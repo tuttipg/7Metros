@@ -34,3 +34,7 @@ Esta versión no incluye partidos, jugadores, clubes ni estadísticas ficticias.
 - `handball.db`, archivos `.env` y secretos NO deben subirse al repositorio público.
 - Cuando se conecte Flask, toda operación POST/PUT/DELETE deberá exigir autenticación y autorización del lado del servidor.
 - Los visitantes sólo tendrán endpoints de lectura. La seguridad nunca dependerá de ocultar botones con JavaScript.
+
+
+## v4 — arco de handball
+La ilustración inferior del menú lateral ya no se dibuja con SVG. Usa directamente `assets/arco-handball.jpeg`, la referencia visual suministrada, para conservar exactamente el arco, la red y las líneas de cancha.
