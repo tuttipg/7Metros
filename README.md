@@ -22,3 +22,7 @@ Subí **todos** los archivos de esta carpeta a la raíz del repositorio `7Metros
 
 ## Importante
 Los formularios de carga usan `localStorage` como modo demo. No modifican una base real. El paso siguiente será reemplazar esa persistencia por llamadas a una API Flask conectada a SQLite.
+
+
+## Datos
+Esta versión no incluye partidos, jugadores, clubes ni estadísticas ficticias. Hasta conectar Flask + SQLite, las secciones de datos quedan vacías y los formularios de carga están deshabilitados.
