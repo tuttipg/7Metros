@@ -1,17 +1,1 @@
-<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#06192d">
-<title>Cargar jugador — 7Metros</title>
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="style.css">
-</head>
-<body data-page="jugadores">
-<div id="mobile-bar" class="mobile-bar"></div>
-<div id="overlay" class="overlay"></div>
-<aside id="sidebar" class="sidebar"></aside>
-<main class="app-main"><div class="content-wrap">
-<header class="page-header"><div><h1>Cargar jugador</h1><p>Formulario preparado para conectar luego con el backend</p></div><div class="header-tools"><span class="date-chip"><span data-icon="calendar"></span> <span data-current-date></span></span><select class="select-dark"><option>APERTURA 2026</option></select></div></header><div class="notice"><b>Carga real pendiente:</b> estos formularios se habilitarán cuando conectemos Flask + SQLite. Esta versión de GitHub Pages no inventa ni guarda datos deportivos.</div><section class="card form-card"><form id="player-form"><div class="form-grid"><div class="field full"><label>Nombre y apellido</label><input name="name" required placeholder="Ej. Juan Pérez"></div><div class="field"><label>Club</label><select name="clubId" required><option value="">Seleccionar…</option></select></div><div class="field"><label>Dorsal</label><input name="number" type="number" min="0" max="99" required></div><div class="field"><label>Posición</label><select name="position" required><option>Arquero</option><option>Extremo</option><option>Lateral</option><option>Central</option><option>Pivote</option></select></div><div class="field"><label>Estado</label><select><option>Activo</option><option>Inactivo</option></select></div></div><div class="form-actions"><a class="btn light" href="jugadores.html">Cancelar</a><button class="btn gold" type="submit">Guardar jugador</button></div></form></section><footer class="footer"><strong>7<b>METROS</b></strong><span>ESTADÍSTICAS · ANÁLISIS · RENDIMIENTO</span><span class="footer-social"><span>IG</span><span>▶</span><span>✉</span></span></footer>
-</div></main><div id="toast" class="toast"></div><script src="script.js"></script></body></html>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#06192d"><title>Cargar jugador — 7Metros</title><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css"></head><body data-page="inicio"><div id="mobile-bar" class="mobile-bar"></div><div id="overlay" class="overlay"></div><aside id="sidebar" class="sidebar"></aside><main class="app-main"><div class="content-wrap"><header class="page-header"><div><h1>Acceso restringido</h1><p>Área de administración de 7Metros</p></div></header><section class="card restricted-card"><div class="lock-mark">🔒</div><h2>Cargar jugador</h2><p>La carga y modificación de información deportiva no está disponible para visitantes. Cuando conectemos el backend, esta sección exigirá inicio de sesión y permisos de administrador o editor.</p><a class="btn" href="jugadores.html">Volver</a></section></div></main><div id="toast" class="toast"></div><script src="script.js"></script></body></html>
