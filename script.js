@@ -1,81 +1,100 @@
-// =========================================
-// 7METROS — script.js
-// Comportamiento de interfaz (sin backend todavía)
-// =========================================
+/* 7Metros — comportamiento de la demo estática */
+const ICONS={
+ home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/>',
+ shield:'<path d="M12 3 4 6v5c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6l-8-3Z"/><path d="m9 12 2 2 4-5"/>',
+ user:'<circle cx="12" cy="7" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/>',
+ users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+ calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>',
+ clipboard:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 9h6M9 13h6M9 17h4"/>',
+ chart:'<path d="M4 20V10M9 20V4M14 20v-7M19 20V7M2 20h20"/>',
+ ball:'<circle cx="12" cy="12" r="9"/><path d="m12 7 3 2-1 4h-4L9 9l3-2ZM6 11l4 2M18 11l-4 2M9 18l1-5M15 18l-1-5"/>',
+ settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.5 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.2.36.6.7 1 .9.2.1.6.1.9.1H21v4h-.09a1.7 1.7 0 0 0-1.51 1Z"/>',
+ info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
+ search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ file:'<path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 13h6M9 17h6"/>',
+ video:'<rect x="3" y="6" width="14" height="12" rx="2"/><path d="m17 10 4-2v8l-4-2z"/>',
+ target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="m15 9 5-5M17 4h3v3"/>',
+ trend:'<path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+ run:'<circle cx="14" cy="5" r="2"/><path d="m12 8-3 4 4 2 2 5M9 12l-4 2M13 10l4 3 3-1"/>',
+ card:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M8 15h2"/>',
+ menu:'<path d="M4 7h16M4 12h16M4 17h16"/>', close:'<path d="m6 6 12 12M18 6 6 18"/>',
+ download:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>', chevron:'<path d="m9 18 6-6-6-6"/>',
+ goal:'<rect x="3" y="7" width="18" height="11" rx="1"/><path d="M3 11h18M7 7v11M12 7v11M17 7v11"/>'
+};
+function icon(name,cls=''){return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||ICONS.info}</svg>`}
 
-document.addEventListener('DOMContentLoaded', () => {
+const baseClubs=[
+ {id:'fco',abbr:'FCO',name:'Ferro Carril Oeste',color:'green',city:'Caballito',players:26,played:7,points:12},
+ {id:'svb',abbr:'SVB',name:'SAG Villa Ballester',color:'purple',city:'Villa Ballester',players:24,played:7,points:10},
+ {id:'aaaj',abbr:'AAAJ',name:'A.A. Argentinos Juniors',color:'red',city:'La Paternal',players:25,played:7,points:8},
+ {id:'cvs',abbr:'CVS',name:'C.A. Vélez Sarsfield',color:'blue',city:'Liniers',players:23,played:7,points:8},
+ {id:'mvl',abbr:'MVL',name:'Mun. de Vicente López',color:'',city:'Vicente López',players:22,played:7,points:6},
+ {id:'river',abbr:'CARP',name:'River Plate',color:'red',city:'Núñez',players:24,played:7,points:9}
+];
+const basePlayers=[
+ {id:1,name:'Juan Pablo Agüero',club:'Ferro Carril Oeste',clubId:'fco',number:10,position:'Central',goals:48,assists:31,eff:74,sanctions:4},
+ {id:2,name:'Faustino Belenky',club:'Ferro Carril Oeste',clubId:'fco',number:7,position:'Extremo',goals:39,assists:18,eff:78,sanctions:2},
+ {id:3,name:'Juan Cruz Amor',club:'Ferro Carril Oeste',clubId:'fco',number:18,position:'Lateral',goals:31,assists:52,eff:63,sanctions:5},
+ {id:4,name:'Martín Jung',club:'SAG Villa Ballester',clubId:'svb',number:4,position:'Pivote',goals:22,assists:9,eff:59,sanctions:16},
+ {id:5,name:'Tomás Bianchi',club:'SAG Villa Ballester',clubId:'svb',number:1,position:'Arquero',goals:1,assists:3,eff:41,sanctions:1},
+ {id:6,name:'Santiago López',club:'A.A. Argentinos Juniors',clubId:'aaaj',number:9,position:'Central',goals:36,assists:29,eff:69,sanctions:6},
+ {id:7,name:'Nicolás Silva',club:'C.A. Vélez Sarsfield',clubId:'cvs',number:14,position:'Lateral',goals:33,assists:17,eff:66,sanctions:7},
+ {id:8,name:'Lucas Peralta',club:'Mun. de Vicente López',clubId:'mvl',number:11,position:'Extremo',goals:30,assists:14,eff:72,sanctions:3},
+ {id:9,name:'Franco Díaz',club:'River Plate',clubId:'river',number:13,position:'Pivote',goals:27,assists:10,eff:61,sanctions:8},
+ {id:10,name:'Matías Roldán',club:'Ferro Carril Oeste',clubId:'fco',number:3,position:'Arquero',goals:0,assists:2,eff:46,sanctions:0},
+ {id:11,name:'Agustín Vera',club:'SAG Villa Ballester',clubId:'svb',number:15,position:'Lateral',goals:25,assists:21,eff:64,sanctions:9},
+ {id:12,name:'Bruno Acosta',club:'A.A. Argentinos Juniors',clubId:'aaaj',number:6,position:'Extremo',goals:28,assists:12,eff:71,sanctions:4}
+];
+const baseMatches=[
+ {id:1,date:'2026-05-31',round:'Fecha 1',home:'A.A. Argentinos Juniors',homeId:'aaaj',away:'Ferro Carril Oeste',awayId:'fco',homeScore:20,awayScore:27,status:'Finalizado',time:'20:30'},
+ {id:2,date:'2026-06-01',round:'Fecha 2',home:'Ferro Carril Oeste',homeId:'fco',away:'SAG Villa Ballester',awayId:'svb',status:'Programado',time:'19:00'},
+ {id:3,date:'2026-06-01',round:'Fecha 2',home:'A.A. Argentinos Juniors',homeId:'aaaj',away:'C.A. Vélez Sarsfield',awayId:'cvs',status:'Programado',time:'21:00'},
+ {id:4,date:'2026-06-07',round:'Fecha 3',home:'SAG Villa Ballester',homeId:'svb',away:'Mun. de Vicente López',awayId:'mvl',status:'Programado',time:'18:00'},
+ {id:5,date:'2026-05-24',round:'Fecha 1',home:'SAG Villa Ballester',homeId:'svb',away:'River Plate',awayId:'river',homeScore:29,awayScore:25,status:'Finalizado',time:'18:00'},
+ {id:6,date:'2026-05-23',round:'Fecha 1',home:'C.A. Vélez Sarsfield',homeId:'cvs',away:'Mun. de Vicente López',awayId:'mvl',homeScore:28,awayScore:28,status:'Finalizado',time:'21:00'}
+];
+function localAdditions(key){try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return []}}
+function clubs(){return [...baseClubs]}
+function players(){return [...basePlayers,...localAdditions('7m_players')]}
+function matches(){return [...localAdditions('7m_matches'),...baseMatches]}
+function club(id){return clubs().find(c=>c.id===id)||{abbr:'7M',name:'7Metros',color:''}}
+function initials(name){return name.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()}
+function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function badge(c,small=false){return `<span class="${small?'mini-badge':'club-badge'} ${c.color||''}">${esc(c.abbr)}</span>`}
+function formatDateISO(s){const d=new Date(`${s}T12:00:00`);return d.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'}).replace('.','')}
+function dateBox(s){const d=new Date(`${s}T12:00:00`);return `<span class="date-box">${String(d.getDate()).padStart(2,'0')}<small>${d.toLocaleDateString('es-AR',{month:'short'}).replace('.','').toUpperCase()}</small></span>`}
+function currentDateLabel(){return new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'})}
 
-  // --- Menú lateral en móvil ---
-  const menuToggle = document.getElementById('menuToggle');
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebarOverlay');
+function renderShell(){
+ const page=document.body.dataset.page||'inicio';
+ const nav=[['inicio','index.html','home','INICIO'],['clubes','clubes.html','shield','CLUBES'],['jugadores','jugadores.html','user','JUGADORES'],['planteles','planteles.html','users','PLANTELES'],['partidos','partidos.html','calendar','PARTIDOS'],['participaciones','participaciones.html','clipboard','PARTICIPACIONES'],['estadisticas','estadisticas.html','chart','ESTADÍSTICAS']];
+ const secondary=[['ajustes','ajustes.html','settings','AJUSTES'],['acerca','acerca-de.html','info','ACERCA DE']];
+ const links=nav.map(([id,href,ic,label])=>`<a class="nav-link ${page===id?'active':''}" href="${href}"><span class="nav-icon">${icon(ic)}</span><span>${label}</span></a>`).join('');
+ const secondaryLinks=secondary.map(([id,href,ic,label])=>`<a class="nav-link ${page===id?'active':''}" href="${href}"><span class="nav-icon">${icon(ic)}</span><span>${label}</span></a>`).join('');
+ const sidebar=document.getElementById('sidebar');
+ if(sidebar) sidebar.innerHTML=`<div class="brand"><div class="brand-logo"><span class="seven">7</span><span class="m">M</span></div><span class="brand-name">7<b>METROS</b></span><span class="brand-sub">HANDBALL APP</span></div><nav class="nav">${links}<div class="nav-link disabled" title="Próximamente"><span class="nav-icon">${icon('ball')}</span><span>IA (PRÓXIMAMENTE)</span></div><div class="nav-sep"></div>${secondaryLinks}</nav><div class="court-floor"></div><div class="sidebar-court"><div class="goal"></div></div>`;
+ const mob=document.getElementById('mobile-bar');
+ if(mob) mob.innerHTML=`<span class="mobile-brand">7<b>METROS</b></span><button id="menu-open" class="icon-btn" aria-label="Abrir menú">${icon('menu')}</button>`;
+ document.querySelectorAll('[data-current-date]').forEach(x=>x.textContent=currentDateLabel());
+ const open=document.getElementById('menu-open'), overlay=document.getElementById('overlay');
+ open?.addEventListener('click',()=>{sidebar?.classList.add('open');overlay?.classList.add('show')});
+ overlay?.addEventListener('click',()=>{sidebar?.classList.remove('open');overlay.classList.remove('show')});
+ sidebar?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{sidebar.classList.remove('open');overlay?.classList.remove('show')}));
+ document.querySelectorAll('[data-icon]').forEach(el=>{el.innerHTML=icon(el.dataset.icon)});
+}
+function showToast(msg){let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t)}t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
 
-  function openSidebar() {
-    sidebar.classList.add('open');
-    overlay.classList.add('visible');
-  }
+function renderClubes(){const grid=document.getElementById('club-grid'),q=document.getElementById('club-search');if(!grid)return;function go(){const term=(q?.value||'').toLowerCase();const rows=clubs().filter(c=>`${c.name} ${c.city}`.toLowerCase().includes(term));grid.innerHTML=rows.map(c=>`<article class="card club-card">${badge(c)}<div><h3>${esc(c.name)}</h3><p>${esc(c.city)} · Apertura 2026</p></div><div class="club-card-stats"><span><b>${c.players}</b>Jugadores</span><span><b>${c.played}</b>Partidos</span><span><b>${c.points}</b>Puntos</span></div></article>`).join('')||'<div class="card empty-state">No se encontraron clubes.</div>'}q?.addEventListener('input',go);go()}
+function renderJugadores(){const tbody=document.getElementById('players-body'),q=document.getElementById('player-search'),clubSel=document.getElementById('player-club'),posSel=document.getElementById('player-position');if(!tbody)return;clubs().forEach(c=>clubSel?.insertAdjacentHTML('beforeend',`<option value="${c.id}">${esc(c.name)}</option>`));function go(){const term=(q?.value||'').toLowerCase(),cid=clubSel?.value||'',pos=posSel?.value||'';const rows=players().filter(p=>(`${p.name} ${p.club}`.toLowerCase().includes(term))&&(!cid||p.clubId===cid)&&(!pos||p.position===pos));tbody.innerHTML=rows.map(p=>`<tr><td><div class="player-cell"><span class="avatar">${initials(p.name)}</span>${esc(p.name)}</div></td><td>${esc(p.club)}</td><td>${p.number}</td><td><span class="tag">${esc(p.position)}</span></td><td>${p.goals}</td><td>${p.assists}</td><td>${p.eff}%</td><td>${p.sanctions}</td></tr>`).join('')||'<tr><td colspan="8" class="empty-state">No se encontraron jugadores.</td></tr>'}q?.addEventListener('input',go);clubSel?.addEventListener('change',go);posSel?.addEventListener('change',go);go()}
+function renderPlanteles(){const sel=document.getElementById('roster-club'),wrap=document.getElementById('roster-wrap');if(!wrap)return;clubs().forEach(c=>sel?.insertAdjacentHTML('beforeend',`<option value="${c.id}">${esc(c.name)}</option>`));function go(){const cid=sel?.value||'fco',c=club(cid),list=players().filter(p=>p.clubId===cid),positions=['Arquero','Extremo','Lateral','Central','Pivote'];document.getElementById('roster-title').textContent=`Plantel — ${c.name}`;wrap.innerHTML=positions.map(pos=>{const ps=list.filter(p=>p.position===pos);return `<section class="card position-column"><h3>${pos.toUpperCase()}</h3>${ps.map(p=>`<div class="roster-player"><span class="avatar">${p.number}</span><div><b>${esc(p.name)}</b><small>#${p.number}</small></div></div>`).join('')||'<div class="roster-player"><small>Sin jugadores demo</small></div>'}</section>`}).join('')}sel?.addEventListener('change',go);go()}
+function renderPartidos(){const list=document.getElementById('matches-list'),status=document.getElementById('match-status');if(!list)return;function go(){const st=status?.value||'';const rows=matches().filter(m=>!st||m.status===st).sort((a,b)=>b.date.localeCompare(a.date));list.innerHTML=rows.map(m=>{const hc=club(m.homeId),ac=club(m.awayId),res=m.status==='Finalizado'?`${m.homeScore} - ${m.awayScore}`:'VS';return `<article class="card match-row"><div class="match-date"><b>${formatDateISO(m.date)}</b><br>${esc(m.round)}</div><div class="match-team">${badge(hc,true)}<span>${esc(m.home)}</span></div><div class="result">${res}<small>${m.status==='Finalizado'?'FINAL':esc(m.time)}</small></div><div class="match-team"><span>${esc(m.away)}</span>${badge(ac,true)}</div><a class="match-link" href="partido.html?id=${m.id}">VER DETALLE ›</a></article>`}).join('')||'<div class="card empty-state">No hay partidos para este filtro.</div>'}status?.addEventListener('change',go);go()}
+function renderParticipaciones(){const tbody=document.getElementById('participations-body');if(!tbody)return;tbody.innerHTML=players().slice().sort((a,b)=>b.goals-a.goals).map((p,i)=>`<tr><td>${i+1}</td><td><div class="player-cell"><span class="avatar">${initials(p.name)}</span>${esc(p.name)}</div></td><td>${esc(p.club)}</td><td>${Math.max(4,7-(i%3))}</td><td>${p.goals}</td><td>${p.assists}</td><td>${p.eff}%</td><td>${p.sanctions}</td></tr>`).join('')}
+function renderStats(){const ps=players();const configs=[['goals-list','goals','Goles'],['assists-list','assists','Asist.'],['eff-list','eff','%'],['sanctions-list','sanctions','Sanc.']];configs.forEach(([id,key,unit])=>{const el=document.getElementById(id);if(!el)return;const rows=ps.slice().sort((a,b)=>b[key]-a[key]).slice(0,5);el.innerHTML=rows.map((p,i)=>`<div class="leader-row"><span class="rank">${i+1}</span><span class="leader-name">${esc(p.name)}<small>${esc(p.club)}</small></span><span class="leader-value">${p[key]}${unit==='%'?'%':''}</span></div>`).join('')});const chart=document.getElementById('club-goals-chart');if(chart){const groups=clubs().map(c=>({name:c.name,value:ps.filter(p=>p.clubId===c.id).reduce((s,p)=>s+p.goals,0)})).sort((a,b)=>b.value-a.value);const max=Math.max(...groups.map(x=>x.value),1);chart.innerHTML=groups.map(x=>`<div class="bar-row"><span>${esc(x.name)}</span><div class="bar-track"><div class="bar-fill" style="--w:${Math.round(x.value/max*100)}%"></div></div><span class="bar-value">${x.value}</span></div>`).join('')}}
+function renderPartidoDetalle(){const el=document.getElementById('match-detail');if(!el)return;const id=Number(new URLSearchParams(location.search).get('id')||1),m=matches().find(x=>x.id===id)||matches()[0],hc=club(m.homeId),ac=club(m.awayId);el.innerHTML=`<section class="card section-card"><div class="section-head"><h2>${esc(m.round)} — APERTURA 2026</h2><span>${formatDateISO(m.date)} · ${esc(m.time)}</span></div><div class="match-main"><div>${badge(hc)}<div class="club-name">${esc(m.home)}</div></div><div><div class="score">${m.status==='Finalizado'?`${m.homeScore} - ${m.awayScore}`:'VS'}</div><span class="status-pill">${esc(m.status).toUpperCase()}</span></div><div>${badge(ac)}<div class="club-name">${esc(m.away)}</div></div></div></section><div class="stats-grid" style="margin-top:14px"><section class="card section-card"><div class="section-head"><h2>RESUMEN DEL PARTIDO</h2></div><table class="data-table"><tbody><tr><td>Goles</td><td><b>${m.homeScore??'-'}</b></td><td><b>${m.awayScore??'-'}</b></td></tr><tr><td>Exclusiones</td><td>4</td><td>3</td></tr><tr><td>7 metros</td><td>5/7</td><td>4/5</td></tr><tr><td>Tiempo muerto</td><td>3</td><td>3</td></tr></tbody></table></section><section class="card section-card"><div class="section-head"><h2>DOCUMENTACIÓN</h2></div><div class="quick-grid" style="grid-template-columns:repeat(2,1fr)"><a class="quick-card" href="participaciones.html">${icon('clipboard')}<span>Ver planilla</span></a><button class="quick-card" onclick="showToast('Video: se conectará cuando tengamos la URL real.')">${icon('video')}<span>Ver video</span></button></div></section></div>`}
+function initForms(){const pf=document.getElementById('player-form');if(pf){clubs().forEach(c=>pf.elements.clubId.insertAdjacentHTML('beforeend',`<option value="${c.id}">${esc(c.name)}</option>`));pf.addEventListener('submit',e=>{e.preventDefault();const fd=new FormData(pf),c=club(fd.get('clubId'));const list=localAdditions('7m_players');list.push({id:Date.now(),name:fd.get('name'),club:c.name,clubId:c.id,number:Number(fd.get('number')||0),position:fd.get('position'),goals:0,assists:0,eff:0,sanctions:0});localStorage.setItem('7m_players',JSON.stringify(list));showToast('Jugador guardado en modo demo.');pf.reset()})}
+ const mf=document.getElementById('match-form');if(mf){clubs().forEach(c=>{mf.elements.homeId.insertAdjacentHTML('beforeend',`<option value="${c.id}">${esc(c.name)}</option>`);mf.elements.awayId.insertAdjacentHTML('beforeend',`<option value="${c.id}">${esc(c.name)}</option>`)});mf.addEventListener('submit',e=>{e.preventDefault();const fd=new FormData(mf);if(fd.get('homeId')===fd.get('awayId'))return showToast('Elegí dos clubes diferentes.');const h=club(fd.get('homeId')),a=club(fd.get('awayId')),list=localAdditions('7m_matches');list.push({id:Date.now(),date:fd.get('date'),round:fd.get('round')||'Fecha',home:h.name,homeId:h.id,away:a.name,awayId:a.id,status:'Programado',time:fd.get('time')});localStorage.setItem('7m_matches',JSON.stringify(list));showToast('Partido guardado en modo demo.');mf.reset()})}}
+function initSettings(){document.querySelectorAll('[data-setting]').forEach(input=>{const key='7m_setting_'+input.dataset.setting;input.checked=localStorage.getItem(key)==='1';input.addEventListener('change',()=>{localStorage.setItem(key,input.checked?'1':'0');showToast('Preferencia guardada en este navegador.')})})}
+function initReports(){document.querySelectorAll('[data-report]').forEach(btn=>btn.addEventListener('click',()=>{const type=btn.dataset.report;let rows,name;if(type==='jugadores'){rows=[['Jugador','Club','Dorsal','Posicion','Goles','Asistencias','Efectividad','Sanciones'],...players().map(p=>[p.name,p.club,p.number,p.position,p.goals,p.assists,p.eff,p.sanctions])];name='7metros_jugadores.csv'}else if(type==='partidos'){rows=[['Fecha','Local','Visitante','Estado','Resultado'],...matches().map(m=>[m.date,m.home,m.away,m.status,m.status==='Finalizado'?`${m.homeScore}-${m.awayScore}`:''])];name='7metros_partidos.csv'}else{rows=[['Jugador','Goles','Asistencias','Efectividad','Sanciones'],...players().map(p=>[p.name,p.goals,p.assists,p.eff,p.sanctions])];name='7metros_estadisticas.csv'}const csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);showToast('Reporte CSV generado.')}))}
 
-  function closeSidebar() {
-    sidebar.classList.remove('open');
-    overlay.classList.remove('visible');
-  }
-
-  menuToggle.addEventListener('click', () => {
-    if (sidebar.classList.contains('open')) {
-      closeSidebar();
-    } else {
-      openSidebar();
-    }
-  });
-
-  overlay.addEventListener('click', closeSidebar);
-
-  // Cerrar el menú al elegir una sección en móvil
-  document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      // La navegación real todavía no está conectada a otras páginas
-      e.preventDefault();
-
-      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-      if (!item.classList.contains('nav-disabled')) {
-        item.classList.add('active');
-      }
-
-      if (window.innerWidth <= 768) {
-        closeSidebar();
-      }
-    });
-  });
-
-  // --- Selector de torneo (placeholder, sin datos reales todavía) ---
-  const tournamentSelect = document.getElementById('tournamentSelect');
-  tournamentSelect.addEventListener('change', () => {
-    console.log('Torneo seleccionado:', tournamentSelect.value);
-    // Acá luego se recargarán los datos reales según el torneo elegido
-  });
-
-  // --- Fecha actual dinámica ---
-  const todayDateEl = document.getElementById('todayDate');
-  const meses = [
-    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-  ];
-  const hoy = new Date();
-  todayDateEl.textContent = `${hoy.getDate()} de ${meses[hoy.getMonth()]} de ${hoy.getFullYear()}`;
-
-  // --- Accesos rápidos (placeholders) ---
-  document.querySelectorAll('.quick-item').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const label = btn.querySelector('span:last-child').textContent;
-      alert(`Próximamente: "${label}" se conectará a la base de datos real.`);
-    });
-  });
-
-  // --- Botones del último partido (placeholders) ---
-  document.querySelectorAll('.btn-ghost').forEach(btn => {
-    btn.addEventListener('click', () => {
-      alert(`Próximamente: "${btn.textContent.trim()}" abrirá la información real del partido.`);
-    });
-  });
-
-});
+document.addEventListener('DOMContentLoaded',()=>{renderShell();renderClubes();renderJugadores();renderPlanteles();renderPartidos();renderParticipaciones();renderStats();renderPartidoDetalle();initForms();initSettings();initReports();});
