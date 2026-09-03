@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d1b3d">
+<title>7Metros — Estadísticas de Handball Argentino</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Botón hamburguesa para móvil -->
+<button class="menu-toggle" id="menuToggle" aria-label="Abrir menú">
+  <span></span><span></span><span></span>
+</button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">7M</div>
+      <div class="logo-text">
+        <span class="logo-title">7METROS</span>
+        <span class="logo-sub">HANDBALL APP</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-icon="home">
+        <span class="nav-icon">🏠</span> INICIO
+      </a>
+      <a href="#" class="nav-item" data-icon="clubes">
+        <span class="nav-icon">🛡️</span> CLUBES
+      </a>
+      <a href="#" class="nav-item" data-icon="jugadores">
+        <span class="nav-icon">👤</span> JUGADORES
+      </a>
+      <a href="#" class="nav-item" data-icon="planteles">
+        <span class="nav-icon">👥</span> PLANTELES
+      </a>
+      <a href="#" class="nav-item" data-icon="partidos">
+        <span class="nav-icon">📅</span> PARTIDOS
+      </a>
+      <a href="#" class="nav-item" data-icon="participaciones">
+        <span class="nav-icon">📋</span> PARTICIPACIONES
+      </a>
+      <a href="#" class="nav-item" data-icon="estadisticas">
+        <span class="nav-icon">📊</span> ESTADÍSTICAS
+      </a>
+      <a href="#" class="nav-item nav-disabled" data-icon="ia">
+        <span class="nav-icon">🌐</span> IA (PRÓXIMAMENTE)
+      </a>
+
+      <div class="nav-divider"></div>
+
+      <a href="#" class="nav-item" data-icon="ajustes">
+        <span class="nav-icon">⚙️</span> AJUSTES
+      </a>
+      <a href="#" class="nav-item" data-icon="acerca">
+        <span class="nav-icon">ℹ️</span> ACERCA DE
+      </a>
+    </nav>
+
+    <div class="sidebar-art" aria-hidden="true">
+      <svg viewBox="0 0 220 260" class="goal-svg">
+        <!-- Arco de handball -->
+        <rect x="30" y="40" width="90" height="70" fill="none" stroke="#e8e8e8" stroke-width="4"/>
+        <line x1="30" y1="40" x2="10" y2="60" stroke="#e8e8e8" stroke-width="3"/>
+        <line x1="120" y1="40" x2="140" y2="60" stroke="#e8e8e8" stroke-width="3"/>
+        <line x1="10" y1="60" x2="10" y2="115" stroke="#e8e8e8" stroke-width="3"/>
+        <line x1="140" y1="60" x2="140" y2="115" stroke="#e8e8e8" stroke-width="3"/>
+        <line x1="10" y1="115" x2="140" y2="115" stroke="#e8e8e8" stroke-width="3"/>
+        <!-- red -->
+        <g stroke="#c62828" stroke-width="1.5" opacity="0.85">
+          <line x1="35" y1="45" x2="35" y2="108"/>
+          <line x1="50" y1="42" x2="50" y2="112"/>
+          <line x1="65" y1="41" x2="65" y2="114"/>
+          <line x1="80" y1="41" x2="80" y2="114"/>
+          <line x1="95" y1="41" x2="95" y2="114"/>
+          <line x1="110" y1="42" x2="110" y2="112"/>
+          <line x1="15" y1="65" x2="135" y2="65"/>
+          <line x1="12" y1="85" x2="138" y2="85"/>
+          <line x1="12" y1="100" x2="138" y2="100"/>
+        </g>
+        <!-- media cancha -->
+        <path d="M -20 260 A 200 200 0 0 1 240 260" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="8 6" opacity="0.55"/>
+      </svg>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- Header -->
+    <header class="page-header">
+      <div class="header-text">
+        <h1>¡Bienvenido a 7Metros!</h1>
+        <p>Tu plataforma de estadísticas de handball argentino</p>
+      </div>
+      <div class="header-controls">
+        <div class="date-pill">
+          <span class="pill-icon">📅</span>
+          <span id="todayDate">31 de mayo de 2026</span>
+        </div>
+        <div class="tournament-select">
+          <select id="tournamentSelect">
+            <option>APERTURA 2026</option>
+            <option>CLAUSURA 2026</option>
+            <option>COPA ARGENTINA 2026</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <!-- Tarjetas KPI -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon kpi-dark">🛡️</div>
+        <div class="kpi-body">
+          <span class="kpi-label">CLUBES</span>
+          <span class="kpi-value">23</span>
+          <span class="kpi-caption">Registrados</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon kpi-gold">👤</div>
+        <div class="kpi-body">
+          <span class="kpi-label">JUGADORES</span>
+          <span class="kpi-value">436</span>
+          <span class="kpi-caption">Registrados</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon kpi-dark">⚽</div>
+        <div class="kpi-body">
+          <span class="kpi-label">PARTIDOS</span>
+          <span class="kpi-value">30</span>
+          <span class="kpi-caption">Disputados</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon kpi-gold">🥅</div>
+        <div class="kpi-body">
+          <span class="kpi-label">GOLES</span>
+          <span class="kpi-value">1.248</span>
+          <span class="kpi-caption">Totales</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon kpi-dark">🟨</div>
+        <div class="kpi-body">
+          <span class="kpi-label">SANCIONES</span>
+          <span class="kpi-value">276</span>
+          <span class="kpi-caption">Totales</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Fila 2: último partido + próximos partidos -->
+    <section class="content-row">
+
+      <div class="panel panel-last-match">
+        <div class="panel-header">
+          <h2>ÚLTIMO PARTIDO CARGADO</h2>
+          <span class="panel-tag">FECHA 1 – APERTURA 2026</span>
+        </div>
+
+        <div class="match-card">
+          <div class="match-team">
+            <div class="crest crest-red">AAA</div>
+            <span class="team-name">A.A. Argentinos Juniors</span>
+          </div>
+
+          <div class="match-score">
+            <span class="score">20 - 27</span>
+            <span class="status-badge">FINALIZADO</span>
+          </div>
+
+          <div class="match-team">
+            <div class="crest crest-green">CO</div>
+            <span class="team-name">Ferro Carril Oeste</span>
+          </div>
+        </div>
+
+        <div class="match-actions">
+          <button class="btn-ghost">📄 Ver detalle</button>
+          <button class="btn-ghost">📋 Ver planilla</button>
+          <button class="btn-ghost">▶ Ver video</button>
+        </div>
+      </div>
+
+      <div class="panel panel-next-matches">
+        <div class="panel-header">
+          <h2>PRÓXIMOS PARTIDOS</h2>
+          <a href="#" class="panel-link">VER TODOS</a>
+        </div>
+
+        <ul class="next-match-list">
+          <li class="next-match-item">
+            <div class="nm-date"><span>01</span>JUN</div>
+            <div class="nm-crest crest-blue-light">FC</div>
+            <div class="nm-info">
+              <span class="nm-team">Ferro Carril Oeste</span>
+              <span class="nm-vs">VS</span>
+              <span class="nm-time">19:00</span>
+            </div>
+            <div class="nm-crest crest-gold">SVB</div>
+          </li>
+          <li class="next-match-item">
+            <div class="nm-date"><span>01</span>JUN</div>
+            <div class="nm-crest crest-red">AAJ</div>
+            <div class="nm-info">
+              <span class="nm-team">A.A. Argentinos Juniors</span>
+              <span class="nm-vs">VS</span>
+              <span class="nm-time">21:00</span>
+            </div>
+            <div class="nm-crest crest-blue">CVS</div>
+          </li>
+          <li class="next-match-item">
+            <div class="nm-date"><span>07</span>JUN</div>
+            <div class="nm-crest crest-gold">SVB</div>
+            <div class="nm-info">
+              <span class="nm-team">SAG Villa Ballester</span>
+              <span class="nm-vs">VS</span>
+              <span class="nm-time">18:00</span>
+            </div>
+            <div class="nm-crest crest-orange">MVL</div>
+          </li>
+        </ul>
+
+        <a href="#" class="panel-footer-link">VER TODOS LOS PARTIDOS ›</a>
+      </div>
+    </section>
+
+    <!-- Fila 3: estadísticas destacadas + accesos rápidos -->
+    <section class="content-row">
+
+      <div class="panel panel-stats">
+        <div class="panel-header">
+          <h2>ESTADÍSTICAS DESTACADAS</h2>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-icon">🎯</div>
+            <span class="stat-label">GOLEADOR DEL TORNEO</span>
+            <span class="stat-name">Juan Pablo Agüero</span>
+            <span class="stat-team">Ferro Carril Oeste</span>
+            <span class="stat-value">48</span>
+            <span class="stat-unit">GOLES</span>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">📈</div>
+            <span class="stat-label">EFECTIVIDAD</span>
+            <span class="stat-name">Faustino Belenky</span>
+            <span class="stat-team">Ferro Carril Oeste</span>
+            <span class="stat-value">78%</span>
+            <span class="stat-unit">EFECTIVIDAD</span>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">🏃</div>
+            <span class="stat-label">MÁS ASISTENCIAS</span>
+            <span class="stat-name">Juan Cruz Amor</span>
+            <span class="stat-team">Ferro Carril Oeste</span>
+            <span class="stat-value">52</span>
+            <span class="stat-unit">ASISTENCIAS</span>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">🛡️</div>
+            <span class="stat-label">MÁS SANCIONES</span>
+            <span class="stat-name">Martín Jung</span>
+            <span class="stat-team">SAG Villa Ballester</span>
+            <span class="stat-value">16</span>
+            <span class="stat-unit">SANCIONES</span>
+          </div>
+        </div>
+
+        <a href="#" class="panel-footer-link">VER TODAS LAS ESTADÍSTICAS ›</a>
+      </div>
+
+      <div class="panel panel-quick">
+        <div class="panel-header">
+          <h2>ACCESOS RÁPIDOS</h2>
+        </div>
+
+        <div class="quick-grid">
+          <button class="quick-item">
+            <span class="quick-icon">🔍</span>
+            <span>Buscar jugador</span>
+          </button>
+          <button class="quick-item">
+            <span class="quick-icon">📅</span>
+            <span>Cargar partido</span>
+          </button>
+          <button class="quick-item">
+            <span class="quick-icon">👤</span>
+            <span>Cargar jugador</span>
+          </button>
+          <button class="quick-item">
+            <span class="quick-icon">👥</span>
+            <span>Ver planteles</span>
+          </button>
+          <button class="quick-item">
+            <span class="quick-icon">📊</span>
+            <span>Reportes</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="page-footer">
+      <span class="footer-brand">7METROS</span>
+      <span class="footer-tag">ESTADÍSTICAS · ANÁLISIS · RENDIMIENTO</span>
+      <div class="footer-social">
+        <span>📷</span><span>▶</span><span>✉</span>
+      </div>
+    </footer>
+
+  </main>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
