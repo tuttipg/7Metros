@@ -46,23 +46,7 @@ function renderShell(){
  const links=nav.map(([id,href,ic,label])=>`<a class="nav-link ${page===id?'active':''}" href="${href}"><span class="nav-icon">${icon(ic)}</span><span>${label}</span></a>`).join('');
  const secondaryLinks=secondary.map(([id,href,ic,label])=>`<a class="nav-link ${page===id?'active':''}" href="${href}"><span class="nav-icon">${icon(ic)}</span><span>${label}</span></a>`).join('');
  const sidebar=document.getElementById('sidebar');
- if(sidebar) sidebar.innerHTML=`<div class="brand"><div class="brand-logo"><span class="seven">7</span><span class="m">M</span></div><span class="brand-name">7<b>METROS</b></span><span class="brand-sub">HANDBALL APP</span></div><nav class="nav">${links}<div class="nav-link disabled" title="Próximamente"><span class="nav-icon">${icon('ball')}</span><span>IA (PRÓXIMAMENTE)</span></div><div class="nav-sep"></div>${secondaryLinks}</nav><div class="sidebar-handball-art" aria-hidden="true"><svg class="handball-goal-svg" viewBox="0 0 260 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <!-- cancha -->
-    <path d="M0 216H260" stroke="#f5f5f5" stroke-width="2" opacity=".8"/>
-    <path d="M0 216C18 174 42 153 82 153" stroke="#f5f5f5" stroke-width="2" opacity=".8"/>
-    <path d="M178 153C218 153 242 174 260 216" stroke="#f5f5f5" stroke-width="2" opacity=".8"/>
-    <path d="M30 216C43 185 58 169 82 169" stroke="#f5f5f5" stroke-width="1.5" opacity=".45"/>
-    <path d="M230 216C217 185 202 169 178 169" stroke="#f5f5f5" stroke-width="1.5" opacity=".45"/>
-
-    <!-- red/white handball goal -->
-    <path d="M78 153V93H182V153" stroke="#fff" stroke-width="8"/>
-    <path d="M78 153V93H182V153" stroke="#d62f3f" stroke-width="4" stroke-dasharray="12 10"/>
-    <path d="M83 98L177 148M177 98L83 148M104 96V151M130 96V151M156 96V151" stroke="#dfe5eb" stroke-width="1.2" opacity=".7"/>
-    <path d="M88 108H172M88 122H172M88 136H172" stroke="#dfe5eb" stroke-width="1.2" opacity=".7"/>
-    <path d="M73 153H187" stroke="#fff" stroke-width="4"/>
-  </g>
-</svg></div>`;
+ if(sidebar) sidebar.innerHTML=`<div class="brand"><div class="brand-logo"><span class="seven">7</span><span class="m">M</span></div><span class="brand-name">7<b>METROS</b></span><span class="brand-sub">HANDBALL APP</span></div><nav class="nav">${links}<div class="nav-link disabled" title="Próximamente"><span class="nav-icon">${icon('ball')}</span><span>IA (PRÓXIMAMENTE)</span></div><div class="nav-sep"></div>${secondaryLinks}</nav>`;
  const mob=document.getElementById('mobile-bar');
  if(mob) mob.innerHTML=`<span class="mobile-brand">7<b>METROS</b></span><button id="menu-open" class="icon-btn" aria-label="Abrir menú">${icon('menu')}</button>`;
  document.querySelectorAll('[data-current-date]').forEach(x=>x.textContent=currentDateLabel());
@@ -83,10 +67,6 @@ function renderStats(){const ps=players();const status=document.getElementById('
 function renderPartidoDetalle(){const el=document.getElementById('match-detail');if(!el)return;const all=matches();if(!all.length){el.innerHTML='<div class="card empty-state">No hay partidos cargados para mostrar.</div>';return}const id=Number(new URLSearchParams(location.search).get('id')||all[0].id),m=all.find(x=>x.id===id)||all[0],hc=club(m.homeId),ac=club(m.awayId);el.innerHTML=`<section class="card section-card"><div class="section-head"><h2>${esc(m.round)}</h2><span>${formatDateISO(m.date)} · ${esc(m.time)}</span></div><div class="match-main"><div>${badge(hc)}<div class="club-name">${esc(m.home)}</div></div><div><div class="score">${m.status==='Finalizado'?`${m.homeScore} - ${m.awayScore}`:'VS'}</div><span class="status-pill">${esc(m.status).toUpperCase()}</span></div><div>${badge(ac)}<div class="club-name">${esc(m.away)}</div></div></div></section>`}
 function renderClubDetalle(){const el=document.getElementById('club-detail');if(!el)return;const all=clubs();if(!all.length){el.innerHTML='<div class="card empty-state">Todavía no hay clubes cargados. Esta ficha se completará automáticamente cuando conectemos la base real.<br><button class="btn gold admin-lock" type="button" style="margin-top:10px">+ Cargar club</button></div>';return}const id=new URLSearchParams(location.search).get('id')||all[0].id,c=all.find(x=>String(x.id)===String(id))||all[0];const list=players().filter(p=>p.clubId===c.id),positions=['Arquero','Extremo','Lateral','Central','Pivote'];const ms=matches().filter(m=>m.homeId===c.id||m.awayId===c.id).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);const h1=document.querySelector('.page-header h1'),sub=document.querySelector('.page-header p');if(h1)h1.textContent=c.name;if(sub)sub.textContent=`${c.city||''} · Ficha de club`;el.innerHTML=`<section class="card section-card club-hero"><div class="club-hero-main">${badge(c)}<div><h2>${esc(c.name)}</h2><p>${esc(c.city||'')} · Apertura 2026</p></div></div><div class="club-card-stats"><span><b>${c.players??list.length}</b>Jugadores</span><span><b>${c.played??ms.length}</b>Partidos</span><span><b>${c.points??0}</b>Puntos</span></div></section><section class="card section-card" style="margin-top:14px"><div class="section-head"><h2>PLANTEL</h2><a href="planteles.html">VER PLANTELES ›</a></div><div class="roster-grid">${positions.map(pos=>{const ps=list.filter(p=>p.position===pos);return `<section class="card position-column"><h3>${pos.toUpperCase()}</h3>${ps.map(p=>`<div class="roster-player"><span class="avatar">${p.number}</span><div><b>${esc(p.name)}</b><small>#${p.number}</small></div></div>`).join('')||'<div class="roster-player"><small>Sin jugadores cargados</small></div>'}</section>`}).join('')}</div></section><section class="card section-card" style="margin-top:14px"><div class="section-head"><h2>ÚLTIMOS PARTIDOS</h2><a href="partidos.html">VER TODOS</a></div><div class="match-list">${ms.map(m=>{const hc=club(m.homeId),ac=club(m.awayId),res=m.status==='Finalizado'?`${m.homeScore} - ${m.awayScore}`:'VS';return `<article class="card match-row"><div class="match-date"><b>${formatDateISO(m.date)}</b><br>${esc(m.round)}</div><div class="match-team">${badge(hc,true)}<span>${esc(m.home)}</span></div><div class="result">${res}<small>${m.status==='Finalizado'?'FINAL':esc(m.time)}</small></div><div class="match-team"><span>${esc(m.away)}</span>${badge(ac,true)}</div><a class="match-link" href="partido.html?id=${m.id}">VER DETALLE ›</a></article>`}).join('')||'<div class="empty-state">Sin partidos cargados para este club.</div>'}</div></section>`}
 function initSeasonSelect(){
- /* Hoy hay una sola temporada (Apertura 2026). Dejamos el <select>
-    funcional y con persistencia en localStorage para poder sumar
-    más torneos/temporadas como <option> más adelante sin tocar
-    esta lógica. */
  document.querySelectorAll('#season-select').forEach(sel=>{
   const saved=localStorage.getItem('7m_season');
   if(saved){const opt=[...sel.options].find(o=>o.value===saved);if(opt) sel.value=saved}
@@ -107,9 +87,6 @@ function renderDashboard(){
 }
 
 function initAdminLocks(){
- /* Delegado en document: funciona también con botones "+ Cargar…"
-    que se generan dinámicamente (estados vacíos, búsquedas, filtros),
-    sin necesidad de volver a engancharlos a mano en cada render. */
  document.addEventListener('click',e=>{
   const el=e.target.closest('.admin-lock');
   if(!el) return;
