@@ -46,7 +46,23 @@ function renderShell(){
  const links=nav.map(([id,href,ic,label])=>`<a class="nav-link ${page===id?'active':''}" href="${href}"><span class="nav-icon">${icon(ic)}</span><span>${label}</span></a>`).join('');
  const secondaryLinks=secondary.map(([id,href,ic,label])=>`<a class="nav-link ${page===id?'active':''}" href="${href}"><span class="nav-icon">${icon(ic)}</span><span>${label}</span></a>`).join('');
  const sidebar=document.getElementById('sidebar');
- if(sidebar) sidebar.innerHTML=`<div class="brand"><div class="brand-logo"><span class="seven">7</span><span class="m">M</span></div><span class="brand-name">7<b>METROS</b></span><span class="brand-sub">HANDBALL APP</span></div><nav class="nav">${links}<div class="nav-link disabled" title="Próximamente"><span class="nav-icon">${icon('ball')}</span><span>IA (PRÓXIMAMENTE)</span></div><div class="nav-sep"></div>${secondaryLinks}</nav><div class="sidebar-handball-art" aria-hidden="true"><img src="assets/arco-handball.jpeg" alt=""></div>`;
+ if(sidebar) sidebar.innerHTML=`<div class="brand"><div class="brand-logo"><span class="seven">7</span><span class="m">M</span></div><span class="brand-name">7<b>METROS</b></span><span class="brand-sub">HANDBALL APP</span></div><nav class="nav">${links}<div class="nav-link disabled" title="Próximamente"><span class="nav-icon">${icon('ball')}</span><span>IA (PRÓXIMAMENTE)</span></div><div class="nav-sep"></div>${secondaryLinks}</nav><div class="sidebar-handball-art" aria-hidden="true"><svg class="handball-goal-svg" viewBox="0 0 260 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- cancha -->
+    <path d="M0 216H260" stroke="#f5f5f5" stroke-width="2" opacity=".8"/>
+    <path d="M0 216C18 174 42 153 82 153" stroke="#f5f5f5" stroke-width="2" opacity=".8"/>
+    <path d="M178 153C218 153 242 174 260 216" stroke="#f5f5f5" stroke-width="2" opacity=".8"/>
+    <path d="M30 216C43 185 58 169 82 169" stroke="#f5f5f5" stroke-width="1.5" opacity=".45"/>
+    <path d="M230 216C217 185 202 169 178 169" stroke="#f5f5f5" stroke-width="1.5" opacity=".45"/>
+
+    <!-- red/white handball goal -->
+    <path d="M78 153V93H182V153" stroke="#fff" stroke-width="8"/>
+    <path d="M78 153V93H182V153" stroke="#d62f3f" stroke-width="4" stroke-dasharray="12 10"/>
+    <path d="M83 98L177 148M177 98L83 148M104 96V151M130 96V151M156 96V151" stroke="#dfe5eb" stroke-width="1.2" opacity=".7"/>
+    <path d="M88 108H172M88 122H172M88 136H172" stroke="#dfe5eb" stroke-width="1.2" opacity=".7"/>
+    <path d="M73 153H187" stroke="#fff" stroke-width="4"/>
+  </g>
+</svg></div>`;
  const mob=document.getElementById('mobile-bar');
  if(mob) mob.innerHTML=`<span class="mobile-brand">7<b>METROS</b></span><button id="menu-open" class="icon-btn" aria-label="Abrir menú">${icon('menu')}</button>`;
  document.querySelectorAll('[data-current-date]').forEach(x=>x.textContent=currentDateLabel());
