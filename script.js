@@ -24,13 +24,311 @@ const ICONS={
 };
 function icon(name,cls=''){return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||ICONS.info}</svg>`}
 
-const baseClubs=[];
-const basePlayers=[];
-const baseMatches=[];
-function localAdditions(key){try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return []}}
-function clubs(){return [...baseClubs]}
-function players(){return [...basePlayers]}
-function matches(){return [...baseMatches]}
+// ============================================================
+// 7METROS — CONEXIÓN CON SUPABASE
+// ============================================================
+
+const SUPABASE_URL = 'https://bvnfgfwxnkusicipwlas.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_xjIsk7dLam6gOKSG1FbwOQ_tResnm7U';
+
+let baseClubs = [];
+let basePlayers = [];
+let baseMatches = [];
+
+let baseParticipations = [];
+
+const SUPABASE_HEADERS = {
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${SUPABASE_KEY}`
+};
+
+async function supabaseGet(table, query = '') {
+    const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/${table}${query}`,
+        {
+            method: 'GET',
+            headers: {
+                ...SUPABASE_HEADERS,
+                'Content-Type': 'application/json'
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Supabase ${table}: ${error}`);
+    }
+
+    return response.json();
+}
+
+
+// ------------------------------------------------------------
+// CARGAR TODOS LOS DATOS
+// ------------------------------------------------------------
+
+async function cargarDatosSupabase() {
+
+    try {
+
+        console.log('7Metros: conectando con Supabase...');
+
+        const [
+            clubesDB,
+            jugadoresDB,
+            plantelesDB,
+            partidosDB,
+            participacionesDB
+        ] = await Promise.all([
+
+            supabaseGet(
+                'clubes',
+                '?select=id,nombre'
+            ),
+
+            supabaseGet(
+                'jugadores',
+                '?select=id,nombre,apellido,fecha_nacimiento,brazo_habil,altura_cm,peso_kg'
+            ),
+
+            supabaseGet(
+                'planteles',
+                '?select=id,jugador_id,club_id,temporada_id,dorsal,posicion'
+            ),
+
+            supabaseGet(
+                'partidos',
+                '?select=*'
+            ),
+
+            supabaseGet(
+                'participaciones',
+                '?select=*'
+            )
+        ]);
+
+
+        // ----------------------------------------------------
+        // CLUBES
+        // ----------------------------------------------------
+
+        baseClubs = clubesDB.map(c => {
+
+            const jugadoresClub = plantelesDB.filter(
+                p => Number(p.club_id) === Number(c.id)
+            );
+
+            const partidosClub = partidosDB.filter(
+                p =>
+                    Number(p.local_id) === Number(c.id) ||
+                    Number(p.visitante_id) === Number(c.id)
+            );
+
+            const partidosFinalizados = partidosClub.filter(
+                p => p.estado === 'finalizado' ||
+                     p.estado === 'Finalizado'
+            );
+
+            let puntos = 0;
+
+            partidosFinalizados.forEach(p => {
+
+                const local = Number(p.local_id) === Number(c.id);
+
+                const propios = local
+                    ? Number(p.goles_local || 0)
+                    : Number(p.goles_visitante || 0);
+
+                const rivales = local
+                    ? Number(p.goles_visitante || 0)
+                    : Number(p.goles_local || 0);
+
+                if (propios > rivales) puntos += 2;
+                else if (propios === rivales) puntos += 1;
+
+            });
+
+            return {
+                id: Number(c.id),
+                name: c.nombre,
+                abbr: initials(c.nombre),
+                city: '',
+                color: '',
+                players: jugadoresClub.length,
+                played: partidosFinalizados.length,
+                points: puntos
+            };
+
+        });
+
+
+        // ----------------------------------------------------
+        // JUGADORES
+        // ----------------------------------------------------
+
+        basePlayers = jugadoresDB.map(j => {
+
+            const plantel = plantelesDB.find(
+                p => Number(p.jugador_id) === Number(j.id)
+            );
+
+            const clubData = plantel
+                ? clubesDB.find(
+                    c => Number(c.id) === Number(plantel.club_id)
+                )
+                : null;
+
+            const participacionesJugador =
+                participacionesDB.filter(
+                    p => Number(p.jugador_id) === Number(j.id)
+                );
+
+            const goles = participacionesJugador.reduce(
+                (total, p) => total + Number(p.goles || 0),
+                0
+            );
+
+            const sanciones = participacionesJugador.reduce(
+                (total, p) =>
+                    total +
+                    Number(p.exclusiones_2min || 0) +
+                    Number(p.tarjeta_amarilla || 0) +
+                    Number(p.tarjeta_roja || 0),
+                0
+            );
+
+            return {
+
+                id: Number(j.id),
+
+                name: `${j.nombre || ''} ${j.apellido || ''}`.trim(),
+
+                clubId: plantel
+                    ? Number(plantel.club_id)
+                    : null,
+
+                club: clubData
+                    ? clubData.nombre
+                    : 'Sin club',
+
+                number: plantel?.dorsal ?? '-',
+
+                position: plantel?.posicion || 'Sin posición',
+
+                goals: goles,
+
+                assists: 0,
+
+                eff: 0,
+
+                sanctions: sanciones,
+
+                fechaNacimiento: j.fecha_nacimiento,
+
+                brazoHabil: j.brazo_habil,
+
+                altura: j.altura_cm,
+
+                peso: j.peso_kg
+
+            };
+
+        });
+
+
+        // ----------------------------------------------------
+        // PARTIDOS
+        // ----------------------------------------------------
+
+        baseMatches = partidosDB.map(p => {
+
+            const home = clubesDB.find(
+                c => Number(c.id) === Number(p.local_id)
+            );
+
+            const away = clubesDB.find(
+                c => Number(c.id) === Number(p.visitante_id)
+            );
+
+            return {
+
+                id: Number(p.id),
+
+                date: p.fecha,
+
+                round: p.jornada || 'Partido',
+
+                homeId: Number(p.local_id),
+
+                awayId: Number(p.visitante_id),
+
+                home: home?.nombre || 'Local',
+
+                away: away?.nombre || 'Visitante',
+
+                homeScore: Number(p.goles_local || 0),
+
+                awayScore: Number(p.goles_visitante || 0),
+
+                status:
+                    p.estado === 'finalizado' ||
+                    p.estado === 'Finalizado'
+                        ? 'Finalizado'
+                        : 'Programado',
+
+                time: p.hora || ''
+
+            };
+
+        });
+
+
+        baseParticipations = participacionesDB;
+
+
+        console.log('7Metros: datos cargados correctamente');
+        console.log('Clubes:', baseClubs.length);
+        console.log('Jugadores:', basePlayers.length);
+        console.log('Partidos:', baseMatches.length);
+        console.log('Participaciones:', baseParticipations.length);
+
+
+    } catch (error) {
+
+        console.error('Error conectando con Supabase:', error);
+
+        showToast('No se pudieron cargar los datos de 7Metros.');
+
+    }
+
+}
+
+
+// ------------------------------------------------------------
+// FUNCIONES DE ACCESO A LOS DATOS
+// ------------------------------------------------------------
+
+function clubs() {
+    return [...baseClubs];
+}
+
+function players() {
+    return [...basePlayers];
+}
+
+function matches() {
+    return [...baseMatches];
+}
+
+function club(id) {
+    return clubs().find(c => Number(c.id) === Number(id)) ||
+        {
+            id: id,
+            abbr: '7M',
+            name: '7Metros',
+            color: ''
+        };
+}
 function club(id){return clubs().find(c=>c.id===id)||{abbr:'7M',name:'7Metros',color:''}}
 function initials(name){return name.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()}
 function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
@@ -95,4 +393,30 @@ function initAdminLocks(){
  });
 }
 
-document.addEventListener('DOMContentLoaded',()=>{renderShell();initSeasonSelect();renderDashboard();renderClubes();renderClubDetalle();renderJugadores();renderPlanteles();renderPartidos();renderParticipaciones();renderStats();renderPartidoDetalle();initForms();initSettings();initReports();initAdminLocks();});
+document.addEventListener('DOMContentLoaded', async () => {
+
+    renderShell();
+
+    initSeasonSelect();
+
+    initSettings();
+
+    initReports();
+
+    initAdminLocks();
+
+    await cargarDatosSupabase();
+
+    renderDashboard();
+    renderClubes();
+    renderClubDetalle();
+    renderJugadores();
+    renderPlanteles();
+    renderPartidos();
+    renderParticipaciones();
+    renderStats();
+    renderPartidoDetalle();
+
+    initForms();
+
+});
