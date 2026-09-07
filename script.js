@@ -32,10 +32,18 @@ const SUPABASE_URL = 'https://bvnfgfwxnkusicipwlas.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_xjIsk7dLam6gOKSG1FbwOQ_tResnm7U';
 
 let baseClubs = [];
+let baseTeams = [];
 let basePlayers = [];
 let baseMatches = [];
-
 let baseParticipations = [];
+
+const CURRENT_SEASON_ID = 3;
+
+let competitionFilters = {
+    categoria: localStorage.getItem('7m_categoria') || 'Mayores',
+    division: localStorage.getItem('7m_division') || 'LHC Hipotecario Seguros',
+    rama: localStorage.getItem('7m_rama') || 'M'
+};
 
 const SUPABASE_HEADERS = {
     apikey: SUPABASE_KEY,
@@ -113,9 +121,14 @@ async function cargarDatosSupabase() {
             )
         ]);
 
-        const CURRENT_SEASON_ID = 3;
+        baseTeams = equiposDB.map(e => ({
+            ...e,
+            id: Number(e.id),
+            club_id: Number(e.club_id),
+            temporada_id: Number(e.temporada_id)
+        }));
 
-        const equiposActuales = equiposDB.filter(
+        const equiposActuales = baseTeams.filter(
             e => Number(e.temporada_id) === CURRENT_SEASON_ID
         );
 
@@ -131,61 +144,13 @@ async function cargarDatosSupabase() {
         // CLUBES
         // ----------------------------------------------------
 
-        baseClubs = clubesDB.map(c => {
-
-            const equiposClub = equiposActuales.filter(
-                e => Number(e.club_id) === Number(c.id)
-            );
-
-            const idsEquiposClub = new Set(
-                equiposClub.map(e => Number(e.id))
-            );
-
-            const jugadoresClub = plantelesDB.filter(
-                p => idsEquiposClub.has(Number(p.equipo_id))
-            );
-
-            const partidosClub = partidosDB.filter(
-                p =>
-                    idsEquiposClub.has(Number(p.local_equipo_id)) ||
-                    idsEquiposClub.has(Number(p.visitante_equipo_id))
-            );
-
-            const partidosFinalizados = partidosClub.filter(
-                p => String(p.estado || '').toLowerCase() === 'finalizado'
-            );
-
-            let puntos = 0;
-
-            partidosFinalizados.forEach(p => {
-
-                const local = idsEquiposClub.has(Number(p.local_equipo_id));
-
-                const propios = local
-                    ? Number(p.goles_local || 0)
-                    : Number(p.goles_visitante || 0);
-
-                const rivales = local
-                    ? Number(p.goles_visitante || 0)
-                    : Number(p.goles_local || 0);
-
-                if (propios > rivales) puntos += 2;
-                else if (propios === rivales) puntos += 1;
-
-            });
-
-            return {
-                id: Number(c.id),
-                name: c.nombre,
-                abbr: initials(c.nombre),
-                city: '',
-                color: '',
-                players: jugadoresClub.length,
-                played: partidosFinalizados.length,
-                points: puntos
-            };
-
-        });
+        baseClubs = clubesDB.map(c => ({
+            id: Number(c.id),
+            name: c.nombre,
+            abbr: initials(c.nombre),
+            city: '',
+            color: ''
+        }));
 
 
         // ----------------------------------------------------
@@ -194,61 +159,29 @@ async function cargarDatosSupabase() {
 
         basePlayers = jugadoresDB.map(j => {
 
-            const plantel = plantelesDB.find(p => {
-                if (Number(p.jugador_id) !== Number(j.id)) return false;
+            const memberships = plantelesDB
+                .filter(p => Number(p.jugador_id) === Number(j.id))
+                .map(p => {
+                    const equipo = equipoPorId.get(Number(p.equipo_id));
+                    if (!equipo) return null;
 
-                const equipo = equipoPorId.get(Number(p.equipo_id));
-                return equipo && Number(equipo.temporada_id) === CURRENT_SEASON_ID;
-            });
-
-            const equipo = plantel
-                ? equipoPorId.get(Number(plantel.equipo_id))
-                : null;
-
-            const clubData = equipo
-                ? clubPorId.get(Number(equipo.club_id))
-                : null;
-
-            const participacionesJugador = participacionesDB.filter(
-                p => Number(p.jugador_id) === Number(j.id)
-            );
-
-            const goles = participacionesJugador.reduce(
-                (total, p) => total + Number(p.goles || 0),
-                0
-            );
-
-            const sanciones = participacionesJugador.reduce(
-                (total, p) =>
-                    total +
-                    Number(p.exclusiones_2min || 0) +
-                    Number(p.tarjeta_amarilla || 0) +
-                    Number(p.tarjeta_roja || 0),
-                0
-            );
+                    return {
+                        teamId: Number(equipo.id),
+                        clubId: Number(equipo.club_id),
+                        temporadaId: Number(equipo.temporada_id),
+                        categoria: equipo.categoria,
+                        division: equipo.division,
+                        rama: equipo.rama,
+                        number: p.dorsal ?? '-',
+                        position: p.posicion || 'Sin posición'
+                    };
+                })
+                .filter(Boolean);
 
             return {
                 id: Number(j.id),
                 name: `${j.nombre || ''} ${j.apellido || ''}`.trim(),
-
-                clubId: clubData
-                    ? Number(clubData.id)
-                    : null,
-
-                club: clubData
-                    ? clubData.nombre
-                    : 'Sin club',
-
-                teamId: equipo
-                    ? Number(equipo.id)
-                    : null,
-
-                number: plantel?.dorsal ?? '-',
-                position: plantel?.posicion || 'Sin posición',
-                goals: goles,
-                assists: 0,
-                eff: 0,
-                sanctions: sanciones,
+                memberships,
                 fechaNacimiento: j.fecha_nacimiento,
                 brazoHabil: j.brazo_habil,
                 altura: j.altura_cm,
@@ -298,7 +231,12 @@ async function cargarDatosSupabase() {
                 status: finalizado ? 'Finalizado' : 'Programado',
                 time: p.hora ? String(p.hora).slice(0, 5) : '',
                 createdAt: p.created_at || null,
-                notes: p.observaciones || ''
+                notes: p.observaciones || '',
+
+                seasonId: homeTeam ? Number(homeTeam.temporada_id) : Number(p.temporada_id),
+                categoria: homeTeam?.categoria || '',
+                division: homeTeam?.division || '',
+                rama: homeTeam?.rama || ''
             };
 
         });
@@ -307,7 +245,7 @@ async function cargarDatosSupabase() {
 
         console.log('7Metros: datos cargados correctamente');
         console.log('Clubes:', baseClubs.length);
-        console.log('Equipos:', equiposDB.length);
+        console.log('Equipos:', baseTeams.length);
         console.log('Jugadores:', basePlayers.length);
         console.log('Partidos:', baseMatches.length);
         console.log('Participaciones:', baseParticipations.length);
@@ -326,20 +264,120 @@ async function cargarDatosSupabase() {
 // FUNCIONES DE ACCESO A LOS DATOS
 // ------------------------------------------------------------
 
-function clubs() {
-    return [...baseClubs];
+function filteredTeams() {
+    return baseTeams.filter(e => {
+        if (Number(e.temporada_id) !== CURRENT_SEASON_ID) return false;
+        if (competitionFilters.categoria && e.categoria !== competitionFilters.categoria) return false;
+        if (competitionFilters.division && e.division !== competitionFilters.division) return false;
+        if (competitionFilters.rama && e.rama !== competitionFilters.rama) return false;
+        return true;
+    });
+}
+
+function filteredTeamIds() {
+    return new Set(filteredTeams().map(e => Number(e.id)));
 }
 
 function players() {
-    return [...basePlayers];
+    const allowedTeams = filteredTeamIds();
+
+    return basePlayers
+        .map(p => {
+            const membership = p.memberships.find(m => allowedTeams.has(Number(m.teamId)));
+            if (!membership) return null;
+
+            const clubData = baseClubs.find(c => Number(c.id) === Number(membership.clubId));
+
+            const participacionesJugador = baseParticipations.filter(part =>
+                Number(part.jugador_id) === Number(p.id) &&
+                allowedTeams.has(Number(part.equipo_id))
+            );
+
+            const goles = participacionesJugador.reduce(
+                (total, part) => total + Number(part.goles || 0),
+                0
+            );
+
+            const sanciones = participacionesJugador.reduce(
+                (total, part) =>
+                    total +
+                    Number(part.exclusiones_2min || 0) +
+                    Number(part.tarjeta_amarilla || 0) +
+                    Number(part.tarjeta_roja || 0),
+                0
+            );
+
+            return {
+                ...p,
+                clubId: Number(membership.clubId),
+                club: clubData?.name || 'Sin club',
+                teamId: Number(membership.teamId),
+                number: membership.number,
+                position: membership.position,
+                goals: goles,
+                assists: 0,
+                eff: 0,
+                sanctions: sanciones
+            };
+        })
+        .filter(Boolean);
 }
 
 function matches() {
-    return [...baseMatches];
+    const allowedTeams = filteredTeamIds();
+
+    return baseMatches.filter(m =>
+        Number(m.seasonId) === CURRENT_SEASON_ID &&
+        allowedTeams.has(Number(m.homeTeamId)) &&
+        allowedTeams.has(Number(m.awayTeamId))
+    );
+}
+
+function clubs() {
+    const visibleClubIds = new Set(
+        filteredTeams().map(e => Number(e.club_id))
+    );
+
+    const ps = players();
+    const ms = matches();
+
+    return baseClubs
+        .filter(c => visibleClubIds.has(Number(c.id)))
+        .map(c => {
+            const jugadoresClub = ps.filter(p => Number(p.clubId) === Number(c.id));
+
+            const partidosClub = ms.filter(m =>
+                Number(m.homeId) === Number(c.id) ||
+                Number(m.awayId) === Number(c.id)
+            );
+
+            const finalizados = partidosClub.filter(
+                m => m.status === 'Finalizado'
+            );
+
+            let puntos = 0;
+
+            finalizados.forEach(m => {
+                const esLocal = Number(m.homeId) === Number(c.id);
+                const propios = esLocal ? Number(m.homeScore || 0) : Number(m.awayScore || 0);
+                const rivales = esLocal ? Number(m.awayScore || 0) : Number(m.homeScore || 0);
+
+                if (propios > rivales) puntos += 2;
+                else if (propios === rivales) puntos += 1;
+            });
+
+            return {
+                ...c,
+                players: jugadoresClub.length,
+                played: finalizados.length,
+                points: puntos
+            };
+        });
 }
 
 function club(id) {
     return clubs().find(c => Number(c.id) === Number(id)) ||
+        baseClubs.find(c => Number(c.id) === Number(id)) ||
         {
             id: id,
             abbr: '7M',
@@ -347,6 +385,7 @@ function club(id) {
             color: ''
         };
 }
+
 function initials(name){return name.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()}
 function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function badge(c,small=false){return `<span class="${small?'mini-badge':'club-badge'} ${c.color||''}">${esc(c.abbr)}</span>`}
@@ -381,12 +420,119 @@ function renderParticipaciones(){const tbody=document.getElementById('participat
 function renderStats(){const ps=players();const status=document.getElementById('chart-status');const configs=[['goals-list','goals','Goles'],['assists-list','assists','Asist.'],['eff-list','eff','%'],['sanctions-list','sanctions','Sanc.']];configs.forEach(([id,key,unit])=>{const el=document.getElementById(id);if(!el)return;const rows=ps.slice().sort((a,b)=>b[key]-a[key]).slice(0,5);el.innerHTML=rows.map((p,i)=>`<div class="leader-row"><span class="rank">${i+1}</span><span class="leader-name">${esc(p.name)}<small>${esc(p.club)}</small></span><span class="leader-value">${p[key]}${unit==='%'?'%':''}</span></div>`).join('')||'<div class="empty-state">Sin datos cargados.</div>'});const chart=document.getElementById('club-goals-chart');if(chart){const groups=clubs().map(c=>({name:c.name,value:ps.filter(p=>p.clubId===c.id).reduce((s,p)=>s+p.goals,0)})).sort((a,b)=>b.value-a.value);if(!groups.length){chart.innerHTML='<div class="empty-state">Todavía no hay estadísticas cargadas.<br><button class="btn gold admin-lock" type="button" style="margin-top:10px">+ Cargar partido</button></div>';if(status){status.textContent='SIN DATOS CARGADOS';status.classList.remove('hidden')}return}if(status){status.textContent='';status.classList.add('hidden')}const max=Math.max(...groups.map(x=>x.value),1);chart.innerHTML=groups.map(x=>`<div class="bar-row"><span>${esc(x.name)}</span><div class="bar-track"><div class="bar-fill" style="--w:${Math.round(x.value/max*100)}%"></div></div><span class="bar-value">${x.value}</span></div>`).join('')}}
 function renderPartidoDetalle(){const el=document.getElementById('match-detail');if(!el)return;const all=matches();if(!all.length){el.innerHTML='<div class="card empty-state">No hay partidos cargados para mostrar.</div>';return}const id=Number(new URLSearchParams(location.search).get('id')||all[0].id),m=all.find(x=>x.id===id)||all[0],hc=club(m.homeId),ac=club(m.awayId);el.innerHTML=`<section class="card section-card"><div class="section-head"><h2>${esc(m.round)}</h2><span>${formatDateISO(m.date)} · ${esc(m.time)}</span></div><div class="match-main"><div>${badge(hc)}<div class="club-name">${esc(m.home)}</div></div><div><div class="score">${m.status==='Finalizado'?`${m.homeScore} - ${m.awayScore}`:'VS'}</div><span class="status-pill">${esc(m.status).toUpperCase()}</span></div><div>${badge(ac)}<div class="club-name">${esc(m.away)}</div></div></div></section>`}
 function renderClubDetalle(){const el=document.getElementById('club-detail');if(!el)return;const all=clubs();if(!all.length){el.innerHTML='<div class="card empty-state">Todavía no hay clubes cargados. Esta ficha se completará automáticamente cuando conectemos la base real.<br><button class="btn gold admin-lock" type="button" style="margin-top:10px">+ Cargar club</button></div>';return}const id=new URLSearchParams(location.search).get('id')||all[0].id,c=all.find(x=>String(x.id)===String(id))||all[0];const list=players().filter(p=>p.clubId===c.id),positions=['Arquero','Extremo','Lateral','Central','Pivote'];const ms=matches().filter(m=>m.homeId===c.id||m.awayId===c.id).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);const h1=document.querySelector('.page-header h1'),sub=document.querySelector('.page-header p');if(h1)h1.textContent=c.name;if(sub)sub.textContent=`${c.city||''} · Ficha de club`;el.innerHTML=`<section class="card section-card club-hero"><div class="club-hero-main">${badge(c)}<div><h2>${esc(c.name)}</h2><p>${esc(c.city||'')} · Clausura 2026</p></div></div><div class="club-card-stats"><span><b>${c.players??list.length}</b>Jugadores</span><span><b>${c.played??ms.length}</b>Partidos</span><span><b>${c.points??0}</b>Puntos</span></div></section><section class="card section-card" style="margin-top:14px"><div class="section-head"><h2>PLANTEL</h2><a href="planteles.html">VER PLANTELES ›</a></div><div class="roster-grid">${positions.map(pos=>{const ps=list.filter(p=>p.position===pos);return `<section class="card position-column"><h3>${pos.toUpperCase()}</h3>${ps.map(p=>`<div class="roster-player"><span class="avatar">${p.number}</span><div><b>${esc(p.name)}</b><small>#${p.number}</small></div></div>`).join('')||'<div class="roster-player"><small>Sin jugadores cargados</small></div>'}</section>`}).join('')}</div></section><section class="card section-card" style="margin-top:14px"><div class="section-head"><h2>ÚLTIMOS PARTIDOS</h2><a href="partidos.html">VER TODOS</a></div><div class="match-list">${ms.map(m=>{const hc=club(m.homeId),ac=club(m.awayId),res=m.status==='Finalizado'?`${m.homeScore} - ${m.awayScore}`:'VS';return `<article class="card match-row"><div class="match-date"><b>${formatDateISO(m.date)}</b><br>${esc(m.round)}</div><div class="match-team">${badge(hc,true)}<span>${esc(m.home)}</span></div><div class="result">${res}<small>${m.status==='Finalizado'?'FINAL':esc(m.time)}</small></div><div class="match-team"><span>${esc(m.away)}</span>${badge(ac,true)}</div><a class="match-link" href="partido.html?id=${m.id}">VER DETALLE ›</a></article>`}).join('')||'<div class="empty-state">Sin partidos cargados para este club.</div>'}</div></section>`}
-function initSeasonSelect(){
- document.querySelectorAll('#season-select').forEach(sel=>{
-  const saved=localStorage.getItem('7m_season');
-  if(saved){const opt=[...sel.options].find(o=>o.value===saved);if(opt) sel.value=saved}
-  sel.addEventListener('change',()=>localStorage.setItem('7m_season',sel.value));
- });
+function initCompetitionFilters() {
+    const tools = document.querySelector('.header-tools');
+    if (!tools || !baseTeams.length) return;
+
+    const seasonSelect = document.getElementById('season-select');
+    if (seasonSelect) {
+        seasonSelect.innerHTML = '<option value="3">CLAUSURA 2026</option>';
+        seasonSelect.value = '3';
+        seasonSelect.disabled = true;
+        seasonSelect.title = 'Temporada';
+    }
+
+    const createSelect = (id, title) => {
+        let sel = document.getElementById(id);
+
+        if (!sel) {
+            sel = document.createElement('select');
+            sel.id = id;
+            sel.className = 'select-dark';
+            sel.title = title;
+            tools.appendChild(sel);
+        }
+
+        return sel;
+    };
+
+    const categoriaSel = createSelect('category-select', 'Categoría');
+    const divisionSel = createSelect('division-select', 'División');
+    const ramaSel = createSelect('branch-select', 'Rama');
+
+    const unique = values =>
+        [...new Set(values.filter(v => v !== null && v !== undefined && String(v).trim() !== ''))];
+
+    const equiposTemporada = baseTeams.filter(
+        e => Number(e.temporada_id) === CURRENT_SEASON_ID
+    );
+
+    const categorias = unique(equiposTemporada.map(e => e.categoria));
+
+    if (!categorias.includes(competitionFilters.categoria)) {
+        competitionFilters.categoria =
+            categorias.includes('Mayores') ? 'Mayores' : (categorias[0] || '');
+    }
+
+    categoriaSel.innerHTML = categorias
+        .map(v => `<option value="${esc(v)}">CATEGORÍA: ${esc(v)}</option>`)
+        .join('');
+
+    categoriaSel.value = competitionFilters.categoria;
+
+    const equiposCategoria = equiposTemporada.filter(
+        e => !competitionFilters.categoria || e.categoria === competitionFilters.categoria
+    );
+
+    const divisiones = unique(equiposCategoria.map(e => e.division));
+
+    if (!divisiones.includes(competitionFilters.division)) {
+        competitionFilters.division =
+            divisiones.includes('LHC Hipotecario Seguros')
+                ? 'LHC Hipotecario Seguros'
+                : (divisiones[0] || '');
+    }
+
+    divisionSel.innerHTML = divisiones
+        .map(v => `<option value="${esc(v)}">DIVISIÓN: ${esc(v)}</option>`)
+        .join('');
+
+    divisionSel.value = competitionFilters.division;
+
+    const equiposDivision = equiposCategoria.filter(
+        e => !competitionFilters.division || e.division === competitionFilters.division
+    );
+
+    const ramas = unique(equiposDivision.map(e => e.rama));
+
+    if (!ramas.includes(competitionFilters.rama)) {
+        competitionFilters.rama =
+            ramas.includes('M') ? 'M' : (ramas[0] || '');
+    }
+
+    const ramaLabel = rama => {
+        if (rama === 'M') return 'Masculino';
+        if (rama === 'F') return 'Femenino';
+        return rama;
+    };
+
+    ramaSel.innerHTML = ramas
+        .map(v => `<option value="${esc(v)}">RAMA: ${esc(ramaLabel(v))}</option>`)
+        .join('');
+
+    ramaSel.value = competitionFilters.rama;
+
+    localStorage.setItem('7m_categoria', competitionFilters.categoria);
+    localStorage.setItem('7m_division', competitionFilters.division);
+    localStorage.setItem('7m_rama', competitionFilters.rama);
+
+    categoriaSel.addEventListener('change', () => {
+        localStorage.setItem('7m_categoria', categoriaSel.value);
+        localStorage.removeItem('7m_division');
+        localStorage.removeItem('7m_rama');
+        location.reload();
+    });
+
+    divisionSel.addEventListener('change', () => {
+        localStorage.setItem('7m_division', divisionSel.value);
+        localStorage.removeItem('7m_rama');
+        location.reload();
+    });
+
+    ramaSel.addEventListener('change', () => {
+        localStorage.setItem('7m_rama', ramaSel.value);
+        location.reload();
+    });
 }
 function initForms(){const pf=document.getElementById('player-form');if(pf){const cs=clubs();cs.forEach(c=>pf.elements.clubId.insertAdjacentHTML('beforeend',`<option value="${c.id}">${esc(c.name)}</option>`));if(!cs.length){pf.elements.clubId.innerHTML='<option value="">Sin clubes cargados</option>';pf.querySelector('button[type="submit"]')?.setAttribute('disabled','disabled')}pf.addEventListener('submit',e=>{e.preventDefault();showToast('La carga real se habilitará al conectar Flask + SQLite.')})}const mf=document.getElementById('match-form');if(mf){const cs=clubs();cs.forEach(c=>{mf.elements.homeId.insertAdjacentHTML('beforeend',`<option value="${c.id}">${esc(c.name)}</option>`);mf.elements.awayId.insertAdjacentHTML('beforeend',`<option value="${c.id}">${esc(c.name)}</option>`)});if(!cs.length){mf.elements.homeId.innerHTML='<option value="">Sin clubes cargados</option>';mf.elements.awayId.innerHTML='<option value="">Sin clubes cargados</option>';mf.querySelector('button[type="submit"]')?.setAttribute('disabled','disabled')}mf.addEventListener('submit',e=>{e.preventDefault();showToast('La carga real se habilitará al conectar Flask + SQLite.')})}}
 function initSettings(){document.querySelectorAll('[data-setting]').forEach(input=>{const key='7m_setting_'+input.dataset.setting;input.checked=localStorage.getItem(key)==='1';input.addEventListener('change',()=>{localStorage.setItem(key,input.checked?'1':'0');showToast('Preferencia guardada en este navegador.')})})}
@@ -414,8 +560,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     renderShell();
 
-    initSeasonSelect();
-
     initSettings();
 
     initReports();
@@ -423,6 +567,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     initAdminLocks();
 
     await cargarDatosSupabase();
+
+    initCompetitionFilters();
 
     renderDashboard();
     renderClubes();
