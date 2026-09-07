@@ -75,6 +75,7 @@ async function cargarDatosSupabase() {
 
         const [
             clubesDB,
+            equiposDB,
             jugadoresDB,
             plantelesDB,
             partidosDB,
@@ -87,13 +88,18 @@ async function cargarDatosSupabase() {
             ),
 
             supabaseGet(
+                'equipos',
+                '?select=id,club_id,temporada_id,categoria,division,rama,equipo_codigo,nombre_femebal,activo'
+            ),
+
+            supabaseGet(
                 'jugadores',
                 '?select=id,nombre,apellido,fecha_nacimiento,brazo_habil,altura_cm,peso_kg'
             ),
 
             supabaseGet(
                 'planteles',
-                '?select=id,jugador_id,club_id,temporada_id,dorsal,posicion'
+                '?select=id,jugador_id,equipo_id,dorsal,posicion'
             ),
 
             supabaseGet(
@@ -107,6 +113,19 @@ async function cargarDatosSupabase() {
             )
         ]);
 
+        const CURRENT_SEASON_ID = 3;
+
+        const equiposActuales = equiposDB.filter(
+            e => Number(e.temporada_id) === CURRENT_SEASON_ID
+        );
+
+        const equipoPorId = new Map(
+            equiposDB.map(e => [Number(e.id), e])
+        );
+
+        const clubPorId = new Map(
+            clubesDB.map(c => [Number(c.id), c])
+        );
 
         // ----------------------------------------------------
         // CLUBES
@@ -114,26 +133,33 @@ async function cargarDatosSupabase() {
 
         baseClubs = clubesDB.map(c => {
 
+            const equiposClub = equiposActuales.filter(
+                e => Number(e.club_id) === Number(c.id)
+            );
+
+            const idsEquiposClub = new Set(
+                equiposClub.map(e => Number(e.id))
+            );
+
             const jugadoresClub = plantelesDB.filter(
-                p => Number(p.club_id) === Number(c.id)
+                p => idsEquiposClub.has(Number(p.equipo_id))
             );
 
             const partidosClub = partidosDB.filter(
                 p =>
-                    Number(p.local_id) === Number(c.id) ||
-                    Number(p.visitante_id) === Number(c.id)
+                    idsEquiposClub.has(Number(p.local_equipo_id)) ||
+                    idsEquiposClub.has(Number(p.visitante_equipo_id))
             );
 
             const partidosFinalizados = partidosClub.filter(
-                p => p.estado === 'finalizado' ||
-                     p.estado === 'Finalizado'
+                p => String(p.estado || '').toLowerCase() === 'finalizado'
             );
 
             let puntos = 0;
 
             partidosFinalizados.forEach(p => {
 
-                const local = Number(p.local_id) === Number(c.id);
+                const local = idsEquiposClub.has(Number(p.local_equipo_id));
 
                 const propios = local
                     ? Number(p.goles_local || 0)
@@ -168,20 +194,24 @@ async function cargarDatosSupabase() {
 
         basePlayers = jugadoresDB.map(j => {
 
-            const plantel = plantelesDB.find(
-                p => Number(p.jugador_id) === Number(j.id)
-            );
+            const plantel = plantelesDB.find(p => {
+                if (Number(p.jugador_id) !== Number(j.id)) return false;
 
-            const clubData = plantel
-                ? clubesDB.find(
-                    c => Number(c.id) === Number(plantel.club_id)
-                )
+                const equipo = equipoPorId.get(Number(p.equipo_id));
+                return equipo && Number(equipo.temporada_id) === CURRENT_SEASON_ID;
+            });
+
+            const equipo = plantel
+                ? equipoPorId.get(Number(plantel.equipo_id))
                 : null;
 
-            const participacionesJugador =
-                participacionesDB.filter(
-                    p => Number(p.jugador_id) === Number(j.id)
-                );
+            const clubData = equipo
+                ? clubPorId.get(Number(equipo.club_id))
+                : null;
+
+            const participacionesJugador = participacionesDB.filter(
+                p => Number(p.jugador_id) === Number(j.id)
+            );
 
             const goles = participacionesJugador.reduce(
                 (total, p) => total + Number(p.goles || 0),
@@ -198,39 +228,31 @@ async function cargarDatosSupabase() {
             );
 
             return {
-
                 id: Number(j.id),
-
                 name: `${j.nombre || ''} ${j.apellido || ''}`.trim(),
 
-                clubId: plantel
-                    ? Number(plantel.club_id)
+                clubId: clubData
+                    ? Number(clubData.id)
                     : null,
 
                 club: clubData
                     ? clubData.nombre
                     : 'Sin club',
 
+                teamId: equipo
+                    ? Number(equipo.id)
+                    : null,
+
                 number: plantel?.dorsal ?? '-',
-
                 position: plantel?.posicion || 'Sin posición',
-
                 goals: goles,
-
                 assists: 0,
-
                 eff: 0,
-
                 sanctions: sanciones,
-
                 fechaNacimiento: j.fecha_nacimiento,
-
                 brazoHabil: j.brazo_habil,
-
                 altura: j.altura_cm,
-
                 peso: j.peso_kg
-
             };
 
         });
@@ -242,61 +264,57 @@ async function cargarDatosSupabase() {
 
         baseMatches = partidosDB.map(p => {
 
-            const home = clubesDB.find(
-                c => Number(c.id) === Number(p.local_id)
-            );
+            const homeTeam = equipoPorId.get(Number(p.local_equipo_id));
+            const awayTeam = equipoPorId.get(Number(p.visitante_equipo_id));
 
-            const away = clubesDB.find(
-                c => Number(c.id) === Number(p.visitante_id)
-            );
+            const homeClub = homeTeam
+                ? clubPorId.get(Number(homeTeam.club_id))
+                : null;
+
+            const awayClub = awayTeam
+                ? clubPorId.get(Number(awayTeam.club_id))
+                : null;
+
+            const finalizado =
+                String(p.estado || '').toLowerCase() === 'finalizado';
 
             return {
-
                 id: Number(p.id),
-
                 date: p.fecha,
+                round: p.jornada ? `Fecha ${p.jornada}` : 'Partido',
 
-                round: p.jornada || 'Partido',
+                homeId: homeClub ? Number(homeClub.id) : null,
+                awayId: awayClub ? Number(awayClub.id) : null,
 
-                homeId: Number(p.local_id),
+                homeTeamId: homeTeam ? Number(homeTeam.id) : null,
+                awayTeamId: awayTeam ? Number(awayTeam.id) : null,
 
-                awayId: Number(p.visitante_id),
+                home: homeClub?.nombre || homeTeam?.nombre_femebal || 'Local',
+                away: awayClub?.nombre || awayTeam?.nombre_femebal || 'Visitante',
 
-                home: home?.nombre || 'Local',
+                homeScore: finalizado ? Number(p.goles_local || 0) : null,
+                awayScore: finalizado ? Number(p.goles_visitante || 0) : null,
 
-                away: away?.nombre || 'Visitante',
-
-                homeScore: Number(p.goles_local || 0),
-
-                awayScore: Number(p.goles_visitante || 0),
-
-                status:
-                    p.estado === 'finalizado' ||
-                    p.estado === 'Finalizado'
-                        ? 'Finalizado'
-                        : 'Programado',
-
-                time: p.hora || ''
-
+                status: finalizado ? 'Finalizado' : 'Programado',
+                time: p.hora ? String(p.hora).slice(0, 5) : '',
+                createdAt: p.created_at || null,
+                notes: p.observaciones || ''
             };
 
         });
 
-
         baseParticipations = participacionesDB;
-
 
         console.log('7Metros: datos cargados correctamente');
         console.log('Clubes:', baseClubs.length);
+        console.log('Equipos:', equiposDB.length);
         console.log('Jugadores:', basePlayers.length);
         console.log('Partidos:', baseMatches.length);
         console.log('Participaciones:', baseParticipations.length);
 
-
     } catch (error) {
 
         console.error('Error conectando con Supabase:', error);
-
         showToast('No se pudieron cargar los datos de 7Metros.');
 
     }
@@ -329,7 +347,6 @@ function club(id) {
             color: ''
         };
 }
-function club(id){return clubs().find(c=>c.id===id)||{abbr:'7M',name:'7Metros',color:''}}
 function initials(name){return name.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()}
 function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function badge(c,small=false){return `<span class="${small?'mini-badge':'club-badge'} ${c.color||''}">${esc(c.abbr)}</span>`}
@@ -356,14 +373,14 @@ function renderShell(){
 }
 function showToast(msg){let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t)}t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
 
-function renderClubes(){const grid=document.getElementById('club-grid'),q=document.getElementById('club-search');if(!grid)return;function go(){const term=(q?.value||'').toLowerCase();const all=clubs();const rows=all.filter(c=>`${c.name} ${c.city}`.toLowerCase().includes(term));const empty=all.length?'<div class="card empty-state">No se encontraron clubes con esa búsqueda.</div>':'<div class="card empty-state">Todavía no hay clubes cargados.<br><button class="btn gold admin-lock" type="button" style="margin-top:10px">+ Cargar club</button></div>';grid.innerHTML=rows.map(c=>`<a class="card club-card club-grid-link" href="club.html?id=${c.id}">${badge(c)}<div><h3>${esc(c.name)}</h3><p>${esc(c.city)} · Apertura 2026</p></div><div class="club-card-stats"><span><b>${c.players}</b>Jugadores</span><span><b>${c.played}</b>Partidos</span><span><b>${c.points}</b>Puntos</span></div></a>`).join('')||empty}q?.addEventListener('input',go);go()}
-function renderJugadores(){const tbody=document.getElementById('players-body'),q=document.getElementById('player-search'),clubSel=document.getElementById('player-club'),posSel=document.getElementById('player-position');if(!tbody)return;clubs().forEach(c=>clubSel?.insertAdjacentHTML('beforeend',`<option value="${c.id}">${esc(c.name)}</option>`));function go(){const term=(q?.value||'').toLowerCase(),cid=clubSel?.value||'',pos=posSel?.value||'';const all=players();const rows=all.filter(p=>(`${p.name} ${p.club}`.toLowerCase().includes(term))&&(!cid||p.clubId===cid)&&(!pos||p.position===pos));const empty=all.length?'<tr><td colspan="8" class="empty-state">No se encontraron jugadores con estos filtros.</td></tr>':'<tr><td colspan="8" class="empty-state">Todavía no hay jugadores cargados.<br><button class="btn gold admin-lock" type="button" style="margin-top:10px">+ Cargar jugador</button></td></tr>';tbody.innerHTML=rows.map(p=>`<tr><td><div class="player-cell"><span class="avatar">${initials(p.name)}</span>${esc(p.name)}</div></td><td>${esc(p.club)}</td><td>${p.number}</td><td><span class="tag">${esc(p.position)}</span></td><td>${p.goals}</td><td>${p.assists}</td><td>${p.eff}%</td><td>${p.sanctions}</td></tr>`).join('')||empty}q?.addEventListener('input',go);clubSel?.addEventListener('change',go);posSel?.addEventListener('change',go);go()}
-function renderPlanteles(){const sel=document.getElementById('roster-club'),wrap=document.getElementById('roster-wrap'),status=document.getElementById('roster-status');if(!wrap)return;const cs=clubs();if(!cs.length){document.getElementById('roster-title').textContent='Planteles';wrap.innerHTML='<div class="card empty-state" style="grid-column:1/-1">No hay clubes ni planteles cargados. Se mostrarán cuando conectemos la base real.<br><button class="btn gold admin-lock" type="button" style="margin-top:10px">+ Cargar club</button></div>';if(sel){sel.innerHTML='<option>Sin clubes cargados</option>';sel.disabled=true}if(status){status.textContent='SIN DATOS CARGADOS';status.classList.remove('hidden')}return}if(status){status.textContent='';status.classList.add('hidden')}cs.forEach(c=>sel?.insertAdjacentHTML('beforeend',`<option value="${c.id}">${esc(c.name)}</option>`));function go(){const cid=sel?.value||cs[0].id,c=club(cid),list=players().filter(p=>p.clubId===cid),positions=['Arquero','Extremo','Lateral','Central','Pivote'];document.getElementById('roster-title').textContent=`Plantel — ${c.name}`;wrap.innerHTML=positions.map(pos=>{const ps=list.filter(p=>p.position===pos);return `<section class="card position-column"><h3>${pos.toUpperCase()}</h3>${ps.map(p=>`<div class="roster-player"><span class="avatar">${p.number}</span><div><b>${esc(p.name)}</b><small>#${p.number}</small></div></div>`).join('')||'<div class="roster-player"><small>Sin jugadores cargados</small></div>'}</section>`}).join('')}sel?.addEventListener('change',go);go()}
+function renderClubes(){const grid=document.getElementById('club-grid'),q=document.getElementById('club-search');if(!grid)return;function go(){const term=(q?.value||'').toLowerCase();const all=clubs();const rows=all.filter(c=>`${c.name} ${c.city}`.toLowerCase().includes(term));const empty=all.length?'<div class="card empty-state">No se encontraron clubes con esa búsqueda.</div>':'<div class="card empty-state">Todavía no hay clubes cargados.<br><button class="btn gold admin-lock" type="button" style="margin-top:10px">+ Cargar club</button></div>';grid.innerHTML=rows.map(c=>`<a class="card club-card club-grid-link" href="club.html?id=${c.id}">${badge(c)}<div><h3>${esc(c.name)}</h3><p>${esc(c.city)} · Clausura 2026</p></div><div class="club-card-stats"><span><b>${c.players}</b>Jugadores</span><span><b>${c.played}</b>Partidos</span><span><b>${c.points}</b>Puntos</span></div></a>`).join('')||empty}q?.addEventListener('input',go);go()}
+function renderJugadores(){const tbody=document.getElementById('players-body'),q=document.getElementById('player-search'),clubSel=document.getElementById('player-club'),posSel=document.getElementById('player-position');if(!tbody)return;clubs().forEach(c=>clubSel?.insertAdjacentHTML('beforeend',`<option value="${c.id}">${esc(c.name)}</option>`));function go(){const term=(q?.value||'').toLowerCase(),cid=clubSel?.value||'',pos=posSel?.value||'';const all=players();const rows=all.filter(p=>(`${p.name} ${p.club}`.toLowerCase().includes(term))&&(!cid||Number(p.clubId)===Number(cid))&&(!pos||p.position===pos));const empty=all.length?'<tr><td colspan="8" class="empty-state">No se encontraron jugadores con estos filtros.</td></tr>':'<tr><td colspan="8" class="empty-state">Todavía no hay jugadores cargados.<br><button class="btn gold admin-lock" type="button" style="margin-top:10px">+ Cargar jugador</button></td></tr>';tbody.innerHTML=rows.map(p=>`<tr><td><div class="player-cell"><span class="avatar">${initials(p.name)}</span>${esc(p.name)}</div></td><td>${esc(p.club)}</td><td>${p.number}</td><td><span class="tag">${esc(p.position)}</span></td><td>${p.goals}</td><td>${p.assists}</td><td>${p.eff}%</td><td>${p.sanctions}</td></tr>`).join('')||empty}q?.addEventListener('input',go);clubSel?.addEventListener('change',go);posSel?.addEventListener('change',go);go()}
+function renderPlanteles(){const sel=document.getElementById('roster-club'),wrap=document.getElementById('roster-wrap'),status=document.getElementById('roster-status');if(!wrap)return;const cs=clubs();if(!cs.length){document.getElementById('roster-title').textContent='Planteles';wrap.innerHTML='<div class="card empty-state" style="grid-column:1/-1">No hay clubes ni planteles cargados. Se mostrarán cuando conectemos la base real.<br><button class="btn gold admin-lock" type="button" style="margin-top:10px">+ Cargar club</button></div>';if(sel){sel.innerHTML='<option>Sin clubes cargados</option>';sel.disabled=true}if(status){status.textContent='SIN DATOS CARGADOS';status.classList.remove('hidden')}return}if(status){status.textContent='';status.classList.add('hidden')}cs.forEach(c=>sel?.insertAdjacentHTML('beforeend',`<option value="${c.id}">${esc(c.name)}</option>`));function go(){const cid=sel?.value||cs[0].id,c=club(cid),list=players().filter(p=>Number(p.clubId)===Number(cid)),positions=['Arquero','Extremo','Lateral','Central','Pivote'];document.getElementById('roster-title').textContent=`Plantel — ${c.name}`;wrap.innerHTML=positions.map(pos=>{const ps=list.filter(p=>p.position===pos);return `<section class="card position-column"><h3>${pos.toUpperCase()}</h3>${ps.map(p=>`<div class="roster-player"><span class="avatar">${p.number}</span><div><b>${esc(p.name)}</b><small>#${p.number}</small></div></div>`).join('')||'<div class="roster-player"><small>Sin jugadores cargados</small></div>'}</section>`}).join('')}sel?.addEventListener('change',go);go()}
 function renderPartidos(){const list=document.getElementById('matches-list'),status=document.getElementById('match-status');if(!list)return;function go(){const st=status?.value||'';const all=matches();const rows=all.filter(m=>!st||m.status===st).sort((a,b)=>b.date.localeCompare(a.date));const empty=all.length?'<div class="card empty-state">No hay partidos para este filtro.</div>':'<div class="card empty-state">Todavía no hay partidos cargados.<br><button class="btn gold admin-lock" type="button" style="margin-top:10px">+ Cargar partido</button></div>';list.innerHTML=rows.map(m=>{const hc=club(m.homeId),ac=club(m.awayId),res=m.status==='Finalizado'?`${m.homeScore} - ${m.awayScore}`:'VS';return `<article class="card match-row"><div class="match-date"><b>${formatDateISO(m.date)}</b><br>${esc(m.round)}</div><div class="match-team">${badge(hc,true)}<span>${esc(m.home)}</span></div><div class="result">${res}<small>${m.status==='Finalizado'?'FINAL':esc(m.time)}</small></div><div class="match-team"><span>${esc(m.away)}</span>${badge(ac,true)}</div><a class="match-link" href="partido.html?id=${m.id}">VER DETALLE ›</a></article>`}).join('')||empty}status?.addEventListener('change',go);go()}
 function renderParticipaciones(){const tbody=document.getElementById('participations-body');if(!tbody)return;const rows=players().slice().sort((a,b)=>b.goals-a.goals);tbody.innerHTML=rows.map((p,i)=>`<tr><td>${i+1}</td><td><div class="player-cell"><span class="avatar">${initials(p.name)}</span>${esc(p.name)}</div></td><td>${esc(p.club)}</td><td>-</td><td>${p.goals}</td><td>${p.assists}</td><td>${p.eff}%</td><td>${p.sanctions}</td></tr>`).join('')||'<tr><td colspan="8" class="empty-state">No hay participaciones cargadas.</td></tr>'}
 function renderStats(){const ps=players();const status=document.getElementById('chart-status');const configs=[['goals-list','goals','Goles'],['assists-list','assists','Asist.'],['eff-list','eff','%'],['sanctions-list','sanctions','Sanc.']];configs.forEach(([id,key,unit])=>{const el=document.getElementById(id);if(!el)return;const rows=ps.slice().sort((a,b)=>b[key]-a[key]).slice(0,5);el.innerHTML=rows.map((p,i)=>`<div class="leader-row"><span class="rank">${i+1}</span><span class="leader-name">${esc(p.name)}<small>${esc(p.club)}</small></span><span class="leader-value">${p[key]}${unit==='%'?'%':''}</span></div>`).join('')||'<div class="empty-state">Sin datos cargados.</div>'});const chart=document.getElementById('club-goals-chart');if(chart){const groups=clubs().map(c=>({name:c.name,value:ps.filter(p=>p.clubId===c.id).reduce((s,p)=>s+p.goals,0)})).sort((a,b)=>b.value-a.value);if(!groups.length){chart.innerHTML='<div class="empty-state">Todavía no hay estadísticas cargadas.<br><button class="btn gold admin-lock" type="button" style="margin-top:10px">+ Cargar partido</button></div>';if(status){status.textContent='SIN DATOS CARGADOS';status.classList.remove('hidden')}return}if(status){status.textContent='';status.classList.add('hidden')}const max=Math.max(...groups.map(x=>x.value),1);chart.innerHTML=groups.map(x=>`<div class="bar-row"><span>${esc(x.name)}</span><div class="bar-track"><div class="bar-fill" style="--w:${Math.round(x.value/max*100)}%"></div></div><span class="bar-value">${x.value}</span></div>`).join('')}}
 function renderPartidoDetalle(){const el=document.getElementById('match-detail');if(!el)return;const all=matches();if(!all.length){el.innerHTML='<div class="card empty-state">No hay partidos cargados para mostrar.</div>';return}const id=Number(new URLSearchParams(location.search).get('id')||all[0].id),m=all.find(x=>x.id===id)||all[0],hc=club(m.homeId),ac=club(m.awayId);el.innerHTML=`<section class="card section-card"><div class="section-head"><h2>${esc(m.round)}</h2><span>${formatDateISO(m.date)} · ${esc(m.time)}</span></div><div class="match-main"><div>${badge(hc)}<div class="club-name">${esc(m.home)}</div></div><div><div class="score">${m.status==='Finalizado'?`${m.homeScore} - ${m.awayScore}`:'VS'}</div><span class="status-pill">${esc(m.status).toUpperCase()}</span></div><div>${badge(ac)}<div class="club-name">${esc(m.away)}</div></div></div></section>`}
-function renderClubDetalle(){const el=document.getElementById('club-detail');if(!el)return;const all=clubs();if(!all.length){el.innerHTML='<div class="card empty-state">Todavía no hay clubes cargados. Esta ficha se completará automáticamente cuando conectemos la base real.<br><button class="btn gold admin-lock" type="button" style="margin-top:10px">+ Cargar club</button></div>';return}const id=new URLSearchParams(location.search).get('id')||all[0].id,c=all.find(x=>String(x.id)===String(id))||all[0];const list=players().filter(p=>p.clubId===c.id),positions=['Arquero','Extremo','Lateral','Central','Pivote'];const ms=matches().filter(m=>m.homeId===c.id||m.awayId===c.id).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);const h1=document.querySelector('.page-header h1'),sub=document.querySelector('.page-header p');if(h1)h1.textContent=c.name;if(sub)sub.textContent=`${c.city||''} · Ficha de club`;el.innerHTML=`<section class="card section-card club-hero"><div class="club-hero-main">${badge(c)}<div><h2>${esc(c.name)}</h2><p>${esc(c.city||'')} · Apertura 2026</p></div></div><div class="club-card-stats"><span><b>${c.players??list.length}</b>Jugadores</span><span><b>${c.played??ms.length}</b>Partidos</span><span><b>${c.points??0}</b>Puntos</span></div></section><section class="card section-card" style="margin-top:14px"><div class="section-head"><h2>PLANTEL</h2><a href="planteles.html">VER PLANTELES ›</a></div><div class="roster-grid">${positions.map(pos=>{const ps=list.filter(p=>p.position===pos);return `<section class="card position-column"><h3>${pos.toUpperCase()}</h3>${ps.map(p=>`<div class="roster-player"><span class="avatar">${p.number}</span><div><b>${esc(p.name)}</b><small>#${p.number}</small></div></div>`).join('')||'<div class="roster-player"><small>Sin jugadores cargados</small></div>'}</section>`}).join('')}</div></section><section class="card section-card" style="margin-top:14px"><div class="section-head"><h2>ÚLTIMOS PARTIDOS</h2><a href="partidos.html">VER TODOS</a></div><div class="match-list">${ms.map(m=>{const hc=club(m.homeId),ac=club(m.awayId),res=m.status==='Finalizado'?`${m.homeScore} - ${m.awayScore}`:'VS';return `<article class="card match-row"><div class="match-date"><b>${formatDateISO(m.date)}</b><br>${esc(m.round)}</div><div class="match-team">${badge(hc,true)}<span>${esc(m.home)}</span></div><div class="result">${res}<small>${m.status==='Finalizado'?'FINAL':esc(m.time)}</small></div><div class="match-team"><span>${esc(m.away)}</span>${badge(ac,true)}</div><a class="match-link" href="partido.html?id=${m.id}">VER DETALLE ›</a></article>`}).join('')||'<div class="empty-state">Sin partidos cargados para este club.</div>'}</div></section>`}
+function renderClubDetalle(){const el=document.getElementById('club-detail');if(!el)return;const all=clubs();if(!all.length){el.innerHTML='<div class="card empty-state">Todavía no hay clubes cargados. Esta ficha se completará automáticamente cuando conectemos la base real.<br><button class="btn gold admin-lock" type="button" style="margin-top:10px">+ Cargar club</button></div>';return}const id=new URLSearchParams(location.search).get('id')||all[0].id,c=all.find(x=>String(x.id)===String(id))||all[0];const list=players().filter(p=>p.clubId===c.id),positions=['Arquero','Extremo','Lateral','Central','Pivote'];const ms=matches().filter(m=>m.homeId===c.id||m.awayId===c.id).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);const h1=document.querySelector('.page-header h1'),sub=document.querySelector('.page-header p');if(h1)h1.textContent=c.name;if(sub)sub.textContent=`${c.city||''} · Ficha de club`;el.innerHTML=`<section class="card section-card club-hero"><div class="club-hero-main">${badge(c)}<div><h2>${esc(c.name)}</h2><p>${esc(c.city||'')} · Clausura 2026</p></div></div><div class="club-card-stats"><span><b>${c.players??list.length}</b>Jugadores</span><span><b>${c.played??ms.length}</b>Partidos</span><span><b>${c.points??0}</b>Puntos</span></div></section><section class="card section-card" style="margin-top:14px"><div class="section-head"><h2>PLANTEL</h2><a href="planteles.html">VER PLANTELES ›</a></div><div class="roster-grid">${positions.map(pos=>{const ps=list.filter(p=>p.position===pos);return `<section class="card position-column"><h3>${pos.toUpperCase()}</h3>${ps.map(p=>`<div class="roster-player"><span class="avatar">${p.number}</span><div><b>${esc(p.name)}</b><small>#${p.number}</small></div></div>`).join('')||'<div class="roster-player"><small>Sin jugadores cargados</small></div>'}</section>`}).join('')}</div></section><section class="card section-card" style="margin-top:14px"><div class="section-head"><h2>ÚLTIMOS PARTIDOS</h2><a href="partidos.html">VER TODOS</a></div><div class="match-list">${ms.map(m=>{const hc=club(m.homeId),ac=club(m.awayId),res=m.status==='Finalizado'?`${m.homeScore} - ${m.awayScore}`:'VS';return `<article class="card match-row"><div class="match-date"><b>${formatDateISO(m.date)}</b><br>${esc(m.round)}</div><div class="match-team">${badge(hc,true)}<span>${esc(m.home)}</span></div><div class="result">${res}<small>${m.status==='Finalizado'?'FINAL':esc(m.time)}</small></div><div class="match-team"><span>${esc(m.away)}</span>${badge(ac,true)}</div><a class="match-link" href="partido.html?id=${m.id}">VER DETALLE ›</a></article>`}).join('')||'<div class="empty-state">Sin partidos cargados para este club.</div>'}</div></section>`}
 function initSeasonSelect(){
  document.querySelectorAll('#season-select').forEach(sel=>{
   const saved=localStorage.getItem('7m_season');
@@ -378,9 +395,9 @@ function initReports(){document.querySelectorAll('[data-report]').forEach(btn=>b
 
 function renderDashboard(){
  const kpis=document.querySelectorAll('.kpi-value');
- if(kpis.length>=5){const ps=players(),ms=matches();const finished=ms.filter(m=>m.status==='Finalizado');kpis[0].textContent=clubs().length;kpis[1].textContent=ps.length;kpis[2].textContent=finished.length;kpis[3].textContent=finished.reduce((s,m)=>s+(Number(m.homeScore)||0)+(Number(m.awayScore)||0),0);kpis[4].textContent=ps.reduce((s,p)=>s+(Number(p.sanctions)||0),0)}
+ if(kpis.length>=5){const ps=players(),ms=matches();const finished=ms.filter(m=>m.status==='Finalizado');kpis[0].textContent=clubs().length;kpis[1].textContent=ps.length;kpis[2].textContent=ms.length;kpis[3].textContent=finished.reduce((s,m)=>s+(Number(m.homeScore)||0)+(Number(m.awayScore)||0),0);kpis[4].textContent=ps.reduce((s,p)=>s+(Number(p.sanctions)||0),0)}
  const last=document.getElementById('dashboard-last');if(last){const m=matches().filter(x=>x.status==='Finalizado').sort((a,b)=>b.date.localeCompare(a.date))[0];last.innerHTML=m?`<div class="match-main"><div>${badge(club(m.homeId))}<div class="club-name">${esc(m.home)}</div></div><div><div class="score">${m.homeScore} - ${m.awayScore}</div><span class="status-pill">FINALIZADO</span></div><div>${badge(club(m.awayId))}<div class="club-name">${esc(m.away)}</div></div></div>`:'<div class="empty-state">Todavía no hay partidos cargados.<br><button class="btn gold admin-lock" type="button" style="margin-top:10px">+ Cargar partido</button></div>'}
- const next=document.getElementById('dashboard-next');if(next){const rows=matches().filter(x=>x.status!=='Finalizado').sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);next.innerHTML=rows.map(m=>`<div class="fixture">${dateBox(m.date)}${badge(club(m.homeId),true)}<span class="team-text">${esc(m.home)}</span><span class="versus">VS<small>${esc(m.time)}</small></span><span class="team-text">${esc(m.away)}</span>${badge(club(m.awayId),true)}</div>`).join('')||'<div class="empty-state">No hay próximos partidos cargados.<br><button class="btn light admin-lock" type="button" style="margin-top:10px">+ Cargar partido</button></div>'}
+ const next=document.getElementById('dashboard-next');if(next){const today=new Date().toISOString().slice(0,10);const rows=matches().filter(x=>x.status!=='Finalizado'&&x.date>=today).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).slice(0,3);next.innerHTML=rows.map(m=>`<div class="fixture">${dateBox(m.date)}${badge(club(m.homeId),true)}<span class="team-text">${esc(m.home)}</span><span class="versus">VS<small>${esc(m.time)}</small></span><span class="team-text">${esc(m.away)}</span>${badge(club(m.awayId),true)}</div>`).join('')||'<div class="empty-state">No hay próximos partidos cargados.<br><button class="btn light admin-lock" type="button" style="margin-top:10px">+ Cargar partido</button></div>'}
  const high=document.getElementById('dashboard-highlights');if(high){const ps=players();if(!ps.length){high.innerHTML='<div class="empty-state" style="grid-column:1/-1">Todavía no hay estadísticas cargadas.<br><button class="btn gold admin-lock" type="button" style="margin-top:10px">+ Cargar partido</button></div>'}else{const top=(key)=>ps.slice().sort((a,b)=>(Number(b[key])||0)-(Number(a[key])||0))[0];const g=top('goals'),e=top('eff'),a=top('assists'),s=top('sanctions');high.innerHTML=[[g,'GOLEADOR DEL TORNEO','goals','GOLES'],[e,'EFECTIVIDAD','eff','%'],[a,'MÁS ASISTENCIAS','assists','ASISTENCIAS'],[s,'MÁS SANCIONES','sanctions','SANCIONES']].map(([p,k,key,u])=>`<div class="highlight-item"><span class="highlight-kicker">${k}</span><b class="highlight-name">${esc(p.name)}</b><span class="highlight-club">${esc(p.club)}</span><strong class="highlight-number">${p[key]}${u==='%'?'%':''}</strong><span class="highlight-unit">${u}</span></div>`).join('')}}
 }
 
