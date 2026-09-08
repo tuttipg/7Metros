@@ -1,17 +1,52 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#06192d">
-<title>Ajustes — 7Metros</title>
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#06192d">
+  <meta name="description" content="7Metros: estadísticas, resultados, planteles y análisis del handball argentino.">
+  <meta name="color-scheme" content="light">
+  <title>Ajustes — 7Metros</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+  <script type="module" src="script.js"></script>
 </head>
-<body data-page="ajustes">
-<div id="mobile-bar" class="mobile-bar"></div>
-<div id="overlay" class="overlay"></div>
-<aside id="sidebar" class="sidebar"></aside>
-<main class="app-main"><div class="content-wrap">
-<header class="page-header"><div><h1>Ajustes</h1><p>Preferencias locales de la interfaz</p></div><div class="header-tools"><span class="date-chip"><span data-icon="calendar"></span> <span data-current-date></span></span><select class="select-dark"><option>APERTURA 2026</option></select></div></header><section class="card section-card"><div class="setting-row"><div><h3>Recordar filtros</h3><p>Preparado para persistir filtros cuando conectemos los datos reales.</p></div><label class="switch"><input data-setting="filters" type="checkbox"><span></span></label></div><div class="setting-row"><div><h3>Confirmar antes de cargar datos</h3><p>Preferencia visual para futuras acciones administrativas.</p></div><label class="switch"><input data-setting="confirm" type="checkbox" checked><span></span></label></div><div class="setting-row"><div><h3>Vista compacta en tablas</h3><p>Preferencia guardada localmente en este navegador.</p></div><label class="switch"><input data-setting="compact" type="checkbox"><span></span></label></div></section><footer class="footer"><strong>7<b>METROS</b></strong><span>ESTADÍSTICAS · ANÁLISIS · RENDIMIENTO</span><span class="footer-social"><span>IG</span><span>▶</span><span>✉</span></span></footer>
-</div></main><div id="toast" class="toast"></div><script src="script.js"></script></body></html>
+<body data-page="ajustes" class="">
+  <a class="skip-link" href="#main-content">Saltar al contenido</a>
+  <div id="mobile-bar" class="mobile-bar"></div>
+  <div id="overlay" class="overlay"></div>
+  <aside id="sidebar" class="sidebar" aria-label="Navegación principal"></aside>
+  <main id="main-content" class="app-main">
+    <div class="content-wrap">
+      <header class="page-header">
+        <div class="page-title-wrap">
+          <span class="eyebrow" data-competition-label>7METROS</span>
+          <h1>Ajustes</h1>
+          <p>Preferencias locales de visualización y filtros.</p>
+        </div>
+        <div class="header-tools">
+          <span class="date-chip"><span data-icon="calendar"></span><span data-current-date></span></span>
+          <span class="season-chip" data-season-label>CLAUSURA 2026</span>
+        </div>
+      </header>
+      <div id="competition-bar" class="competition-bar" aria-label="Filtros de competición"></div>
+      <div id="data-status" class="data-status" aria-live="polite"></div>
+      
+<section class="card section-card settings-card">
+  <div class="setting-row"><div><h3>Recordar filtros de competición</h3><p>Conserva categoría, división y rama en este navegador.</p></div><label class="switch"><input data-setting="filters" type="checkbox" checked><span></span></label></div>
+  <div class="setting-row"><div><h3>Vista compacta en tablas</h3><p>Reduce el alto de las filas para ver más información a la vez.</p></div><label class="switch"><input data-setting="compact" type="checkbox"><span></span></label></div>
+  <div class="setting-row"><div><h3>Reducir animaciones</h3><p>Minimiza transiciones y movimientos de la interfaz.</p></div><label class="switch"><input data-setting="motion" type="checkbox"><span></span></label></div>
+</section>
+<section class="card section-card settings-actions"><div><h2>Datos locales</h2><p>Podés restaurar filtros y preferencias sin modificar la base de datos.</p></div><button id="reset-settings" class="btn light">Restablecer preferencias</button></section>
+
+      <footer class="footer">
+        <div class="footer-brand"><strong>7<b>METROS</b></strong><span>ESTADÍSTICAS · ANÁLISIS · RENDIMIENTO</span></div>
+        <div class="footer-meta"><span>Proyecto independiente de análisis de handball argentino.</span><a data-femebal-link target="_blank" rel="noopener noreferrer">Fuente institucional: Fe.Me.Bal.</a></div>
+      </footer>
+    </div>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="global-search-root"></div>
+</body>
+</html>

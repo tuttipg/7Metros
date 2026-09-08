@@ -1,17 +1,64 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#06192d">
-<title>Acerca de — 7Metros</title>
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#06192d">
+  <meta name="description" content="7Metros: estadísticas, resultados, planteles y análisis del handball argentino.">
+  <meta name="color-scheme" content="light">
+  <title>Acerca de — 7Metros</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+  <script type="module" src="script.js"></script>
 </head>
-<body data-page="acerca">
-<div id="mobile-bar" class="mobile-bar"></div>
-<div id="overlay" class="overlay"></div>
-<aside id="sidebar" class="sidebar"></aside>
-<main class="app-main"><div class="content-wrap">
-<header class="page-header"><div><h1>Acerca de 7Metros</h1><p>La base de la plataforma que vamos a seguir construyendo</p></div><div class="header-tools"><span class="date-chip"><span data-icon="calendar"></span> <span data-current-date></span></span><select class="select-dark"><option>APERTURA 2026</option></select></div></header><section class="card about-hero"><div class="about-logo">7<b>M</b></div><h2>7Metros</h2><p>Plataforma de estadísticas, análisis y rendimiento para handball argentino. Esta versión es una interfaz estática funcional, lista para GitHub Pages y preparada para integrarse más adelante con Python/Flask y SQLite.</p></section><section class="roadmap"><article class="card roadmap-item done"><b>1. Interfaz web</b><span>Dashboard, navegación y diseño responsive.</span></article><article class="card roadmap-item done"><b>2. Secciones</b><span>Clubes, jugadores, planteles, partidos y estadísticas.</span></article><article class="card roadmap-item next"><b>3. Backend</b><span>Conexión con Flask, API y base SQLite.</span></article><article class="card roadmap-item"><b>4. Usuarios + IA</b><span>Permisos, carga protegida y análisis inteligente.</span></article></section><footer class="footer"><strong>7<b>METROS</b></strong><span>ESTADÍSTICAS · ANÁLISIS · RENDIMIENTO</span><span class="footer-social"><span>IG</span><span>▶</span><span>✉</span></span></footer>
-</div></main><div id="toast" class="toast"></div><script src="script.js"></script></body></html>
+<body data-page="acerca" class="">
+  <a class="skip-link" href="#main-content">Saltar al contenido</a>
+  <div id="mobile-bar" class="mobile-bar"></div>
+  <div id="overlay" class="overlay"></div>
+  <aside id="sidebar" class="sidebar" aria-label="Navegación principal"></aside>
+  <main id="main-content" class="app-main">
+    <div class="content-wrap">
+      <header class="page-header">
+        <div class="page-title-wrap">
+          <span class="eyebrow" data-competition-label>7METROS</span>
+          <h1>Acerca de 7Metros</h1>
+          <p>Un proyecto independiente para hacer visible el rendimiento del handball argentino.</p>
+        </div>
+        <div class="header-tools">
+          <span class="date-chip"><span data-icon="calendar"></span><span data-current-date></span></span>
+          <span class="season-chip" data-season-label>CLAUSURA 2026</span>
+        </div>
+      </header>
+      <div id="competition-bar" class="competition-bar" aria-label="Filtros de competición"></div>
+      <div id="data-status" class="data-status" aria-live="polite"></div>
+      
+<section class="card about-hero">
+  <div class="about-logo" aria-hidden="true">7<b>M</b></div>
+  <span class="section-kicker">MISIÓN</span>
+  <h2>Datos útiles para jugadores, clubes y comunidad</h2>
+  <p>7Metros organiza resultados, planteles y estadísticas del handball argentino para convertir información dispersa en una experiencia pública, clara y navegable. La plataforma actual consume datos desde Supabase y está diseñada para crecer hacia análisis de video e inteligencia artificial.</p>
+  <div class="about-badges"><span>Supabase</span><span>GitHub Pages</span><span>Responsive</span><span>CSV</span><span>IA en desarrollo</span></div>
+</section>
+<section class="about-grid">
+  <article class="card section-card"><span class="section-kicker">FUENTE</span><h2>Fe.Me.Bal. como referencia institucional</h2><p>7Metros es un proyecto independiente. Las fuentes institucionales y planillas de Fe.Me.Bal. son la referencia para competencia, fixtures y resultados. Siempre que exista una URL de origen, el detalle del partido la muestra para mantener trazabilidad.</p><a class="text-link" data-femebal-link target="_blank" rel="noopener noreferrer">Ir al sitio oficial de Fe.Me.Bal. →</a></article>
+  <article class="card section-card"><span class="section-kicker">PRINCIPIO</span><h2>No inventar estadísticas</h2><p>Si una métrica no está disponible en la fuente actual —por ejemplo asistencias, lanzamientos o efectividad— 7Metros la presenta como no disponible en lugar de mostrar un cero que podría interpretarse como rendimiento real.</p></article>
+</section>
+<section id="roadmap" class="card section-card roadmap-section"><div class="section-head"><div><span class="section-kicker">ROADMAP</span><h2>Hacia el análisis automático</h2></div></div><div class="roadmap">
+  <article class="roadmap-item done"><span>01</span><b>Portal público</b><p>Clubes, jugadores, planteles, partidos, posiciones, estadísticas y reportes.</p></article>
+  <article class="roadmap-item done"><span>02</span><b>Datos conectados</b><p>Supabase como fuente de verdad y filtros por competencia.</p></article>
+  <article class="roadmap-item next"><span>03</span><b>Perfiles y trazabilidad</b><p>Fichas individuales, detalle por partido y enlaces a planilla/video.</p></article>
+  <article class="roadmap-item"><span>04</span><b>Visión por computadora</b><p>Detección, tracking, dorsales, pelota y eventos deportivos.</p></article>
+  <article class="roadmap-item"><span>05</span><b>Analítica avanzada</b><p>Mapas de tiro, efectividad, arqueros, comparación y scouting.</p></article>
+</div></section>
+
+      <footer class="footer">
+        <div class="footer-brand"><strong>7<b>METROS</b></strong><span>ESTADÍSTICAS · ANÁLISIS · RENDIMIENTO</span></div>
+        <div class="footer-meta"><span>Proyecto independiente de análisis de handball argentino.</span><a data-femebal-link target="_blank" rel="noopener noreferrer">Fuente institucional: Fe.Me.Bal.</a></div>
+      </footer>
+    </div>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="global-search-root"></div>
+</body>
+</html>

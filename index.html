@@ -1,33 +1,84 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#06192d">
-<title>Inicio — 7Metros</title>
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#06192d">
+  <meta name="description" content="7Metros: estadísticas, resultados, planteles y análisis del handball argentino.">
+  <meta name="color-scheme" content="light">
+  <title>Inicio — 7Metros</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+  <script type="module" src="script.js"></script>
 </head>
-<body data-page="inicio">
-<div id="mobile-bar" class="mobile-bar"></div>
-<div id="overlay" class="overlay"></div>
-<aside id="sidebar" class="sidebar"></aside>
-<main class="app-main"><div class="content-wrap">
-<header class="page-header"><div><h1>¡Bienvenido a 7Metros!</h1><p>Tu plataforma de estadísticas de handball argentino</p></div><div class="header-tools"><span class="date-chip"><span data-icon="calendar"></span> <span data-current-date></span></span><select id="season-select" class="select-dark"><option value="CLAUSURA 2026">CLAUSURA 2026</option></select></div></header>
-<section class="kpi-grid">
- <article class="card kpi-card"><span class="kpi-icon" data-icon="shield"></span><div class="kpi-copy"><span class="kpi-label">CLUBES</span><b class="kpi-value">0</b><span class="kpi-meta">Registrados</span></div></article>
- <article class="card kpi-card"><span class="kpi-icon" data-icon="user"></span><div class="kpi-copy"><span class="kpi-label">JUGADORES</span><b class="kpi-value">0</b><span class="kpi-meta">Registrados</span></div></article>
- <article class="card kpi-card featured"><span class="kpi-icon" data-icon="ball"></span><div class="kpi-copy"><span class="kpi-label">PARTIDOS</span><b class="kpi-value">0</b><span class="kpi-meta">Registrados</span></div></article>
- <article class="card kpi-card featured"><span class="kpi-icon" data-icon="goal"></span><div class="kpi-copy"><span class="kpi-label">GOLES</span><b class="kpi-value">0</b><span class="kpi-meta">Totales</span></div></article>
- <article class="card kpi-card"><span class="kpi-icon" data-icon="card"></span><div class="kpi-copy"><span class="kpi-label">SANCIONES</span><b class="kpi-value">0</b><span class="kpi-meta">Totales</span></div></article>
+<body data-page="inicio" class="">
+  <a class="skip-link" href="#main-content">Saltar al contenido</a>
+  <div id="mobile-bar" class="mobile-bar"></div>
+  <div id="overlay" class="overlay"></div>
+  <aside id="sidebar" class="sidebar" aria-label="Navegación principal"></aside>
+  <main id="main-content" class="app-main">
+    <div class="content-wrap">
+      <header class="page-header">
+        <div class="page-title-wrap">
+          <span class="eyebrow" data-competition-label>7METROS</span>
+          <h1>El handball argentino, en datos</h1>
+          <p>Resultados, rendimiento y contexto competitivo en un solo lugar.</p>
+        </div>
+        <div class="header-tools">
+          <span class="date-chip"><span data-icon="calendar"></span><span data-current-date></span></span>
+          <span class="season-chip" data-season-label>CLAUSURA 2026</span>
+        </div>
+      </header>
+      <div id="competition-bar" class="competition-bar" aria-label="Filtros de competición"></div>
+      <div id="data-status" class="data-status" aria-live="polite"></div>
+      
+<section class="hero-grid" aria-label="Resumen de la competición">
+  <article class="card competition-hero">
+    <div class="competition-hero-copy">
+      <span class="hero-kicker">TEMPORADA ACTUAL</span>
+      <h2 data-hero-competition>Clausura 2026</h2>
+      <p>Explorá clubes, jugadores, resultados, posiciones y estadísticas con filtros por categoría, división y rama.</p>
+      <div class="hero-actions">
+        <a class="btn gold" href="partidos.html"><span data-icon="calendar"></span>Ver partidos</a>
+        <a class="btn ghost" href="posiciones.html"><span data-icon="standings"></span>Ver posiciones</a>
+      </div>
+    </div>
+    <div class="hero-mark" aria-hidden="true"><span>7</span><b>M</b></div>
+  </article>
+  <article class="card update-card">
+    <span class="update-icon" data-icon="database"></span>
+    <div><span class="mini-label">ESTADO DE DATOS</span><b id="data-health-label">Conectando…</b><small id="data-health-meta">Cargando información de la competencia</small></div>
+  </article>
 </section>
+
+<section class="kpi-grid" aria-label="Indicadores principales">
+  <article class="card kpi-card"><span class="kpi-icon" data-icon="shield"></span><div class="kpi-copy"><span class="kpi-label">CLUBES</span><b class="kpi-value" data-kpi="clubs">—</b><span class="kpi-meta">en la selección actual</span></div></article>
+  <article class="card kpi-card"><span class="kpi-icon" data-icon="user"></span><div class="kpi-copy"><span class="kpi-label">JUGADORES</span><b class="kpi-value" data-kpi="players">—</b><span class="kpi-meta">con plantel cargado</span></div></article>
+  <article class="card kpi-card featured"><span class="kpi-icon" data-icon="ball"></span><div class="kpi-copy"><span class="kpi-label">PARTIDOS</span><b class="kpi-value" data-kpi="matches">—</b><span class="kpi-meta">programados y jugados</span></div></article>
+  <article class="card kpi-card featured"><span class="kpi-icon" data-icon="goal"></span><div class="kpi-copy"><span class="kpi-label">GOLES</span><b class="kpi-value" data-kpi="goals">—</b><span class="kpi-meta">en partidos finalizados</span></div></article>
+  <article class="card kpi-card"><span class="kpi-icon" data-icon="trend"></span><div class="kpi-copy"><span class="kpi-label">PROMEDIO</span><b class="kpi-value" data-kpi="avgGoals">—</b><span class="kpi-meta">goles por partido</span></div></article>
+</section>
+
 <section class="dashboard-grid">
- <article class="card section-card last-match"><div class="section-head"><h2>ÚLTIMO PARTIDO CARGADO</h2></div><div id="dashboard-last"><div class="empty-state">Todavía no hay partidos cargados.</div></div></article>
- <article class="card section-card next-matches"><div class="section-head"><h2>PRÓXIMOS PARTIDOS</h2><a href="partidos.html">VER TODOS</a></div><div id="dashboard-next"><div class="empty-state">No hay próximos partidos cargados.</div></div><a class="section-link" href="partidos.html">VER TODOS LOS PARTIDOS ›</a></article>
- <article class="card section-card highlights"><div class="section-head"><h2>ESTADÍSTICAS DESTACADAS</h2></div><div id="dashboard-highlights" class="highlight-grid"><div class="empty-state" style="grid-column:1/-1">Todavía no hay estadísticas cargadas.</div></div><a class="section-link" href="estadisticas.html">VER TODAS LAS ESTADÍSTICAS ›</a></article>
- <article class="card section-card quick-actions"><div class="section-head"><h2>ACCESOS RÁPIDOS</h2></div><div class="quick-grid"><a class="quick-card" href="clubes.html"><span data-icon="shield"></span><span>Ver<br>clubes</span></a><a class="quick-card" href="jugadores.html"><span data-icon="user"></span><span>Ver<br>jugadores</span></a><a class="quick-card" href="partidos.html"><span data-icon="calendar"></span><span>Ver<br>partidos</span></a><a class="quick-card" href="planteles.html"><span data-icon="users"></span><span>Ver<br>planteles</span></a><a class="quick-card" href="estadisticas.html"><span data-icon="chart"></span><span>Estadísticas</span></a></div></article>
+  <article class="card section-card last-match"><div class="section-head"><div><span class="section-kicker">RESULTADOS</span><h2>Último partido</h2></div><a href="partidos.html">Ver todos</a></div><div id="dashboard-last" class="loading-block"></div></article>
+  <article class="card section-card next-matches"><div class="section-head"><div><span class="section-kicker">CALENDARIO</span><h2>Próximos partidos</h2></div><a href="partidos.html">Ver todos</a></div><div id="dashboard-next" class="loading-block"></div></article>
+  <article class="card section-card standings-preview"><div class="section-head"><div><span class="section-kicker">COMPETICIÓN</span><h2>Posiciones</h2></div><a href="posiciones.html">Tabla completa</a></div><div id="dashboard-standings" class="loading-block"></div></article>
+  <article class="card section-card highlights"><div class="section-head"><div><span class="section-kicker">RENDIMIENTO</span><h2>Destacados</h2></div><a href="estadisticas.html">Más estadísticas</a></div><div id="dashboard-highlights" class="highlight-grid loading-block"></div></article>
 </section>
-<section class="card section-card ai-teaser" style="margin-top:14px"><span class="ai-teaser-icon" data-icon="ball"></span><h2>ANÁLISIS POR IA <span class="status-pill gold" style="margin-left:6px">PRÓXIMAMENTE</span></h2><p>Con la carga automática de partidos ya conectada, próximamente vas a poder ver acá insights automáticos: tendencias de rendimiento, comparativas entre jugadores y clubes, y proyecciones generadas por IA.</p></section>
-<footer class="footer"><strong>7<b>METROS</b></strong><span>ESTADÍSTICAS · ANÁLISIS · RENDIMIENTO</span><span class="footer-social"><span>IG</span><span>▶</span><span>✉</span></span></footer>
-</div></main><div id="toast" class="toast"></div><script src="script.js"></script></body>
+
+<section class="card section-card ai-teaser">
+  <div class="ai-teaser-visual"><img src="arco-handball.jpeg" alt="Arco de handball sobre una cancha azul"></div>
+  <div class="ai-teaser-copy"><span class="section-kicker">7METROS LAB</span><h2>Análisis de video e IA <span class="status-pill gold">EN DESARROLLO</span></h2><p>La arquitectura está preparada para sumar detección y tracking de jugadores y pelota, reconocimiento de dorsales, eventos por timestamp y mapas de lanzamiento, manteniendo trazabilidad hacia el video original.</p><a class="text-link" href="acerca-de.html#roadmap">Ver roadmap del proyecto →</a></div>
+</section>
+
+      <footer class="footer">
+        <div class="footer-brand"><strong>7<b>METROS</b></strong><span>ESTADÍSTICAS · ANÁLISIS · RENDIMIENTO</span></div>
+        <div class="footer-meta"><span>Proyecto independiente de análisis de handball argentino.</span><a data-femebal-link target="_blank" rel="noopener noreferrer">Fuente institucional: Fe.Me.Bal.</a></div>
+      </footer>
+    </div>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="global-search-root"></div>
+</body>
 </html>

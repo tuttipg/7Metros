@@ -1,0 +1,112 @@
+import { CONFIG } from './config.js';
+
+const PAGE_SIZE = 1000;
+const REQUEST_TIMEOUT = 15000;
+
+export class DataError extends Error {
+  constructor(message, cause = null) {
+    super(message);
+    this.name = 'DataError';
+    this.cause = cause;
+  }
+}
+
+function endpoint(table, query = '') {
+  const base = String(CONFIG.supabaseUrl || '').replace(/\/$/, '');
+  const suffix = query ? (String(query).startsWith('?') ? query : `?${query}`) : '';
+  return `${base}/rest/v1/${table}${suffix}`;
+}
+
+function headers(range = null) {
+  const result = {
+    apikey: CONFIG.supabaseKey || '',
+    Authorization: `Bearer ${CONFIG.supabaseKey || ''}`,
+    Accept: 'application/json',
+    'Content-Type': 'application/json'
+  };
+  if (range) result.Range = range;
+  return result;
+}
+
+async function request(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      throw new DataError(`Error ${response.status} al consultar datos. ${detail}`.trim());
+    }
+    return response;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new DataError('La consulta de datos excedió el tiempo de espera.', error);
+    if (error instanceof DataError) throw error;
+    throw new DataError('No se pudo conectar con la fuente de datos.', error);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function supabaseGetAll(table, query = '', { pageSize = PAGE_SIZE } = {}) {
+  const rows = [];
+  let from = 0;
+
+  while (true) {
+    const to = from + pageSize - 1;
+    const response = await request(endpoint(table, query), {
+      method: 'GET',
+      headers: headers(`${from}-${to}`)
+    });
+    const page = await response.json();
+    if (!Array.isArray(page)) throw new DataError(`Respuesta inesperada al consultar ${table}.`);
+    rows.push(...page);
+    if (page.length < pageSize) break;
+    from += pageSize;
+    if (from > 100000) throw new DataError(`La consulta de ${table} superó el límite de seguridad.`);
+  }
+
+  return rows;
+}
+
+export async function supabaseGetByIds(table, field, ids, select = '*', { chunkSize = 100 } = {}) {
+  const values = [...new Set((ids || []).map(Number).filter(Number.isFinite))];
+  if (!values.length) return [];
+
+  const result = [];
+  for (let i = 0; i < values.length; i += chunkSize) {
+    const chunk = values.slice(i, i + chunkSize);
+    const query = `?select=${encodeURIComponent(select)}&${encodeURIComponent(field)}=in.(${chunk.join(',')})`;
+    result.push(...await supabaseGetAll(table, query));
+  }
+  return result;
+}
+
+export async function loadPublicDataset(seasonId) {
+  const season = Number(seasonId);
+
+  // Equipos es la primera consulta porque define el alcance real de la temporada.
+  const equipos = await supabaseGetAll(
+    'equipos',
+    `?select=id,club_id,temporada_id,categoria,division,rama,equipo_codigo,nombre_femebal,activo&temporada_id=eq.${season}`
+  );
+
+  const teamIds = equipos.map(row => Number(row.id)).filter(Number.isFinite);
+  const clubIds = equipos.map(row => Number(row.club_id)).filter(Number.isFinite);
+
+  const [clubes, planteles] = await Promise.all([
+    supabaseGetByIds('clubes', 'id', clubIds, 'id,nombre'),
+    supabaseGetByIds('planteles', 'equipo_id', teamIds, 'id,jugador_id,equipo_id,dorsal,posicion')
+  ]);
+
+  const playerIds = planteles.map(row => Number(row.jugador_id)).filter(Number.isFinite);
+
+  // Partidos se pagina. La tabla actual no garantiza que temporada_id exista en
+  // todas las instalaciones, por eso filtramos de forma segura luego usando equipos.
+  const [jugadores, partidos, participaciones] = await Promise.all([
+    supabaseGetByIds('jugadores', 'id', playerIds, 'id,nombre,apellido,fecha_nacimiento,brazo_habil,altura_cm,peso_kg'),
+    supabaseGetAll('partidos', '?select=*'),
+    supabaseGetByIds('participaciones', 'equipo_id', teamIds, '*')
+  ]);
+
+  return { clubes, equipos, jugadores, planteles, partidos, participaciones };
+}

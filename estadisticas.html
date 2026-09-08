@@ -1,17 +1,57 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#06192d">
-<title>Estadísticas — 7Metros</title>
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#06192d">
+  <meta name="description" content="7Metros: estadísticas, resultados, planteles y análisis del handball argentino.">
+  <meta name="color-scheme" content="light">
+  <title>Estadísticas — 7Metros</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+  <script type="module" src="script.js"></script>
 </head>
-<body data-page="estadisticas">
-<div id="mobile-bar" class="mobile-bar"></div>
-<div id="overlay" class="overlay"></div>
-<aside id="sidebar" class="sidebar"></aside>
-<main class="app-main"><div class="content-wrap">
-<header class="page-header"><div><h1>Estadísticas</h1><p>Líderes y comparativas del Apertura 2026</p></div><div class="header-tools"><span class="date-chip"><span data-icon="calendar"></span> <span data-current-date></span></span><select id="season-select" class="select-dark"><option value="APERTURA 2026">APERTURA 2026</option></select></div></header><section class="stats-grid"><article class="card leader-card"><div class="section-head"><h2>GOLEADORES</h2></div><div id="goals-list" class="leader-list"></div></article><article class="card leader-card"><div class="section-head"><h2>ASISTENCIAS</h2></div><div id="assists-list" class="leader-list"></div></article><article class="card leader-card"><div class="section-head"><h2>EFECTIVIDAD</h2></div><div id="eff-list" class="leader-list"></div></article><article class="card leader-card"><div class="section-head"><h2>SANCIONES</h2></div><div id="sanctions-list" class="leader-list"></div></article></section><section class="card section-card" style="margin-top:14px"><div class="section-head"><h2>GOLES POR CLUB</h2><span id="chart-status" class="tag hidden"></span></div><div id="club-goals-chart" class="bar-chart"></div></section><footer class="footer"><strong>7<b>METROS</b></strong><span>ESTADÍSTICAS · ANÁLISIS · RENDIMIENTO</span><span class="footer-social"><span>IG</span><span>▶</span><span>✉</span></span></footer>
-</div></main><div id="toast" class="toast"></div><script src="script.js"></script></body></html>
+<body data-page="estadisticas" class="">
+  <a class="skip-link" href="#main-content">Saltar al contenido</a>
+  <div id="mobile-bar" class="mobile-bar"></div>
+  <div id="overlay" class="overlay"></div>
+  <aside id="sidebar" class="sidebar" aria-label="Navegación principal"></aside>
+  <main id="main-content" class="app-main">
+    <div class="content-wrap">
+      <header class="page-header">
+        <div class="page-title-wrap">
+          <span class="eyebrow" data-competition-label>7METROS</span>
+          <h1>Estadísticas</h1>
+          <p>Líderes y comparativas con métricas verificables de la fuente actual.</p>
+        </div>
+        <div class="header-tools">
+          <span class="date-chip"><span data-icon="calendar"></span><span data-current-date></span></span>
+          <span class="season-chip" data-season-label>CLAUSURA 2026</span>
+        </div>
+      </header>
+      <div id="competition-bar" class="competition-bar" aria-label="Filtros de competición"></div>
+      <div id="data-status" class="data-status" aria-live="polite"></div>
+      
+<section class="stats-grid">
+  <article class="card leader-card"><div class="section-head"><div><span class="section-kicker">JUGADORES</span><h2>Goleadores</h2></div></div><div id="goals-list" class="leader-list loading-block"></div></article>
+  <article class="card leader-card"><div class="section-head"><div><span class="section-kicker">REGULARIDAD</span><h2>Goles por partido</h2></div></div><div id="rate-list" class="leader-list loading-block"></div></article>
+  <article class="card leader-card"><div class="section-head"><div><span class="section-kicker">PARTICIPACIÓN</span><h2>Más partidos</h2></div></div><div id="played-list" class="leader-list loading-block"></div></article>
+  <article class="card leader-card"><div class="section-head"><div><span class="section-kicker">DISCIPLINA</span><h2>Sanciones</h2></div></div><div id="sanctions-list" class="leader-list loading-block"></div></article>
+</section>
+<section class="stats-two-col">
+  <article class="card section-card"><div class="section-head"><div><span class="section-kicker">EQUIPOS</span><h2>Goles a favor por club</h2></div></div><div id="club-goals-chart" class="bar-chart loading-block"></div></article>
+  <article class="card section-card"><div class="section-head"><div><span class="section-kicker">EQUIPOS</span><h2>Balance ofensivo/defensivo</h2></div></div><div id="club-balance-chart" class="balance-list loading-block"></div></article>
+</section>
+<section class="card section-card advanced-stats-teaser"><div><span class="section-kicker">PRÓXIMA CAPA DE DATOS</span><h2>Tiros, efectividad, asistencias y arqueros</h2><p>7Metros ya reserva estos espacios para incorporar eventos de video y métricas avanzadas cuando estén disponibles. Mientras tanto, la interfaz evita inventar valores faltantes.</p></div><img src="arco-handball.jpeg" alt="Arco de handball"></section>
+
+      <footer class="footer">
+        <div class="footer-brand"><strong>7<b>METROS</b></strong><span>ESTADÍSTICAS · ANÁLISIS · RENDIMIENTO</span></div>
+        <div class="footer-meta"><span>Proyecto independiente de análisis de handball argentino.</span><a data-femebal-link target="_blank" rel="noopener noreferrer">Fuente institucional: Fe.Me.Bal.</a></div>
+      </footer>
+    </div>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="global-search-root"></div>
+</body>
+</html>

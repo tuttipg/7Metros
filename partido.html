@@ -1,17 +1,48 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#06192d">
-<title>Detalle de partido — 7Metros</title>
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#06192d">
+  <meta name="description" content="7Metros: estadísticas, resultados, planteles y análisis del handball argentino.">
+  <meta name="color-scheme" content="light">
+  <title>Detalle de partido — 7Metros</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+  <script type="module" src="script.js"></script>
 </head>
-<body data-page="partidos">
-<div id="mobile-bar" class="mobile-bar"></div>
-<div id="overlay" class="overlay"></div>
-<aside id="sidebar" class="sidebar"></aside>
-<main class="app-main"><div class="content-wrap">
-<header class="page-header"><div><h1>Detalle del partido</h1><p>Resultado, resumen y documentación</p></div><div class="header-tools"><span class="date-chip"><span data-icon="calendar"></span> <span data-current-date></span></span><select class="select-dark"><option>APERTURA 2026</option></select></div></header><div id="match-detail"></div><footer class="footer"><strong>7<b>METROS</b></strong><span>ESTADÍSTICAS · ANÁLISIS · RENDIMIENTO</span><span class="footer-social"><span>IG</span><span>▶</span><span>✉</span></span></footer>
-</div></main><div id="toast" class="toast"></div><script src="script.js"></script></body></html>
+<body data-page="partidos" class="">
+  <a class="skip-link" href="#main-content">Saltar al contenido</a>
+  <div id="mobile-bar" class="mobile-bar"></div>
+  <div id="overlay" class="overlay"></div>
+  <aside id="sidebar" class="sidebar" aria-label="Navegación principal"></aside>
+  <main id="main-content" class="app-main">
+    <div class="content-wrap">
+      <header class="page-header">
+        <div class="page-title-wrap">
+          <span class="eyebrow" data-competition-label>7METROS</span>
+          <h1>Detalle del partido</h1>
+          <p>Resultado, protagonistas, estadísticas y fuentes.</p>
+        </div>
+        <div class="header-tools">
+          <span class="date-chip"><span data-icon="calendar"></span><span data-current-date></span></span>
+          <span class="season-chip" data-season-label>CLAUSURA 2026</span>
+        </div>
+      </header>
+      <div id="competition-bar" class="competition-bar" aria-label="Filtros de competición"></div>
+      <div id="data-status" class="data-status" aria-live="polite"></div>
+      
+<a class="breadcrumb-back" href="partidos.html">‹ Volver a partidos</a>
+<div id="match-detail" class="loading-block"></div>
+
+      <footer class="footer">
+        <div class="footer-brand"><strong>7<b>METROS</b></strong><span>ESTADÍSTICAS · ANÁLISIS · RENDIMIENTO</span></div>
+        <div class="footer-meta"><span>Proyecto independiente de análisis de handball argentino.</span><a data-femebal-link target="_blank" rel="noopener noreferrer">Fuente institucional: Fe.Me.Bal.</a></div>
+      </footer>
+    </div>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="global-search-root"></div>
+</body>
+</html>

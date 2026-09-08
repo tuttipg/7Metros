@@ -1,1 +1,45 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#06192d"><title>Cargar partido — 7Metros</title><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css"></head><body data-page="inicio"><div id="mobile-bar" class="mobile-bar"></div><div id="overlay" class="overlay"></div><aside id="sidebar" class="sidebar"></aside><main class="app-main"><div class="content-wrap"><header class="page-header"><div><h1>Acceso restringido</h1><p>Área de administración de 7Metros</p></div></header><section class="card restricted-card"><div class="lock-mark">🔒</div><h2>Cargar partido</h2><p>La carga y modificación de información deportiva no está disponible para visitantes. Cuando conectemos el backend, esta sección exigirá inicio de sesión y permisos de administrador o editor.</p><a class="btn" href="partidos.html">Volver</a></section></div></main><div id="toast" class="toast"></div><script src="script.js"></script></body></html>
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#06192d">
+  <meta name="description" content="7Metros: estadísticas, resultados, planteles y análisis del handball argentino.">
+  <meta name="color-scheme" content="light">
+  <title>Cargar partido — 7Metros</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+  <script type="module" src="script.js"></script>
+</head>
+<body data-page="partidos" class="">
+  <a class="skip-link" href="#main-content">Saltar al contenido</a>
+  <div id="mobile-bar" class="mobile-bar"></div>
+  <div id="overlay" class="overlay"></div>
+  <aside id="sidebar" class="sidebar" aria-label="Navegación principal"></aside>
+  <main id="main-content" class="app-main">
+    <div class="content-wrap">
+      <header class="page-header">
+        <div class="page-title-wrap">
+          <span class="eyebrow" data-competition-label>7METROS</span>
+          <h1>Acceso restringido</h1>
+          <p>Administración de 7Metros.</p>
+        </div>
+        <div class="header-tools">
+          <span class="date-chip"><span data-icon="calendar"></span><span data-current-date></span></span>
+          <span class="season-chip" data-season-label>CLAUSURA 2026</span>
+        </div>
+      </header>
+      <div id="competition-bar" class="competition-bar" aria-label="Filtros de competición"></div>
+      <div id="data-status" class="data-status" aria-live="polite"></div>
+      <section class="card restricted-card"><div class="lock-mark" data-icon="lock"></div><span class="section-kicker">ÁREA PROTEGIDA</span><h2>Cargar o editar partido</h2><p>El backend de lectura ya está conectado a Supabase. La escritura pública permanece deshabilitada hasta implementar autenticación y políticas RLS para administradores y editores.</p><a class="btn" href="partidos.html">Volver</a></section>
+      <footer class="footer">
+        <div class="footer-brand"><strong>7<b>METROS</b></strong><span>ESTADÍSTICAS · ANÁLISIS · RENDIMIENTO</span></div>
+        <div class="footer-meta"><span>Proyecto independiente de análisis de handball argentino.</span><a data-femebal-link target="_blank" rel="noopener noreferrer">Fuente institucional: Fe.Me.Bal.</a></div>
+      </footer>
+    </div>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="global-search-root"></div>
+</body>
+</html>

@@ -1,17 +1,52 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#06192d">
-<title>Reportes — 7Metros</title>
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#06192d">
+  <meta name="description" content="7Metros: estadísticas, resultados, planteles y análisis del handball argentino.">
+  <meta name="color-scheme" content="light">
+  <title>Reportes — 7Metros</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+  <script type="module" src="script.js"></script>
 </head>
-<body data-page="estadisticas">
-<div id="mobile-bar" class="mobile-bar"></div>
-<div id="overlay" class="overlay"></div>
-<aside id="sidebar" class="sidebar"></aside>
-<main class="app-main"><div class="content-wrap">
-<header class="page-header"><div><h1>Reportes</h1><p>Exportaciones simples para trabajar con los datos de la demo</p></div><div class="header-tools"><span class="date-chip"><span data-icon="calendar"></span> <span data-current-date></span></span><select id="season-select" class="select-dark"><option value="APERTURA 2026">APERTURA 2026</option></select></div></header><section class="report-grid"><article class="card report-card"><span data-icon="user"></span><h3>Jugadores</h3><p>Listado con club, dorsal, posición y estadísticas principales.</p><button class="btn" data-report="jugadores"><span data-icon="download"></span> Descargar CSV de jugadores</button></article><article class="card report-card"><span data-icon="calendar"></span><h3>Partidos</h3><p>Calendario y resultados cargados en la demo.</p><button class="btn" data-report="partidos"><span data-icon="download"></span> Descargar CSV de partidos</button></article><article class="card report-card"><span data-icon="chart"></span><h3>Estadísticas</h3><p>Goles, asistencias, efectividad y sanciones por jugador.</p><button class="btn" data-report="estadisticas"><span data-icon="download"></span> Descargar CSV de estadísticas</button></article></section><footer class="footer"><strong>7<b>METROS</b></strong><span>ESTADÍSTICAS · ANÁLISIS · RENDIMIENTO</span><span class="footer-social"><span>IG</span><span>▶</span><span>✉</span></span></footer>
-</div></main><div id="toast" class="toast"></div><script src="script.js"></script></body></html>
+<body data-page="reportes" class="">
+  <a class="skip-link" href="#main-content">Saltar al contenido</a>
+  <div id="mobile-bar" class="mobile-bar"></div>
+  <div id="overlay" class="overlay"></div>
+  <aside id="sidebar" class="sidebar" aria-label="Navegación principal"></aside>
+  <main id="main-content" class="app-main">
+    <div class="content-wrap">
+      <header class="page-header">
+        <div class="page-title-wrap">
+          <span class="eyebrow" data-competition-label>7METROS</span>
+          <h1>Reportes</h1>
+          <p>Exportá los datos visibles con los filtros de competición actuales.</p>
+        </div>
+        <div class="header-tools">
+          <span class="date-chip"><span data-icon="calendar"></span><span data-current-date></span></span>
+          <span class="season-chip" data-season-label>CLAUSURA 2026</span>
+        </div>
+      </header>
+      <div id="competition-bar" class="competition-bar" aria-label="Filtros de competición"></div>
+      <div id="data-status" class="data-status" aria-live="polite"></div>
+      
+<section class="report-grid">
+  <article class="card report-card"><span class="report-icon" data-icon="user"></span><h3>Jugadores</h3><p>Club, dorsal, posición, partidos, goles y sanciones.</p><button class="btn" data-report="jugadores"><span data-icon="download"></span>Descargar jugadores CSV</button></article>
+  <article class="card report-card"><span class="report-icon" data-icon="calendar"></span><h3>Partidos</h3><p>Fecha, jornada, local, visitante, estado y resultado.</p><button class="btn" data-report="partidos"><span data-icon="download"></span>Descargar partidos CSV</button></article>
+  <article class="card report-card"><span class="report-icon" data-icon="standings"></span><h3>Posiciones</h3><p>Tabla calculada con PJ, PG, PE, PP, GF, GC, diferencia y puntos.</p><button class="btn" data-report="posiciones"><span data-icon="download"></span>Descargar posiciones CSV</button></article>
+  <article class="card report-card"><span class="report-icon" data-icon="chart"></span><h3>Estadísticas</h3><p>Resumen de rendimiento individual con métricas disponibles.</p><button class="btn" data-report="estadisticas"><span data-icon="download"></span>Descargar estadísticas CSV</button></article>
+</section>
+
+      <footer class="footer">
+        <div class="footer-brand"><strong>7<b>METROS</b></strong><span>ESTADÍSTICAS · ANÁLISIS · RENDIMIENTO</span></div>
+        <div class="footer-meta"><span>Proyecto independiente de análisis de handball argentino.</span><a data-femebal-link target="_blank" rel="noopener noreferrer">Fuente institucional: Fe.Me.Bal.</a></div>
+      </footer>
+    </div>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="global-search-root"></div>
+</body>
+</html>
