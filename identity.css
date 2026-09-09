@@ -24,6 +24,14 @@
   height:100%;
   font-weight:950;
 }
+
+/* Si hay una imagen de escudo, ocultamos las iniciales de fallback. Cuando la
+   imagen falla, ui.js la elimina y el fallback vuelve a mostrarse solo. */
+.club-badge>span:not(:only-child),
+.mini-badge>span:not(:only-child){
+  visibility:hidden!important;
+}
+
 .club-badge img,.mini-badge img{
   grid-area:1/1;
   width:100%!important;
