@@ -4,17 +4,18 @@ import sys
 ROOT = Path(__file__).resolve().parent
 errors = []
 
-migration = ROOT / 'supabase/migrations/20260909_add_integrity_report_rpc.sql'
+integrity_rpc = ROOT / 'supabase/migrations/20260909_add_integrity_report_rpc.sql'
+support = ROOT / 'supabase/migrations/20260909_version_importer_support_contract.sql'
 integrity = ROOT / 'supabase_integrity_check.sql'
 audit = ROOT / 'docs/importador-femebal-v8.2-audit.md'
 v9 = ROOT / 'docs/importador-femebal-v9-rpc-contract.md'
 
-for path in (migration, integrity, audit, v9):
+for path in (integrity_rpc, support, integrity, audit, v9):
     if not path.exists():
         errors.append(f'missing backend contract file: {path.relative_to(ROOT)}')
 
-if migration.exists():
-    sql = migration.read_text(encoding='utf-8').lower()
+if integrity_rpc.exists():
+    sql = integrity_rpc.read_text(encoding='utf-8').lower()
     required = [
         'integrity_report_7metros',
         'security definer',
@@ -32,6 +33,28 @@ if migration.exists():
     for needle in required:
         if needle not in sql:
             errors.append(f'integrity RPC migration missing safeguard: {needle}')
+
+if support.exists():
+    sql = support.read_text(encoding='utf-8').lower()
+    required = [
+        'importador_contexto_7metros',
+        'catalogo_aliases_7metros',
+        'grant execute on function public.importador_contexto_7metros(bigint) to service_role',
+        'grant execute on function public.catalogo_aliases_7metros() to service_role',
+        'idx_ai_eventos_equipo',
+        'idx_ai_eventos_video',
+        'idx_ai_jobs_created_by',
+        'idx_ai_jobs_video',
+        'ai_eventos_select_anon',
+        'ai_eventos_select_authenticated',
+        'validar_scope_partido_7metros',
+        'local y visitante no pueden ser el mismo equipo',
+        'trg_validar_scope_partido_7metros',
+        'revoke all on function public.validar_scope_partido_7metros() from public, anon, authenticated',
+    ]
+    for needle in required:
+        if needle not in sql:
+            errors.append(f'importer support migration missing safeguard: {needle}')
 
 if integrity.exists():
     sql = integrity.read_text(encoding='utf-8').lower()
@@ -60,4 +83,4 @@ if errors:
         print('-', error)
     sys.exit(1)
 
-print('✓ backend contract: integrity RPC, SQL checks and importer docs OK')
+print('✓ backend contract: importer support, integrity RPC, SQL checks and docs OK')
