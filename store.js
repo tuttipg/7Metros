@@ -48,13 +48,26 @@ function pushMapList(map, key, value) {
   map.get(key).push(value);
 }
 
+export function teamCode(team) {
+  const raw = String(team?.equipo_codigo || 'A').trim().toUpperCase();
+  return /^[A-Z]$/.test(raw) ? raw : (raw || 'A');
+}
+
+export function teamDisplayName(team, club = null, { compact = false } = {}) {
+  const base = club?.name || team?.nombre_femebal || 'Equipo';
+  const code = teamCode(team);
+  if (!code || code === 'A') return base;
+  return compact ? `${base} ${code}` : `${base} · Equipo ${code}`;
+}
+
 function prepareDataset(dataset) {
   state.globalSummary = { ...state.globalSummary, ...(dataset.globalSummary || {}) };
   state.teams = (dataset.equipos || []).map(row => ({
     ...row,
     id: Number(row.id),
     club_id: Number(row.club_id),
-    temporada_id: Number(row.temporada_id)
+    temporada_id: Number(row.temporada_id),
+    equipo_codigo: teamCode(row)
   })).filter(row => Number.isFinite(row.id));
 
   state.clubs = (dataset.clubes || []).map(row => ({
@@ -119,8 +132,10 @@ function prepareDataset(dataset) {
       awayTeamId: Number.isFinite(awayTeamId) ? awayTeamId : null,
       homeClubId: homeClub?.id ?? null,
       awayClubId: awayClub?.id ?? null,
-      home: homeClub?.name || homeTeam?.nombre_femebal || field(row, ['local'], 'Local'),
-      away: awayClub?.name || awayTeam?.nombre_femebal || field(row, ['visitante'], 'Visitante'),
+      homeTeamCode: homeTeam ? teamCode(homeTeam) : 'A',
+      awayTeamCode: awayTeam ? teamCode(awayTeam) : 'A',
+      home: homeTeam ? teamDisplayName(homeTeam, homeClub) : (homeClub?.name || field(row, ['local'], 'Local')),
+      away: awayTeam ? teamDisplayName(awayTeam, awayClub) : (awayClub?.name || field(row, ['visitante'], 'Visitante')),
       homeScore: finished ? toNumber(field(row, ['goles_local'], 0)) : null,
       awayScore: finished ? toNumber(field(row, ['goles_visitante'], 0)) : null,
       status: finished ? 'Finalizado' : 'Programado',
@@ -131,7 +146,6 @@ function prepareDataset(dataset) {
     };
   }).filter(Boolean);
 
-  // Índices para evitar filtros O(n²) en los renders.
   state.index.clubById = new Map(state.clubs.map(row => [row.id, row]));
   state.index.teamById = new Map(state.teams.map(row => [row.id, row]));
   state.index.playerById = new Map(state.players.map(row => [row.id, row]));
@@ -184,8 +198,6 @@ export function getCompetitionOptions(filters = state.filters) {
     return rank === -1 ? 999 : rank;
   };
 
-  // Dependencia de filtros: rama → categoría → división.
-  // Esto evita ofrecer combinaciones que no existen realmente en equipos.
   const ramas = unique(seasonTeams.map(team => team.rama)).sort(bySpanishName);
   const rama = ramas.includes(filters.rama)
     ? filters.rama
@@ -273,7 +285,6 @@ export function getTopDivisionTeams(branch = null) {
   const seasonTeams = state.teams.filter(team => Number(team.temporada_id) === SEASON_ID);
   let rows = seasonTeams.filter(team => isTopHonorTeam(team) && (!branch || team.rama === branch));
 
-  // Fallback prudente por si la base usa una etiqueta abreviada diferente.
   if (!rows.length) {
     rows = seasonTeams.filter(team =>
       normalizeText(team.categoria) === 'mayores' &&
@@ -343,8 +354,10 @@ export function getPlayersForTeamIds(teamIds) {
     result.push({
       ...player,
       teamId: team?.id ?? null,
+      teamCode: team ? teamCode(team) : 'A',
       clubId: club?.id ?? null,
-      club: club?.name || 'Sin club',
+      clubName: club?.name || 'Sin club',
+      club: team ? teamDisplayName(team, club) : (club?.name || 'Sin club'),
       number: membership.dorsal ?? '—',
       position: membership.posicion || 'Sin posición',
       branch: team?.rama || '',
@@ -367,9 +380,9 @@ export function getPlayer(playerId) {
   return getPlayers().find(player => Number(player.id) === Number(playerId)) || null;
 }
 
-function resultForClub(match, clubId) {
+function resultForTeam(match, teamId) {
   if (match.status !== 'Finalizado') return null;
-  const home = Number(match.homeClubId) === Number(clubId);
+  const home = Number(match.homeTeamId) === Number(teamId);
   const own = home ? match.homeScore : match.awayScore;
   const opp = home ? match.awayScore : match.homeScore;
   if (own > opp) return 'W';
@@ -380,47 +393,64 @@ function resultForClub(match, clubId) {
 export function getClubsForTeamIds(teamIds) {
   const allowedTeams = teamIds instanceof Set ? teamIds : new Set((teamIds || []).map(Number));
   const scopedTeams = state.teams.filter(team => allowedTeams.has(Number(team.id)));
-  const visibleClubIds = new Set(scopedTeams.map(team => Number(team.club_id)));
   const players = getPlayersForTeamIds(allowedTeams);
   const matches = getMatchesForTeamIds(allowedTeams);
 
-  return state.clubs
-    .filter(club => visibleClubIds.has(Number(club.id)))
-    .map(club => {
-      const clubPlayers = players.filter(player => Number(player.clubId) === Number(club.id));
-      const clubMatches = matches.filter(match => Number(match.homeClubId) === club.id || Number(match.awayClubId) === club.id);
-      const finished = clubMatches.filter(match => match.status === 'Finalizado');
-      let won = 0, drawn = 0, lost = 0, gf = 0, ga = 0;
+  return scopedTeams.map(team => {
+    const club = state.index.clubById.get(Number(team.club_id)) || {
+      id: Number(team.club_id),
+      name: team.nombre_femebal || 'Club',
+      abbr: initials(team.nombre_femebal || '7M'),
+      city: '',
+      logoUrl: null
+    };
+    const teamId = Number(team.id);
+    const teamPlayers = players.filter(player => Number(player.teamId) === teamId);
+    const teamMatches = matches.filter(match => Number(match.homeTeamId) === teamId || Number(match.awayTeamId) === teamId);
+    const finished = teamMatches.filter(match => match.status === 'Finalizado');
+    let won = 0, drawn = 0, lost = 0, gf = 0, ga = 0;
 
-      finished.forEach(match => {
-        const home = Number(match.homeClubId) === club.id;
-        const own = home ? toNumber(match.homeScore) : toNumber(match.awayScore);
-        const opp = home ? toNumber(match.awayScore) : toNumber(match.homeScore);
-        gf += own; ga += opp;
-        if (own > opp) won += 1;
-        else if (own === opp) drawn += 1;
-        else lost += 1;
-      });
-
-      const form = finished
-        .slice()
-        .sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`))
-        .slice(0, 5)
-        .reverse()
-        .map(match => resultForClub(match, club.id));
-
-      return {
-        ...club,
-        players: clubPlayers.length,
-        played: finished.length,
-        won, drawn, lost,
-        gf, ga,
-        gd: gf - ga,
-        points: won * 2 + drawn,
-        goals: clubPlayers.reduce((sum, player) => sum + player.goals, 0),
-        form
-      };
+    finished.forEach(match => {
+      const home = Number(match.homeTeamId) === teamId;
+      const own = home ? toNumber(match.homeScore) : toNumber(match.awayScore);
+      const opp = home ? toNumber(match.awayScore) : toNumber(match.homeScore);
+      gf += own;
+      ga += opp;
+      if (own > opp) won += 1;
+      else if (own === opp) drawn += 1;
+      else lost += 1;
     });
+
+    const form = finished
+      .slice()
+      .sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`))
+      .slice(0, 5)
+      .reverse()
+      .map(match => resultForTeam(match, teamId));
+
+    return {
+      ...club,
+      id: Number(club.id),
+      teamId,
+      teamCode: teamCode(team),
+      clubName: club.name,
+      name: teamDisplayName(team, club),
+      category: team.categoria || '',
+      division: team.division || '',
+      branch: team.rama || '',
+      players: teamPlayers.length,
+      played: finished.length,
+      won,
+      drawn,
+      lost,
+      gf,
+      ga,
+      gd: gf - ga,
+      points: won * 2 + drawn,
+      goals: teamPlayers.reduce((sum, player) => sum + player.goals, 0),
+      form
+    };
+  });
 }
 
 export function getClubs() {
@@ -431,12 +461,21 @@ export function getTopDivisionClubs(branch = null) {
   return getClubsForTeamIds(getTopDivisionTeamIds(branch));
 }
 
-export function getClub(clubId) {
-  return getClubs().find(club => Number(club.id) === Number(clubId)) || null;
+export function getClub(clubId, teamId = null) {
+  const clubs = getClubs();
+  if (teamId !== null && teamId !== undefined) {
+    const exact = clubs.find(club => Number(club.teamId) === Number(teamId));
+    if (exact) return exact;
+  }
+  return clubs.find(club => Number(club.id) === Number(clubId)) || null;
 }
 
 export function getBaseClub(clubId) {
   return state.index.clubById.get(Number(clubId)) || null;
+}
+
+export function getTeam(teamId) {
+  return state.index.teamById.get(Number(teamId)) || null;
 }
 
 function sortStandings(clubs) {

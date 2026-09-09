@@ -61,22 +61,39 @@ required_assets = [
     'utils.js',
     'style.css',
     'v3.css',
+    'identity.css',
 ]
 for name in required_assets:
     if not (ROOT / name).exists():
         errors.append(f'missing {name}')
 
 script = (ROOT / 'script.js').read_text(encoding='utf-8') if (ROOT / 'script.js').exists() else ''
-if "link.href = 'v3.css'" not in script:
+if "loadStylesheet('seven-metros-v3-theme', 'v3.css')" not in script:
     errors.append('script.js: V3 theme is not loaded')
+if "loadStylesheet('seven-metros-identity-theme', 'identity.css')" not in script:
+    errors.append('script.js: identity theme is not loaded')
 
-theme_path = ROOT / 'v3.css'
-if theme_path.exists():
-    theme = theme_path.read_text(encoding='utf-8')
-    if theme.count('{') != theme.count('}'):
-        errors.append('v3.css: unbalanced braces')
-    if '@media' not in theme:
-        errors.append('v3.css: responsive rules are missing')
+for css_name in ('v3.css', 'identity.css'):
+    css_path = ROOT / css_name
+    if css_path.exists():
+        css = css_path.read_text(encoding='utf-8')
+        if css.count('{') != css.count('}'):
+            errors.append(f'{css_name}: unbalanced braces')
+
+v3_path = ROOT / 'v3.css'
+if v3_path.exists() and '@media' not in v3_path.read_text(encoding='utf-8'):
+    errors.append('v3.css: responsive rules are missing')
+
+identity_path = ROOT / 'identity.css'
+if identity_path.exists():
+    identity = identity_path.read_text(encoding='utf-8')
+    if 'border-radius:0!important' not in identity:
+        errors.append('identity.css: shields are still forced into rounded containers')
+    if 'object-fit:contain!important' not in identity:
+        errors.append('identity.css: shield normalization is missing')
+
+if (ROOT / '.identity-placeholder').exists():
+    errors.append('temporary identity placeholder must not ship')
 
 if errors:
     print('VALIDATION FAILED')
@@ -84,4 +101,4 @@ if errors:
         print('-', error)
     sys.exit(1)
 
-print(f'✓ validate_site: {len(html_files)} HTML, enlaces locales, módulos, V3 y textos base OK')
+print(f'✓ validate_site: {len(html_files)} HTML, enlaces, módulos, V3 e identidad de equipos OK')
