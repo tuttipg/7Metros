@@ -24,7 +24,10 @@ const db = {
     {id:101,club_id:1,temporada_id:3,categoria:'Mayores',division:'LHC Hipotecario Seguros',rama:'M',activo:true},
     {id:102,club_id:2,temporada_id:3,categoria:'Mayores',division:'LHC Hipotecario Seguros',rama:'M',activo:true}
   ],
-  clubes: [{id:1,nombre:'Ferro Carril Oeste'},{id:2,nombre:'S.A.G. Villa Ballester'}],
+  clubes: [
+    {id:1,nombre:'Ferro Carril Oeste',abreviatura:'FCO',ciudad:'CABA',logo_url:'https://example.test/ferro.png'},
+    {id:2,nombre:'S.A.G. Villa Ballester',abreviatura:null,ciudad:null,logo_url:null}
+  ],
   jugadores: [
     {id:11,nombre:'Juan',apellido:'Pérez',fecha_nacimiento:'2002-01-01',brazo_habil:'Derecho',altura_cm:188,peso_kg:84},
     {id:12,nombre:'Mateo',apellido:'López',fecha_nacimiento:'2001-01-01',brazo_habil:'Izquierdo',altura_cm:184,peso_kg:80}
@@ -45,10 +48,14 @@ const db = {
 
 globalThis.fetch = async function(url){
   const table = String(url).split('/rest/v1/')[1].split('?')[0];
-  return new Response(JSON.stringify(db[table] || []), { status:200, headers:{'Content-Type':'application/json'} });
+  const rows = db[table] || [];
+  return new Response(JSON.stringify(rows), {
+    status:200,
+    headers:{'Content-Type':'application/json', 'Content-Range': `0-${Math.max(rows.length - 1, 0)}/${rows.length}`}
+  });
 };
 
-const store = await import('../js/store.js');
+const store = await import('./store.js');
 await store.loadData();
 
 assert.equal(store.state.loaded, true);
@@ -57,6 +64,9 @@ assert.equal(store.getPlayers().length, 2);
 assert.equal(store.getMatches().length, 2);
 assert.equal(store.dataSummary().finished, 1);
 assert.equal(store.dataSummary().goals, 58);
+assert.equal(store.getBaseClub(1).abbr, 'FCO');
+assert.equal(store.getBaseClub(1).logoUrl, 'https://example.test/ferro.png');
+assert.equal(store.getBaseClub(2).logoUrl, null);
 
 const juan = store.getPlayer(11);
 assert.equal(juan.goals, 10);
@@ -70,4 +80,4 @@ assert.equal(table[0].points, 2);
 assert.equal(table[0].gd, 2);
 assert.equal(table[1].points, 0);
 
-console.log('✓ store-smoke: carga, filtros, estadísticas y posiciones OK');
+console.log('✓ store-smoke: carga, logos, filtros, estadísticas y posiciones OK');
