@@ -60,7 +60,9 @@ function prepareDataset(dataset) {
   state.clubs = (dataset.clubes || []).map(row => ({
     id: Number(row.id),
     name: row.nombre || 'Club',
-    abbr: initials(row.nombre || '7Metros')
+    abbr: row.abreviatura || initials(row.nombre || '7Metros'),
+    city: row.ciudad || '',
+    logoUrl: row.logo_url || null
   })).filter(row => Number.isFinite(row.id));
 
   state.players = (dataset.jugadores || []).map(row => ({
@@ -181,24 +183,27 @@ export function getCompetitionOptions(filters = state.filters) {
     const rank = categoryOrder.indexOf(key);
     return rank === -1 ? 999 : rank;
   };
-  const categorias = unique(seasonTeams.map(team => team.categoria)).sort((a, b) =>
+
+  // Dependencia de filtros: rama → categoría → división.
+  // Esto evita ofrecer combinaciones que no existen realmente en equipos.
+  const ramas = unique(seasonTeams.map(team => team.rama)).sort(bySpanishName);
+  const rama = ramas.includes(filters.rama)
+    ? filters.rama
+    : (ramas.includes(DEFAULT_FILTERS.rama) ? DEFAULT_FILTERS.rama : (ramas[0] || ''));
+
+  const branchTeams = seasonTeams.filter(team => !rama || team.rama === rama);
+  const categorias = unique(branchTeams.map(team => team.categoria)).sort((a, b) =>
     categoryRank(a) - categoryRank(b) || bySpanishName(a, b)
   );
   const categoria = categorias.includes(filters.categoria)
     ? filters.categoria
     : (categorias.includes(DEFAULT_FILTERS.categoria) ? DEFAULT_FILTERS.categoria : (categorias[0] || ''));
 
-  const categoryTeams = seasonTeams.filter(team => !categoria || team.categoria === categoria);
+  const categoryTeams = branchTeams.filter(team => !categoria || team.categoria === categoria);
   const divisiones = unique(categoryTeams.map(team => team.division)).sort(bySpanishName);
   const division = divisiones.includes(filters.division)
     ? filters.division
     : (divisiones.includes(DEFAULT_FILTERS.division) ? DEFAULT_FILTERS.division : (divisiones[0] || ''));
-
-  const divisionTeams = categoryTeams.filter(team => !division || team.division === division);
-  const ramas = unique(divisionTeams.map(team => team.rama)).sort(bySpanishName);
-  const rama = ramas.includes(filters.rama)
-    ? filters.rama
-    : (ramas.includes(DEFAULT_FILTERS.rama) ? DEFAULT_FILTERS.rama : (ramas[0] || ''));
 
   return { categorias, divisiones, ramas, resolved: { categoria, division, rama } };
 }
