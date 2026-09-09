@@ -1,0 +1,65 @@
+/* 7Metros — identidad de clubes y equipos */
+
+/* Escudos: sin círculos ni marcos artificiales. El lienzo fijo normaliza el
+   tamaño visual y object-fit:contain conserva la proporción real del escudo. */
+.club-badge,.mini-badge{
+  display:grid!important;
+  place-items:center!important;
+  flex:0 0 auto;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  color:var(--navy);
+  overflow:visible!important;
+  line-height:1;
+}
+.club-badge{width:66px!important;height:66px!important;font-size:11px!important}
+.mini-badge{width:31px!important;height:31px!important;font-size:7px!important}
+.club-badge>span,.mini-badge>span{
+  grid-area:1/1;
+  display:grid;
+  place-items:center;
+  width:100%;
+  height:100%;
+  font-weight:950;
+}
+.club-badge img,.mini-badge img{
+  grid-area:1/1;
+  width:100%!important;
+  height:100%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  padding:4%!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  background:transparent!important;
+  border-radius:0!important;
+  filter:drop-shadow(0 2px 3px rgba(6,25,45,.12));
+}
+.mini-badge img{padding:2%!important;filter:drop-shadow(0 1px 2px rgba(6,25,45,.12))}
+
+/* Identidad de equipos B/C/D dentro de un mismo club. */
+.team-code{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:24px;
+  height:20px;
+  padding:0 7px;
+  margin-left:6px;
+  border-radius:999px;
+  background:var(--navy);
+  color:#fff;
+  font-size:8px;
+  font-weight:950;
+  letter-spacing:.7px;
+  vertical-align:middle;
+  white-space:nowrap;
+}
+.team-code.secondary{background:#e9eef3;color:var(--navy);border:1px solid #d8e0e7}
+
+@media (max-width:760px){
+  .club-badge{width:56px!important;height:56px!important}
+  .mini-badge{width:29px!important;height:29px!important}
+}
