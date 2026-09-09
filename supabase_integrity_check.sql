@@ -27,10 +27,11 @@ with duplicate_clubs as (
   from public.partidos p
   join public.equipos l on l.id = p.local_equipo_id
   join public.equipos v on v.id = p.visitante_equipo_id
-  where l.temporada_id <> v.temporada_id
-     or l.categoria <> v.categoria
-     or l.division <> v.division
-     or l.rama <> v.rama
+  where l.temporada_id is distinct from p.temporada_id
+     or v.temporada_id is distinct from p.temporada_id
+     or l.categoria is distinct from v.categoria
+     or l.division is distinct from v.division
+     or l.rama is distinct from v.rama
 ), same_team as (
   select id from public.partidos where local_equipo_id = visitante_equipo_id
 )
