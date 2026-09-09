@@ -6,6 +6,7 @@
  * 2) Renderizar marca, navegación e iconos ANTES de cargar datos.
  * 3) Si falla un módulo o Supabase, la web sigue siendo navegable y explica el problema.
  * 4) Cargar las capas visuales globales sin duplicar enlaces CSS en cada HTML.
+ * 5) Permitir enlaces profundos a una competencia con rama/categoría/división en la URL.
  */
 
 window.SEVEN_METROS_CONFIG = Object.freeze({
@@ -43,6 +44,7 @@ function loadStylesheet(id, href) {
 
 loadStylesheet('seven-metros-v3-theme', 'v3.css');
 loadStylesheet('seven-metros-identity-theme', 'identity.css');
+loadStylesheet('seven-metros-features-theme', 'features.css');
 
 const BOOT_ICONS = {
   home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/>',
@@ -53,7 +55,7 @@ const BOOT_ICONS = {
   clipboard:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 9h6M9 13h6M9 17h4"/>',
   chart:'<path d="M4 20V10M9 20V4M14 20v-7M19 20V7M2 20h20"/>',
   ball:'<circle cx="12" cy="12" r="9"/><path d="m12 7 3 2-1 4h-4L9 9l3-2ZM6 11l4 2M18 11l-4 2M9 18l1-5M15 18l-1-5"/>',
-  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v-.09A1.7 1.7 0 0 0 15.5 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.2.36.6.7 1 .9.2.1.6.1.9.1H21v4h-.09a1.7 1.7 0 0 0-1.51 1Z"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.5 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.2.36.6.7 1 .9.2.1.6.1.9.1H21v4h-.09a1.7 1.7 0 0 0-1.51 1Z"/>',
   info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
   search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
   download:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
@@ -74,6 +76,7 @@ function renderBootstrapShell() {
   const groups = {
     primary: [
       ['inicio','index.html','home','Inicio'],
+      ['competiciones','competiciones.html','ball','Competiciones'],
       ['posiciones','posiciones.html','standings','Posiciones'],
       ['partidos','partidos.html','calendar','Partidos'],
       ['clubes','clubes.html','shield','Clubes'],
@@ -143,8 +146,16 @@ function showBootstrapError(error) {
   }
 }
 
-renderBootstrapShell();
+function filtersFromUrl() {
+  const params = new URLSearchParams(location.search);
+  const next = {};
+  if (params.get('rama')) next.rama = params.get('rama');
+  if (params.get('categoria')) next.categoria = params.get('categoria');
+  if (params.get('division')) next.division = params.get('division');
+  return next;
+}
 
+renderBootstrapShell();
 autoStart();
 
 async function autoStart() {
@@ -152,6 +163,7 @@ async function autoStart() {
     const store = await import('./store.js');
     const ui = await import('./ui.js');
     const pages = await import('./pages.js');
+    const features = await import('./features.js');
 
     ui.renderShell();
     ui.initSettingsPage();
@@ -161,8 +173,11 @@ async function autoStart() {
 
     try {
       await store.loadData();
+      const urlFilters = filtersFromUrl();
+      if (Object.keys(urlFilters).length) store.setFilters(urlFilters);
       ui.renderCompetitionBar();
       pages.renderCurrentPage();
+      features.enhanceCurrentPage();
       ui.renderSuccessStatus();
     } catch (error) {
       console.error('7Metros: error cargando datos', error);
@@ -174,6 +189,7 @@ async function autoStart() {
     document.addEventListener('7m:filters-changed', () => {
       if (!store.state.loaded) return;
       pages.renderCurrentPage();
+      features.enhanceCurrentPage();
       ui.showToast('Filtros actualizados.');
     });
   } catch (error) {
