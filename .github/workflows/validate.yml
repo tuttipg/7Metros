@@ -31,6 +31,7 @@ jobs:
           node --check store.js
           node --check ui.js
           node --check pages.js
+          node --check features.js
           node --check script.js
           node --check utils.js
           node --check config.js
