@@ -70,6 +70,14 @@ script = (ROOT / 'script.js').read_text(encoding='utf-8') if (ROOT / 'script.js'
 if "link.href = 'v3.css'" not in script:
     errors.append('script.js: V3 theme is not loaded')
 
+theme_path = ROOT / 'v3.css'
+if theme_path.exists():
+    theme = theme_path.read_text(encoding='utf-8')
+    if theme.count('{') != theme.count('}'):
+        errors.append('v3.css: unbalanced braces')
+    if '@media' not in theme:
+        errors.append('v3.css: responsive rules are missing')
+
 if errors:
     print('VALIDATION FAILED')
     for error in errors:
