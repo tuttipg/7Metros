@@ -1,10 +1,11 @@
 /*
- * 7Metros V2.2 — bootstrap robusto.
+ * 7Metros V3 — bootstrap robusto.
  *
  * Objetivos:
  * 1) No depender de una carpeta /js: todos los módulos viven en la raíz.
  * 2) Renderizar marca, navegación e iconos ANTES de cargar datos.
  * 3) Si falla un módulo o Supabase, la web sigue siendo navegable y explica el problema.
+ * 4) Cargar la capa visual V3 en todas las páginas sin duplicar enlaces CSS en cada HTML.
  */
 
 window.SEVEN_METROS_CONFIG = Object.freeze({
@@ -30,6 +31,17 @@ window.SEVEN_METROS_CONFIG = Object.freeze({
     dataSourceLabel: 'Datos de competencia cargados desde fuentes Fe.Me.Bal.'
   })
 });
+
+function loadV3Theme() {
+  if (document.getElementById('seven-metros-v3-theme')) return;
+  const link = document.createElement('link');
+  link.id = 'seven-metros-v3-theme';
+  link.rel = 'stylesheet';
+  link.href = 'v3.css';
+  document.head.appendChild(link);
+}
+
+loadV3Theme();
 
 const BOOT_ICONS = {
   home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/>',
