@@ -3,7 +3,7 @@ import {
   state, getCompetitionOptions, setFilters, getPlayers, getClubs, getMatches,
   getStandings, clearStoredFilters, selectedCompetitionLabel
 } from './store.js';
-import { esc, initials, currentDateLabel, csvDownload, metric, normalizeText } from './utils.js';
+import { esc, initials, currentDateLabel, csvDownload, metric, normalizeText, safeHttpUrl } from './utils.js';
 
 const ICONS = {
   home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/>',
@@ -36,7 +36,15 @@ export function icon(name, cls = '') {
 
 export function clubBadge(club, small = false) {
   const id = Number(club?.id) || 0;
-  return `<span class="${small ? 'mini-badge' : 'club-badge'}" data-club-tone="${id % 6}">${esc(club?.abbr || initials(club?.name || '7M'))}</span>`;
+  const cls = small ? 'mini-badge' : 'club-badge';
+  const fallback = esc(club?.abbr || initials(club?.name || '7M'));
+  const logoUrl = safeHttpUrl(club?.logoUrl || club?.logo_url || '');
+
+  if (!logoUrl) {
+    return `<span class="${cls}" data-club-tone="${id % 6}">${fallback}</span>`;
+  }
+
+  return `<span class="${cls}" data-club-tone="${id % 6}"><span style="grid-area:1/1">${fallback}</span><img src="${esc(logoUrl)}" alt="" loading="lazy" decoding="async" style="grid-area:1/1;width:82%;height:82%;object-fit:contain;background:#fff;border-radius:16%" onerror="this.remove()"></span>`;
 }
 
 export function showToast(message) {
@@ -122,7 +130,6 @@ export function renderErrorStatus(error) {
   document.getElementById('retry-data')?.addEventListener('click', () => location.reload());
 }
 
-
 function categoryLabel(value) {
   const key = normalizeText(value).replace(/[^a-z]/g, '');
   const labels = {
@@ -158,22 +165,22 @@ export function renderCompetitionBar() {
   root.innerHTML = `
     <div class="competition-context"><span class="context-icon">${icon('ball')}</span><div><small>Viendo</small><b>${esc(selectedCompetitionLabel())}</b></div></div>
     <div class="competition-selects">
+      <select id="branch-select" class="competition-select" aria-label="Rama">${options(ramas, resolved.rama, 'Rama', branchLabel)}</select>
       <select id="category-select" class="competition-select" aria-label="Categoría">${options(categorias, resolved.categoria, 'Categoría', categoryLabel)}</select>
       <select id="division-select" class="competition-select" aria-label="División">${options(divisiones, resolved.division, 'División')}</select>
-      <select id="branch-select" class="competition-select" aria-label="Rama">${options(ramas, resolved.rama, 'Rama', branchLabel)}</select>
     </div>`;
 
   const emit = () => document.dispatchEvent(new CustomEvent('7m:filters-changed'));
+  document.getElementById('branch-select')?.addEventListener('change', event => {
+    setFilters({ rama: event.target.value, categoria: '', division: '' });
+    renderCompetitionBar(); emit();
+  });
   document.getElementById('category-select')?.addEventListener('change', event => {
-    setFilters({ categoria: event.target.value, division: '', rama: '' });
+    setFilters({ categoria: event.target.value, division: '' });
     renderCompetitionBar(); emit();
   });
   document.getElementById('division-select')?.addEventListener('change', event => {
-    setFilters({ division: event.target.value, rama: '' });
-    renderCompetitionBar(); emit();
-  });
-  document.getElementById('branch-select')?.addEventListener('change', event => {
-    setFilters({ rama: event.target.value });
+    setFilters({ division: event.target.value });
     renderCompetitionBar(); emit();
   });
 
