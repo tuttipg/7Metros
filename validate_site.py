@@ -1,5 +1,6 @@
 from pathlib import Path
 from html.parser import HTMLParser
+import re
 import sys
 
 ROOT = Path(__file__).resolve().parent
@@ -69,6 +70,23 @@ for needle, label in [
     if needle not in script:
         errors.append(f'script.js: {label} is not loaded')
 
+# El frontend público de 7Metros es deliberadamente de solo lectura.
+# Si alguien introduce una escritura REST accidental, CI debe bloquearla antes de publicar.
+api_path = ROOT / 'api.js'
+if api_path.exists():
+    api = api_path.read_text(encoding='utf-8')
+    methods = {m.upper() for m in re.findall(r"method\s*:\s*['\"]([A-Za-z]+)['\"]", api)}
+    forbidden_methods = sorted(methods - {'GET', 'HEAD', 'OPTIONS'})
+    if forbidden_methods:
+        errors.append(
+            'api.js: public frontend must remain read-only; forbidden HTTP methods: '
+            + ', '.join(forbidden_methods)
+        )
+    for verb in ('POST', 'PUT', 'PATCH', 'DELETE'):
+        if re.search(rf"\.\s*(insert|update|delete|upsert)\s*\(", api, re.IGNORECASE):
+            errors.append('api.js: write-style Supabase call detected in public frontend')
+            break
+
 for css_name in ('v3.css', 'identity.css', 'features.css'):
     css_path = ROOT / css_name
     if css_path.exists():
@@ -118,4 +136,4 @@ if errors:
         print('-', error)
     sys.exit(1)
 
-print(f'✓ validate_site: {len(html_files)} HTML, enlaces, módulos, V3, identidad y perfiles OK')
+print(f'✓ validate_site: {len(html_files)} HTML, enlaces, módulos, V3, identidad, perfiles y frontend read-only OK')
