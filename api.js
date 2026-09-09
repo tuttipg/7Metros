@@ -68,8 +68,6 @@ export async function supabaseGetAll(table, query = '', { pageSize = PAGE_SIZE }
   return rows;
 }
 
-
-
 export async function supabaseCount(table) {
   const response = await request(endpoint(table, '?select=id'), {
     method: 'GET',
@@ -111,7 +109,7 @@ export async function loadPublicDataset(seasonId) {
   const clubIds = equipos.map(row => Number(row.club_id)).filter(Number.isFinite);
 
   const [clubes, planteles, totalClubes, totalJugadores] = await Promise.all([
-    supabaseGetByIds('clubes', 'id', clubIds, 'id,nombre'),
+    supabaseGetByIds('clubes', 'id', clubIds, 'id,nombre,abreviatura,ciudad,logo_url'),
     supabaseGetByIds('planteles', 'equipo_id', teamIds, 'id,jugador_id,equipo_id,dorsal,posicion'),
     supabaseCount('clubes'),
     supabaseCount('jugadores')
