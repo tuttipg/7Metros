@@ -11,16 +11,43 @@ export class DataError extends Error {
   }
 }
 
+export function validatePublicConfig(config = CONFIG) {
+  const base = String(config?.supabaseUrl || '').trim().replace(/\/$/, '');
+  const key = String(config?.supabaseKey || '').trim();
+
+  if (!base) throw new DataError('Falta configurar la URL pública de Supabase.');
+
+  let parsed;
+  try {
+    parsed = new URL(base);
+  } catch (error) {
+    throw new DataError('La URL pública de Supabase no es válida.', error);
+  }
+
+  if (parsed.protocol !== 'https:') {
+    throw new DataError('La URL pública de Supabase debe usar HTTPS.');
+  }
+
+  if (!/\.supabase\.co$/i.test(parsed.hostname) && !/\.test$/i.test(parsed.hostname)) {
+    throw new DataError('La URL pública configurada no corresponde a un endpoint esperado de Supabase.');
+  }
+
+  if (!key) throw new DataError('Falta configurar la clave pública de Supabase.');
+
+  return { base, key };
+}
+
 function endpoint(table, query = '') {
-  const base = String(CONFIG.supabaseUrl || '').replace(/\/$/, '');
+  const { base } = validatePublicConfig();
   const suffix = query ? (String(query).startsWith('?') ? query : `?${query}`) : '';
   return `${base}/rest/v1/${table}${suffix}`;
 }
 
 function headers(range = null, extra = {}) {
+  const { key } = validatePublicConfig();
   const result = {
-    apikey: CONFIG.supabaseKey || '',
-    Authorization: `Bearer ${CONFIG.supabaseKey || ''}`,
+    apikey: key,
+    Authorization: `Bearer ${key}`,
     Accept: 'application/json',
     'Content-Type': 'application/json'
   };
@@ -117,8 +144,8 @@ export async function loadPublicDataset(seasonId) {
 
   const playerIds = planteles.map(row => Number(row.jugador_id)).filter(Number.isFinite);
 
-  // Partidos se pagina. La tabla actual no garantiza que temporada_id exista en
-  // todas las instalaciones, por eso filtramos de forma segura luego usando equipos.
+  // Partidos se pagina. La portada usa además totales globales, por eso esta consulta
+  // conserva el alcance completo y el store filtra luego la temporada mediante equipos.
   const [jugadores, partidos, participaciones] = await Promise.all([
     supabaseGetByIds('jugadores', 'id', playerIds, 'id,nombre,apellido,fecha_nacimiento,brazo_habil,altura_cm,peso_kg'),
     supabaseGetAll('partidos', '?select=*'),
