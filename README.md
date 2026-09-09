@@ -16,6 +16,7 @@
 - Escudos de clubes leídos desde `clubes.logo_url`, con fallback automático por iniciales.
 - Inicio sin filtros globales: los KPI muestran la base completa y la portada deportiva prioriza LHC/LHD.
 - Arquitectura preparada para sumar eventos de video/IA sin inventar métricas que todavía no existen.
+- Importador FEMEBAL auditado con política fail-closed e idempotencia como requisito operativo.
 
 ## Secciones
 
@@ -47,6 +48,9 @@
 ├── style.css
 ├── store-smoke.mjs
 ├── validate_site.py
+├── supabase_integrity_check.sql
+├── docs/
+│   └── importador-femebal-v8.2-audit.md
 ├── favicon.svg
 ├── arco-handball.jpeg
 └── *.html
@@ -61,6 +65,8 @@
 - `ui.js`: navegación, escudos, filtros globales, búsqueda, ajustes y reportes.
 - `utils.js`: fechas, seguridad de texto/URLs, CSV y utilidades.
 - `script.js`: arranque robusto de la aplicación y shell de respaldo.
+- `supabase_integrity_check.sql`: controles no destructivos para detectar duplicados, referencias rotas y partidos fuera de scope.
+- `docs/importador-femebal-v8.2-audit.md`: auditoría técnica y contrato recomendado para la evolución del importador.
 
 ## Ejecutar localmente
 
@@ -116,6 +122,21 @@ Si `logo_url` está vacío o la imagen externa falla, la interfaz conserva las i
 
 Los partidos con estado `programado` tampoco se consideran resultados aunque la base contenga placeholders de marcador.
 
+El importador debe ser idempotente: ejecutar dos veces la misma fuente no puede duplicar clubes, equipos ni partidos. Ante una ambigüedad, la escritura debe bloquearse o pasar a revisión; nunca se debe completar información por adivinación.
+
+## Importador FEMEBAL
+
+La auditoría del workflow V8.2 está documentada en `docs/importador-femebal-v8.2-audit.md`. La rama general del importador valida cobertura de clubes, IDs de equipos, reprogramaciones y volumen antes de escribir en Supabase.
+
+Antes y después de una importación importante se recomienda ejecutar `supabase_integrity_check.sql`. El resultado esperado para los controles críticos es cero en:
+
+- grupos de clubes duplicados;
+- grupos de equipos duplicados;
+- partidos exactamente duplicados;
+- referencias de equipos rotas;
+- partidos entre equipos de distinto scope competitivo;
+- partidos con el mismo equipo como local y visitante.
+
 ## Tests
 
 Desde la raíz del repositorio:
@@ -136,6 +157,8 @@ Los tests incluidos comprueban:
 - enlaces locales;
 - páginas faltantes;
 - textos obsoletos.
+
+GitHub Actions ejecuta automáticamente estas validaciones en cada push a `main` y en pull requests.
 
 ## Escudos
 
