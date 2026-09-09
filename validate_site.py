@@ -51,7 +51,7 @@ for path in html_files:
     if '/js/' in text or 'src="js/' in text or "src='js/" in text:
         errors.append(f'{path.name}: stale /js module reference')
 
-required_js = [
+required_assets = [
     'script.js',
     'config.js',
     'api.js',
@@ -59,10 +59,24 @@ required_js = [
     'ui.js',
     'pages.js',
     'utils.js',
+    'style.css',
+    'v3.css',
 ]
-for name in required_js:
+for name in required_assets:
     if not (ROOT / name).exists():
         errors.append(f'missing {name}')
+
+script = (ROOT / 'script.js').read_text(encoding='utf-8') if (ROOT / 'script.js').exists() else ''
+if "link.href = 'v3.css'" not in script:
+    errors.append('script.js: V3 theme is not loaded')
+
+theme_path = ROOT / 'v3.css'
+if theme_path.exists():
+    theme = theme_path.read_text(encoding='utf-8')
+    if theme.count('{') != theme.count('}'):
+        errors.append('v3.css: unbalanced braces')
+    if '@media' not in theme:
+        errors.append('v3.css: responsive rules are missing')
 
 if errors:
     print('VALIDATION FAILED')
@@ -70,4 +84,4 @@ if errors:
         print('-', error)
     sys.exit(1)
 
-print(f'✓ validate_site: {len(html_files)} HTML, enlaces locales, módulos y textos base OK')
+print(f'✓ validate_site: {len(html_files)} HTML, enlaces locales, módulos, V3 y textos base OK')
