@@ -1,6 +1,6 @@
 import { loadPublicDataset } from './api.js';
 import { DEFAULT_FILTERS, SEASON_ID, STORAGE_KEYS } from './config.js';
-import { field, numericField, initials, ratio, toNumber, unique, bySpanishName } from './utils.js';
+import { field, numericField, initials, ratio, toNumber, unique, bySpanishName, normalizeText } from './utils.js';
 
 function settingEnabled(key, defaultValue = false) {
   const stored = localStorage.getItem(key);
@@ -30,6 +30,7 @@ export const state = {
   rosters: [],
   matches: [],
   participations: [],
+  globalSummary: { clubs: 0, players: 0, matches: 0, finished: 0, goals: 0, avgGoals: null },
   index: {
     clubById: new Map(),
     teamById: new Map(),
@@ -48,6 +49,7 @@ function pushMapList(map, key, value) {
 }
 
 function prepareDataset(dataset) {
+  state.globalSummary = { ...state.globalSummary, ...(dataset.globalSummary || {}) };
   state.teams = (dataset.equipos || []).map(row => ({
     ...row,
     id: Number(row.id),
@@ -167,7 +169,21 @@ export async function loadData() {
 
 export function getCompetitionOptions(filters = state.filters) {
   const seasonTeams = state.teams.filter(team => Number(team.temporada_id) === SEASON_ID);
-  const categorias = unique(seasonTeams.map(team => team.categoria)).sort(bySpanishName);
+  const categoryOrder = ['infantiles', 'menores', 'cadetes', 'juveniles', 'juniors', 'mayores'];
+  const categoryRank = value => {
+    let key = normalizeText(value).replace(/[^a-z]/g, '');
+    if (key === 'infantil') key = 'infantiles';
+    if (key === 'menor') key = 'menores';
+    if (key === 'cadete') key = 'cadetes';
+    if (key === 'juvenil') key = 'juveniles';
+    if (key === 'junior') key = 'juniors';
+    if (key === 'mayor') key = 'mayores';
+    const rank = categoryOrder.indexOf(key);
+    return rank === -1 ? 999 : rank;
+  };
+  const categorias = unique(seasonTeams.map(team => team.categoria)).sort((a, b) =>
+    categoryRank(a) - categoryRank(b) || bySpanishName(a, b)
+  );
   const categoria = categorias.includes(filters.categoria)
     ? filters.categoria
     : (categorias.includes(DEFAULT_FILTERS.categoria) ? DEFAULT_FILTERS.categoria : (categorias[0] || ''));
@@ -228,11 +244,48 @@ export function filteredTeamIds() {
   return new Set(filteredTeams().map(team => team.id));
 }
 
-export function getMatches() {
-  const allowed = filteredTeamIds();
+export function getMatchesForTeamIds(teamIds) {
+  const allowed = teamIds instanceof Set ? teamIds : new Set((teamIds || []).map(Number));
   return state.matches.filter(match =>
     allowed.has(Number(match.homeTeamId)) && allowed.has(Number(match.awayTeamId))
   );
+}
+
+export function getMatches() {
+  return getMatchesForTeamIds(filteredTeamIds());
+}
+
+function isTopHonorTeam(team) {
+  if (normalizeText(team?.categoria) !== 'mayores') return false;
+  const division = normalizeText(team?.division);
+  if (!division || division.includes('plata')) return false;
+  return /(^|\s)lh[cd](\s|$)/.test(division) ||
+    (division.includes('liga') && division.includes('honor') && division.includes('hipotecario')) ||
+    division.includes('liga de honor hipotecario');
+}
+
+export function getTopDivisionTeams(branch = null) {
+  const seasonTeams = state.teams.filter(team => Number(team.temporada_id) === SEASON_ID);
+  let rows = seasonTeams.filter(team => isTopHonorTeam(team) && (!branch || team.rama === branch));
+
+  // Fallback prudente por si la base usa una etiqueta abreviada diferente.
+  if (!rows.length) {
+    rows = seasonTeams.filter(team =>
+      normalizeText(team.categoria) === 'mayores' &&
+      normalizeText(team.division).includes('honor') &&
+      !normalizeText(team.division).includes('plata') &&
+      (!branch || team.rama === branch)
+    );
+  }
+  return rows;
+}
+
+export function getTopDivisionTeamIds(branch = null) {
+  return new Set(getTopDivisionTeams(branch).map(team => Number(team.id)));
+}
+
+export function getTopDivisionMatches(branch = null) {
+  return getMatchesForTeamIds(getTopDivisionTeamIds(branch));
 }
 
 function participationStats(playerId, allowedTeamIds = filteredTeamIds()) {
@@ -270,8 +323,8 @@ function participationStats(playerId, allowedTeamIds = filteredTeamIds()) {
   };
 }
 
-export function getPlayers() {
-  const allowedTeams = filteredTeamIds();
+export function getPlayersForTeamIds(teamIds) {
+  const allowedTeams = teamIds instanceof Set ? teamIds : new Set((teamIds || []).map(Number));
   const result = [];
 
   for (const player of state.players) {
@@ -289,10 +342,20 @@ export function getPlayers() {
       club: club?.name || 'Sin club',
       number: membership.dorsal ?? '—',
       position: membership.posicion || 'Sin posición',
+      branch: team?.rama || '',
+      division: team?.division || '',
       ...stats
     });
   }
   return result;
+}
+
+export function getPlayers() {
+  return getPlayersForTeamIds(filteredTeamIds());
+}
+
+export function getTopDivisionPlayers(branch = null) {
+  return getPlayersForTeamIds(getTopDivisionTeamIds(branch));
 }
 
 export function getPlayer(playerId) {
@@ -309,10 +372,12 @@ function resultForClub(match, clubId) {
   return 'D';
 }
 
-export function getClubs() {
-  const visibleClubIds = new Set(filteredTeams().map(team => Number(team.club_id)));
-  const players = getPlayers();
-  const matches = getMatches();
+export function getClubsForTeamIds(teamIds) {
+  const allowedTeams = teamIds instanceof Set ? teamIds : new Set((teamIds || []).map(Number));
+  const scopedTeams = state.teams.filter(team => allowedTeams.has(Number(team.id)));
+  const visibleClubIds = new Set(scopedTeams.map(team => Number(team.club_id)));
+  const players = getPlayersForTeamIds(allowedTeams);
+  const matches = getMatchesForTeamIds(allowedTeams);
 
   return state.clubs
     .filter(club => visibleClubIds.has(Number(club.id)))
@@ -353,6 +418,14 @@ export function getClubs() {
     });
 }
 
+export function getClubs() {
+  return getClubsForTeamIds(filteredTeamIds());
+}
+
+export function getTopDivisionClubs(branch = null) {
+  return getClubsForTeamIds(getTopDivisionTeamIds(branch));
+}
+
 export function getClub(clubId) {
   return getClubs().find(club => Number(club.id) === Number(clubId)) || null;
 }
@@ -361,13 +434,25 @@ export function getBaseClub(clubId) {
   return state.index.clubById.get(Number(clubId)) || null;
 }
 
-export function getStandings() {
-  return getClubs().slice().sort((a, b) =>
+function sortStandings(clubs) {
+  return clubs.slice().sort((a, b) =>
     b.points - a.points ||
     b.gd - a.gd ||
     b.gf - a.gf ||
     bySpanishName(a.name, b.name)
   );
+}
+
+export function getStandingsForTeamIds(teamIds) {
+  return sortStandings(getClubsForTeamIds(teamIds));
+}
+
+export function getStandings() {
+  return sortStandings(getClubs());
+}
+
+export function getTopDivisionStandings(branch = null) {
+  return getStandingsForTeamIds(getTopDivisionTeamIds(branch));
 }
 
 export function getMatch(matchId) {
@@ -423,6 +508,18 @@ export function selectedCompetitionLabel() {
   const { categoria, division, rama } = state.filters;
   const branch = rama === 'M' ? 'Masculino' : rama === 'F' ? 'Femenino' : rama;
   return [categoria, division, branch].filter(Boolean).join(' · ');
+}
+
+export function globalDataSummary() {
+  const summary = state.globalSummary || {};
+  return {
+    clubs: Number(summary.clubs || 0),
+    players: Number(summary.players || 0),
+    matches: Number(summary.matches || 0),
+    finished: Number(summary.finished || 0),
+    goals: Number(summary.goals || 0),
+    avgGoals: summary.avgGoals === null || summary.avgGoals === undefined ? null : Number(summary.avgGoals)
+  };
 }
 
 export function dataSummary() {

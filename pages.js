@@ -1,6 +1,7 @@
 import {
   state, getPlayers, getPlayer, getPlayerMatchRows, getClubs, getClub, getMatches, getBaseClub,
-  getMatch, getMatchParticipations, getStandings, dataSummary, filteredTeams
+  getMatch, getMatchParticipations, getStandings, dataSummary, filteredTeams,
+  globalDataSummary, getTopDivisionMatches, getTopDivisionPlayers, getTopDivisionStandings
 } from './store.js';
 import {
   esc, initials, formatDateISO, formatShortDate, localISODate, metric, ageFromBirthDate,
@@ -54,8 +55,15 @@ function compactMatch(match) {
   return `<a class="compact-match" href="partido.html?id=${match.id}"><span class="date-box"><b>${d.day}</b><small>${d.month}</small></span><span class="compact-team">${clubBadge(homeClub, true)}${esc(match.home)}</span><strong>${esc(score)}</strong><span class="compact-team right">${esc(match.away)}${clubBadge(awayClub, true)}</span></a>`;
 }
 
+function miniStandingsGroup(title, standings) {
+  if (!standings.length) return `<section class="home-standings-group"><h3>${esc(title)}</h3>${emptyState('Sin posiciones', 'Todavía no hay resultados suficientes.')}</section>`;
+  return `<section class="home-standings-group"><h3>${esc(title)}</h3><div class="mini-standings">${standings.slice(0, 5).map((club, i) => `<a href="club.html?id=${club.id}" class="mini-standing-row"><span class="standing-pos">${i + 1}</span>${clubBadge(club, true)}<b>${esc(club.name)}</b><span>${club.played} PJ</span><strong>${club.points} pts</strong></a>`).join('')}</div></section>`;
+}
+
 function renderDashboard() {
-  const summary = dataSummary();
+  // Los cinco KPI del inicio son deliberadamente GLOBALES: muestran la escala real
+  // de toda la base de 7Metros, independientemente de los filtros de competencia.
+  const summary = globalDataSummary();
   document.querySelector('[data-kpi="clubs"]')?.replaceChildren(document.createTextNode(metric(summary.clubs)));
   document.querySelector('[data-kpi="players"]')?.replaceChildren(document.createTextNode(metric(summary.players)));
   document.querySelector('[data-kpi="matches"]')?.replaceChildren(document.createTextNode(metric(summary.matches)));
@@ -64,49 +72,45 @@ function renderDashboard() {
 
   const healthLabel = document.getElementById('data-health-label');
   const healthMeta = document.getElementById('data-health-meta');
-  if (healthLabel) healthLabel.textContent = summary.matches ? 'Datos disponibles' : 'Sin partidos en este filtro';
-  if (healthMeta) healthMeta.textContent = `${dataFreshnessLabel()} · ${summary.finished} finalizados`;
+  if (healthLabel) healthLabel.textContent = summary.matches ? `${metric(summary.matches)} partidos en la base` : 'Base conectada';
+  if (healthMeta) healthMeta.textContent = `${metric(summary.players)} jugadores · ${metric(summary.clubs)} clubes · ${dataFreshnessLabel()}`;
 
-  const matches = getMatches();
+  // La portada deportiva se concentra por defecto en las dos ramas de Liga de Honor.
+  const matches = getTopDivisionMatches();
   const finished = matches.filter(m => m.status === 'Finalizado').sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
   const upcoming = matches.filter(m => m.status !== 'Finalizado' && m.date >= localISODate()).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
 
   const last = document.getElementById('dashboard-last');
   if (last) {
-    const match = finished[0];
-    if (!match) last.innerHTML = emptyState('Todavía no hay resultados', 'Los partidos finalizados aparecerán acá.');
-    else {
-      const home = getBaseClub(match.homeClubId) || { name: match.home, abbr: initials(match.home) };
-      const away = getBaseClub(match.awayClubId) || { name: match.away, abbr: initials(match.away) };
-      last.innerHTML = `<a class="featured-match" href="partido.html?id=${match.id}"><div class="featured-team">${clubBadge(home)}<b>${esc(match.home)}</b></div><div class="featured-score"><span>${esc(match.roundLabel)} · ${formatDateISO(match.date)}</span><strong>${match.homeScore}<i>–</i>${match.awayScore}</strong><small>FINALIZADO</small></div><div class="featured-team">${clubBadge(away)}<b>${esc(match.away)}</b></div></a>`;
-    }
+    last.innerHTML = finished.slice(0, 3).map(compactMatch).join('') || emptyState('Todavía no hay resultados de Liga de Honor', 'Los últimos partidos de LHC y LHD aparecerán acá.');
   }
 
   const next = document.getElementById('dashboard-next');
-  if (next) next.innerHTML = upcoming.slice(0, 4).map(compactMatch).join('') || emptyState('No hay próximos partidos', 'No encontramos encuentros programados desde hoy.');
+  if (next) next.innerHTML = upcoming.slice(0, 4).map(compactMatch).join('') || emptyState('No hay próximos partidos de Liga de Honor', 'No encontramos encuentros de LHC o LHD programados desde hoy.');
 
   const standingsRoot = document.getElementById('dashboard-standings');
   if (standingsRoot) {
-    const standings = getStandings().slice(0, 6);
-    standingsRoot.innerHTML = standings.length ? `<div class="mini-standings">${standings.map((club, i) => `<a href="club.html?id=${club.id}" class="mini-standing-row"><span class="standing-pos">${i + 1}</span>${clubBadge(club, true)}<b>${esc(club.name)}</b><span>${club.played} PJ</span><strong>${club.points} pts</strong></a>`).join('')}</div>` : emptyState('Sin posiciones', 'Se necesitan resultados cargados para calcular la tabla.');
+    const lhc = getTopDivisionStandings('M');
+    const lhd = getTopDivisionStandings('F');
+    standingsRoot.innerHTML = `<div class="home-standings-groups">${miniStandingsGroup('LHC · Caballeros', lhc)}${miniStandingsGroup('LHD · Damas', lhd)}</div>`;
   }
 
   const high = document.getElementById('dashboard-highlights');
   if (high) {
-    const players = getPlayers();
-    if (!players.length) high.innerHTML = emptyState('Sin estadísticas', 'Los líderes aparecerán al cargar participaciones.');
+    const players = getTopDivisionPlayers();
+    if (!players.length) high.innerHTML = emptyState('Sin estadísticas de Liga de Honor', 'Los líderes de LHC y LHD aparecerán al cargar participaciones.');
     else {
       const goals = players.slice().sort((a, b) => b.goals - a.goals)[0];
       const rate = players.filter(p => p.matchesPlayed > 0).slice().sort((a, b) => (b.goalsPerMatch || 0) - (a.goalsPerMatch || 0))[0] || goals;
       const played = players.slice().sort((a, b) => b.matchesPlayed - a.matchesPlayed)[0];
       const discipline = players.slice().sort((a, b) => b.sanctions - a.sanctions)[0];
       const cards = [
-        [goals, 'GOLEADOR', goals?.goals ?? 0, 'goles'],
+        [goals, 'GOLEADOR LIGA DE HONOR', goals?.goals ?? 0, 'goles'],
         [rate, 'GOLES / PARTIDO', rate?.goalsPerMatch ?? 0, 'promedio'],
         [played, 'MÁS PARTIDOS', played?.matchesPlayed ?? 0, 'partidos'],
         [discipline, 'SANCIONES', discipline?.sanctions ?? 0, 'totales']
       ];
-      high.innerHTML = cards.map(([p, label, value, unit]) => `<a class="highlight-item" href="jugador.html?id=${p.id}"><span class="highlight-kicker">${label}</span><span class="avatar large">${esc(initials(p.name))}</span><b class="highlight-name">${esc(p.name)}</b><span class="highlight-club">${esc(p.club)}</span><strong class="highlight-number">${typeof value === 'number' && !Number.isInteger(value) ? metric(value, 1) : metric(value)}</strong><span class="highlight-unit">${unit}</span></a>`).join('');
+      high.innerHTML = cards.map(([p, label, value, unit]) => `<a class="highlight-item" href="jugador.html?id=${p.id}"><span class="highlight-kicker">${label}</span><span class="avatar large">${esc(initials(p.name))}</span><b class="highlight-name">${esc(p.name)}</b><span class="highlight-club">${esc(p.club)} · ${p.branch === 'F' ? 'LHD' : 'LHC'}</span><strong class="highlight-number">${typeof value === 'number' && !Number.isInteger(value) ? metric(value, 1) : metric(value)}</strong><span class="highlight-unit">${unit}</span></a>`).join('');
     }
   }
 }

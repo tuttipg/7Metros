@@ -17,7 +17,7 @@ function endpoint(table, query = '') {
   return `${base}/rest/v1/${table}${suffix}`;
 }
 
-function headers(range = null) {
+function headers(range = null, extra = {}) {
   const result = {
     apikey: CONFIG.supabaseKey || '',
     Authorization: `Bearer ${CONFIG.supabaseKey || ''}`,
@@ -25,7 +25,7 @@ function headers(range = null) {
     'Content-Type': 'application/json'
   };
   if (range) result.Range = range;
-  return result;
+  return { ...result, ...extra };
 }
 
 async function request(url, options = {}) {
@@ -68,6 +68,23 @@ export async function supabaseGetAll(table, query = '', { pageSize = PAGE_SIZE }
   return rows;
 }
 
+
+
+export async function supabaseCount(table) {
+  const response = await request(endpoint(table, '?select=id'), {
+    method: 'GET',
+    headers: headers('0-0', { Prefer: 'count=exact' })
+  });
+
+  const contentRange = response.headers.get('content-range') || '';
+  const match = contentRange.match(/\/(\d+)$/);
+  if (match) return Number(match[1]);
+
+  // Fallback útil para mocks o instalaciones que no devuelven Content-Range.
+  const page = await response.json();
+  return Array.isArray(page) ? page.length : 0;
+}
+
 export async function supabaseGetByIds(table, field, ids, select = '*', { chunkSize = 100 } = {}) {
   const values = [...new Set((ids || []).map(Number).filter(Number.isFinite))];
   if (!values.length) return [];
@@ -93,9 +110,11 @@ export async function loadPublicDataset(seasonId) {
   const teamIds = equipos.map(row => Number(row.id)).filter(Number.isFinite);
   const clubIds = equipos.map(row => Number(row.club_id)).filter(Number.isFinite);
 
-  const [clubes, planteles] = await Promise.all([
+  const [clubes, planteles, totalClubes, totalJugadores] = await Promise.all([
     supabaseGetByIds('clubes', 'id', clubIds, 'id,nombre'),
-    supabaseGetByIds('planteles', 'equipo_id', teamIds, 'id,jugador_id,equipo_id,dorsal,posicion')
+    supabaseGetByIds('planteles', 'equipo_id', teamIds, 'id,jugador_id,equipo_id,dorsal,posicion'),
+    supabaseCount('clubes'),
+    supabaseCount('jugadores')
   ]);
 
   const playerIds = planteles.map(row => Number(row.jugador_id)).filter(Number.isFinite);
@@ -108,5 +127,23 @@ export async function loadPublicDataset(seasonId) {
     supabaseGetByIds('participaciones', 'equipo_id', teamIds, '*')
   ]);
 
-  return { clubes, equipos, jugadores, planteles, partidos, participaciones };
+  const finalizadosGlobales = partidos.filter(row => {
+    const estado = String(row.estado || '').toLowerCase();
+    const tieneResultado = row.goles_local !== null && row.goles_local !== undefined && row.goles_visitante !== null && row.goles_visitante !== undefined;
+    return estado === 'finalizado' || estado === 'final' || (tieneResultado && estado !== 'programado');
+  });
+  const golesGlobales = finalizadosGlobales.reduce((sum, row) =>
+    sum + Number(row.goles_local || 0) + Number(row.goles_visitante || 0), 0
+  );
+
+  const globalSummary = {
+    clubs: totalClubes,
+    players: totalJugadores,
+    matches: partidos.length,
+    finished: finalizadosGlobales.length,
+    goals: golesGlobales,
+    avgGoals: finalizadosGlobales.length ? Number((golesGlobales / finalizadosGlobales.length).toFixed(1)) : null
+  };
+
+  return { clubes, equipos, jugadores, planteles, partidos, participaciones, globalSummary };
 }

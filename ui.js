@@ -122,6 +122,20 @@ export function renderErrorStatus(error) {
   document.getElementById('retry-data')?.addEventListener('click', () => location.reload());
 }
 
+
+function categoryLabel(value) {
+  const key = normalizeText(value).replace(/[^a-z]/g, '');
+  const labels = {
+    infantil: 'Infantiles', infantiles: 'Infantiles',
+    menor: 'Menores', menores: 'Menores',
+    cadete: 'Cadetes', cadetes: 'Cadetes',
+    juvenil: 'Juveniles', juveniles: 'Juveniles',
+    junior: 'Juniors', juniors: 'Juniors',
+    mayor: 'Mayores', mayores: 'Mayores'
+  };
+  return labels[key] || value;
+}
+
 function branchLabel(value) {
   if (value === 'M') return 'Masculino';
   if (value === 'F') return 'Femenino';
@@ -130,6 +144,10 @@ function branchLabel(value) {
 
 export function renderCompetitionBar() {
   const root = document.getElementById('competition-bar');
+  if (document.body.dataset.page === 'inicio') {
+    if (root) root.remove();
+    return;
+  }
   if (!root || !state.loaded) return;
   const { categorias, divisiones, ramas, resolved } = getCompetitionOptions();
 
@@ -140,7 +158,7 @@ export function renderCompetitionBar() {
   root.innerHTML = `
     <div class="competition-context"><span class="context-icon">${icon('ball')}</span><div><small>Viendo</small><b>${esc(selectedCompetitionLabel())}</b></div></div>
     <div class="competition-selects">
-      <select id="category-select" class="competition-select" aria-label="Categoría">${options(categorias, resolved.categoria, 'Categoría')}</select>
+      <select id="category-select" class="competition-select" aria-label="Categoría">${options(categorias, resolved.categoria, 'Categoría', categoryLabel)}</select>
       <select id="division-select" class="competition-select" aria-label="División">${options(divisiones, resolved.division, 'División')}</select>
       <select id="branch-select" class="competition-select" aria-label="Rama">${options(ramas, resolved.rama, 'Rama', branchLabel)}</select>
     </div>`;
