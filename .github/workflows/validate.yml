@@ -41,3 +41,6 @@ jobs:
 
       - name: Validate static site
         run: python validate_site.py
+
+      - name: Validate backend/importer contract
+        run: python validate_backend_contract.py
