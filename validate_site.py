@@ -91,6 +91,10 @@ if identity_path.exists():
         errors.append('identity.css: shields are still forced into rounded containers')
     if 'object-fit:contain!important' not in identity:
         errors.append('identity.css: shield normalization is missing')
+    if ':has(>img)>span' not in identity or 'visibility:hidden' not in identity:
+        errors.append('identity.css: shield fallback initials can overlap real crest images')
+    if 'mix-blend-mode:normal!important' not in identity:
+        errors.append('identity.css: legacy blend mode can contaminate transparent crests')
 
 features_path = ROOT / 'features.js'
 if features_path.exists():
