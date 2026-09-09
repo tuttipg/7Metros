@@ -5,7 +5,7 @@
  * 1) No depender de una carpeta /js: todos los módulos viven en la raíz.
  * 2) Renderizar marca, navegación e iconos ANTES de cargar datos.
  * 3) Si falla un módulo o Supabase, la web sigue siendo navegable y explica el problema.
- * 4) Cargar la capa visual V3 en todas las páginas sin duplicar enlaces CSS en cada HTML.
+ * 4) Cargar las capas visuales globales sin duplicar enlaces CSS en cada HTML.
  */
 
 window.SEVEN_METROS_CONFIG = Object.freeze({
@@ -32,16 +32,17 @@ window.SEVEN_METROS_CONFIG = Object.freeze({
   })
 });
 
-function loadV3Theme() {
-  if (document.getElementById('seven-metros-v3-theme')) return;
+function loadStylesheet(id, href) {
+  if (document.getElementById(id)) return;
   const link = document.createElement('link');
-  link.id = 'seven-metros-v3-theme';
+  link.id = id;
   link.rel = 'stylesheet';
-  link.href = 'v3.css';
+  link.href = href;
   document.head.appendChild(link);
 }
 
-loadV3Theme();
+loadStylesheet('seven-metros-v3-theme', 'v3.css');
+loadStylesheet('seven-metros-identity-theme', 'identity.css');
 
 const BOOT_ICONS = {
   home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/>',
@@ -52,7 +53,7 @@ const BOOT_ICONS = {
   clipboard:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 9h6M9 13h6M9 17h4"/>',
   chart:'<path d="M4 20V10M9 20V4M14 20v-7M19 20V7M2 20h20"/>',
   ball:'<circle cx="12" cy="12" r="9"/><path d="m12 7 3 2-1 4h-4L9 9l3-2ZM6 11l4 2M18 11l-4 2M9 18l1-5M15 18l-1-5"/>',
-  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.5 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.2.36.6.7 1 .9.2.1.6.1.9.1H21v4h-.09a1.7 1.7 0 0 0-1.51 1Z"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v-.09A1.7 1.7 0 0 0 15.5 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.2.36.6.7 1 .9.2.1.6.1.9.1H21v4h-.09a1.7 1.7 0 0 0-1.51 1Z"/>',
   info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
   search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
   download:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
@@ -148,7 +149,6 @@ autoStart();
 
 async function autoStart() {
   try {
-    // Imports dinámicos: si uno falla, el shell de navegación queda visible.
     const store = await import('./store.js');
     const ui = await import('./ui.js');
     const pages = await import('./pages.js');
