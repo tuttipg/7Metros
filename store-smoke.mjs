@@ -60,6 +60,25 @@ globalThis.fetch = async function(url){
   });
 };
 
+const api = await import('./api.js');
+assert.deepEqual(api.validatePublicConfig(), { base:'https://mock.7metros.test', key:'test' });
+assert.throws(
+  () => api.validatePublicConfig({ supabaseUrl:'', supabaseKey:'test' }),
+  error => error instanceof api.DataError && /URL pública/.test(error.message)
+);
+assert.throws(
+  () => api.validatePublicConfig({ supabaseUrl:'http://example.com', supabaseKey:'test' }),
+  error => error instanceof api.DataError && /HTTPS/.test(error.message)
+);
+assert.throws(
+  () => api.validatePublicConfig({ supabaseUrl:'https://example.com', supabaseKey:'test' }),
+  error => error instanceof api.DataError && /endpoint esperado/.test(error.message)
+);
+assert.throws(
+  () => api.validatePublicConfig({ supabaseUrl:'https://mock.7metros.test', supabaseKey:'' }),
+  error => error instanceof api.DataError && /clave pública/.test(error.message)
+);
+
 const store = await import('./store.js');
 await store.loadData();
 
@@ -93,4 +112,4 @@ assert.equal(table[1].name, 'Ferro Carril Oeste · Equipo B');
 assert.equal(table[1].points, 2);
 assert.equal(table[2].points, 0);
 
-console.log('✓ store-smoke: carga, logos, equipos A/B, filtros, estadísticas y posiciones OK');
+console.log('✓ store-smoke: configuración, carga, logos, equipos A/B, filtros, estadísticas y posiciones OK');
