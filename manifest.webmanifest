@@ -1,0 +1,11 @@
+{
+  "name": "7Metros — Handball App",
+  "short_name": "7Metros",
+  "description": "Estadísticas, resultados, clubes y análisis del handball argentino.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#06192d",
+  "icons": []
+}

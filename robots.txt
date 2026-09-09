@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /cargar-jugador.html
+Disallow: /cargar-partido.html
+
+Sitemap: https://tuttipg.github.io/7Metros/sitemap.xml

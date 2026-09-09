@@ -1,12 +1,7 @@
 /*
- * 7Metros V3 — bootstrap robusto.
- *
- * Objetivos:
- * 1) No depender de una carpeta /js: todos los módulos viven en la raíz.
- * 2) Renderizar marca, navegación e iconos ANTES de cargar datos.
- * 3) Si falla un módulo o Supabase, la web sigue siendo navegable y explica el problema.
- * 4) Cargar las capas visuales globales sin duplicar enlaces CSS en cada HTML.
- * 5) Permitir enlaces profundos a una competencia con rama/categoría/división en la URL.
+ * 7Metros V4 — bootstrap robusto y extensible.
+ * La navegación se renderiza antes de los datos y la expansión autónoma agrega
+ * cobertura global, comparadores, administración e IA sin romper páginas legacy.
  */
 
 window.SEVEN_METROS_CONFIG = Object.freeze({
@@ -45,6 +40,7 @@ function loadStylesheet(id, href) {
 loadStylesheet('seven-metros-v3-theme', 'v3.css');
 loadStylesheet('seven-metros-identity-theme', 'identity.css');
 loadStylesheet('seven-metros-features-theme', 'features.css');
+loadStylesheet('seven-metros-autonomous-theme', 'autonomous.css');
 
 const BOOT_ICONS = {
   home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/>',
@@ -63,6 +59,7 @@ const BOOT_ICONS = {
   goal:'<rect x="3" y="7" width="18" height="11" rx="1"/><path d="M3 11h18M7 7v11M12 7v11M17 7v11"/>',
   trend:'<path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
   database:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
+  lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   menu:'<path d="M4 7h16M4 12h16M4 17h16"/>'
 };
 
@@ -85,10 +82,14 @@ function renderBootstrapShell() {
       ['estadisticas','estadisticas.html','chart','Estadísticas']
     ],
     data: [
+      ['cobertura','cobertura.html','database','Cobertura'],
+      ['comparar','comparar.html','trend','Comparar'],
       ['participaciones','participaciones.html','clipboard','Participaciones'],
-      ['reportes','reportes.html','download','Reportes']
+      ['reportes','reportes.html','download','Reportes'],
+      ['ia','ia-lab.html','ball','IA / Video']
     ],
     secondary: [
+      ['admin','admin.html','lock','Administración'],
       ['ajustes','ajustes.html','settings','Ajustes'],
       ['acerca','acerca-de.html','info','Acerca de']
     ]
@@ -99,39 +100,22 @@ function renderBootstrapShell() {
   ).join('');
 
   const sidebar = document.getElementById('sidebar');
-  if (sidebar) {
-    sidebar.innerHTML = `
-      <div class="brand"><a href="index.html" aria-label="7Metros - Inicio"><div class="brand-logo"><span class="seven">7</span><span class="m">M</span></div><span class="brand-name">7<b>METROS</b></span><span class="brand-sub">HANDBALL APP</span></a></div>
-      <a class="nav-search" href="jugadores.html"><span class="nav-icon">${bootIcon('search')}</span><span>Buscar</span><kbd>Ctrl K</kbd></a>
-      <nav class="nav"><span class="nav-group-label">COMPETICIÓN</span>${links(groups.primary)}<span class="nav-group-label">DATOS</span>${links(groups.data)}<div class="nav-link disabled"><span class="nav-icon">${bootIcon('ball')}</span><span>IA / VIDEO</span><em>LAB</em></div><div class="nav-sep"></div>${links(groups.secondary)}</nav>
-      <div class="sidebar-foot"><span class="live-dot"></span><span>7Metros conectado</span></div>`;
-  }
+  if (sidebar) sidebar.innerHTML = `<div class="brand"><a href="index.html" aria-label="7Metros - Inicio"><div class="brand-logo"><span class="seven">7</span><span class="m">M</span></div><span class="brand-name">7<b>METROS</b></span><span class="brand-sub">HANDBALL APP</span></a></div><a class="nav-search" href="jugadores.html"><span class="nav-icon">${bootIcon('search')}</span><span>Buscar</span><kbd>Ctrl K</kbd></a><nav class="nav"><span class="nav-group-label">COMPETICIÓN</span>${links(groups.primary)}<span class="nav-group-label">DATOS</span>${links(groups.data)}<div class="nav-sep"></div>${links(groups.secondary)}</nav><div class="sidebar-foot"><span class="live-dot"></span><span>7Metros conectado</span></div>`;
 
   const mobile = document.getElementById('mobile-bar');
-  if (mobile) {
-    mobile.innerHTML = `<a class="mobile-brand" href="index.html">7<b>METROS</b></a><div class="mobile-actions"><a class="icon-btn" href="jugadores.html" aria-label="Buscar">${bootIcon('search')}</a><button id="menu-open" class="icon-btn" aria-label="Abrir menú">${bootIcon('menu')}</button></div>`;
-  }
+  if (mobile) mobile.innerHTML = `<a class="mobile-brand" href="index.html">7<b>METROS</b></a><div class="mobile-actions"><a class="icon-btn" href="jugadores.html" aria-label="Buscar">${bootIcon('search')}</a><button id="menu-open" class="icon-btn" aria-label="Abrir menú">${bootIcon('menu')}</button></div>`;
 
   document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = bootIcon(el.dataset.icon); });
   document.querySelectorAll('[data-season-label]').forEach(el => { el.textContent = window.SEVEN_METROS_CONFIG.seasonLabel; });
   document.querySelectorAll('[data-femebal-link]').forEach(el => { el.href = window.SEVEN_METROS_CONFIG.links.femebal; });
   document.querySelectorAll('[data-current-date]').forEach(el => {
-    try {
-      el.textContent = new Intl.DateTimeFormat('es-AR', { day:'2-digit', month:'long', year:'numeric', timeZone:'America/Argentina/Buenos_Aires' }).format(new Date());
-    } catch {
-      el.textContent = new Date().toLocaleDateString('es-AR');
-    }
+    try { el.textContent = new Intl.DateTimeFormat('es-AR', { day:'2-digit', month:'long', year:'numeric', timeZone:'America/Argentina/Buenos_Aires' }).format(new Date()); }
+    catch { el.textContent = new Date().toLocaleDateString('es-AR'); }
   });
 
   const overlay = document.getElementById('overlay');
-  document.getElementById('menu-open')?.addEventListener('click', () => {
-    sidebar?.classList.add('open');
-    overlay?.classList.add('show');
-  });
-  overlay?.addEventListener('click', () => {
-    sidebar?.classList.remove('open');
-    overlay?.classList.remove('show');
-  });
+  document.getElementById('menu-open')?.addEventListener('click', () => { sidebar?.classList.add('open'); overlay?.classList.add('show'); });
+  overlay?.addEventListener('click', () => { sidebar?.classList.remove('open'); overlay?.classList.remove('show'); });
 }
 
 function showBootstrapError(error) {
@@ -141,9 +125,7 @@ function showBootstrapError(error) {
   const meta = document.getElementById('data-health-meta');
   if (health) health.textContent = 'Navegación disponible';
   if (meta) meta.textContent = 'No se pudieron iniciar los datos; el menú sigue funcionando.';
-  if (root) {
-    root.innerHTML = `<div class="status-banner error"><span>${bootIcon('info')}</span><div><b>No se pudieron cargar los datos</b><small>La navegación quedó activa. Revisá la consola o los archivos JavaScript del sitio.</small></div></div>`;
-  }
+  if (root) root.innerHTML = `<div class="status-banner error"><span>${bootIcon('info')}</span><div><b>No se pudieron cargar los datos</b><small>La navegación quedó activa. Revisá la consola o los archivos JavaScript del sitio.</small></div></div>`;
 }
 
 function filtersFromUrl() {
@@ -164,8 +146,10 @@ async function autoStart() {
     const ui = await import('./ui.js');
     const pages = await import('./pages.js');
     const features = await import('./features.js');
+    const autonomous = await import('./autonomous.js');
 
     ui.renderShell();
+    autonomous.enhanceAutonomousFeatures();
     ui.initSettingsPage();
     ui.initReports();
     ui.renderLoadingStatus();
@@ -178,6 +162,7 @@ async function autoStart() {
       ui.renderCompetitionBar();
       pages.renderCurrentPage();
       features.enhanceCurrentPage();
+      autonomous.enhanceAutonomousFeatures();
       ui.renderSuccessStatus();
     } catch (error) {
       console.error('7Metros: error cargando datos', error);
@@ -190,9 +175,8 @@ async function autoStart() {
       if (!store.state.loaded) return;
       pages.renderCurrentPage();
       features.enhanceCurrentPage();
+      autonomous.enhanceAutonomousFeatures();
       ui.showToast('Filtros actualizados.');
     });
-  } catch (error) {
-    showBootstrapError(error);
-  }
+  } catch (error) { showBootstrapError(error); }
 }

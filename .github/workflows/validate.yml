@@ -2,7 +2,7 @@ name: Validate 7Metros
 
 on:
   push:
-    branches: [main]
+    branches: [main, autonomous/full-platform-upgrade-2026-09-09]
   pull_request:
 
 permissions:
@@ -32,9 +32,15 @@ jobs:
           node --check ui.js
           node --check pages.js
           node --check features.js
+          node --check autonomous.js
+          node --check admin.js
           node --check script.js
           node --check utils.js
           node --check config.js
+
+      - name: Check Python syntax
+        run: |
+          python -m py_compile validate_site.py tools/femebal_importer.py ai/pipeline.py ai/evaluate.py
 
       - name: Store smoke test
         run: node store-smoke.mjs

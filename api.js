@@ -50,13 +50,9 @@ async function request(url, options = {}) {
 export async function supabaseGetAll(table, query = '', { pageSize = PAGE_SIZE } = {}) {
   const rows = [];
   let from = 0;
-
   while (true) {
     const to = from + pageSize - 1;
-    const response = await request(endpoint(table, query), {
-      method: 'GET',
-      headers: headers(`${from}-${to}`)
-    });
+    const response = await request(endpoint(table, query), { method: 'GET', headers: headers(`${from}-${to}`) });
     const page = await response.json();
     if (!Array.isArray(page)) throw new DataError(`Respuesta inesperada al consultar ${table}.`);
     rows.push(...page);
@@ -64,21 +60,14 @@ export async function supabaseGetAll(table, query = '', { pageSize = PAGE_SIZE }
     from += pageSize;
     if (from > 100000) throw new DataError(`La consulta de ${table} superó el límite de seguridad.`);
   }
-
   return rows;
 }
 
 export async function supabaseCount(table) {
-  const response = await request(endpoint(table, '?select=id'), {
-    method: 'GET',
-    headers: headers('0-0', { Prefer: 'count=exact' })
-  });
-
+  const response = await request(endpoint(table, '?select=id'), { method: 'GET', headers: headers('0-0', { Prefer: 'count=exact' }) });
   const contentRange = response.headers.get('content-range') || '';
   const match = contentRange.match(/\/(\d+)$/);
   if (match) return Number(match[1]);
-
-  // Fallback útil para mocks o instalaciones que no devuelven Content-Range.
   const page = await response.json();
   return Array.isArray(page) ? page.length : 0;
 }
@@ -86,7 +75,6 @@ export async function supabaseCount(table) {
 export async function supabaseGetByIds(table, field, ids, select = '*', { chunkSize = 100 } = {}) {
   const values = [...new Set((ids || []).map(Number).filter(Number.isFinite))];
   if (!values.length) return [];
-
   const result = [];
   for (let i = 0; i < values.length; i += chunkSize) {
     const chunk = values.slice(i, i + chunkSize);
@@ -96,52 +84,59 @@ export async function supabaseGetByIds(table, field, ids, select = '*', { chunkS
   return result;
 }
 
+async function loadGlobalSummaryFallback(partidos, clubes) {
+  const [totalJugadores, totalPartidos] = await Promise.all([supabaseCount('jugadores'), supabaseCount('partidos')]);
+  const finished = partidos.filter(row => row.goles_local !== null && row.goles_local !== undefined && row.goles_visitante !== null && row.goles_visitante !== undefined);
+  const goals = finished.reduce((sum, row) => sum + Number(row.goles_local || 0) + Number(row.goles_visitante || 0), 0);
+  return { clubs: clubes.length, players: totalJugadores, matches: totalPartidos, finished: finished.length, goals, avgGoals: finished.length ? Number((goals / finished.length).toFixed(1)) : null };
+}
+
+async function loadGlobalSummary(partidos, clubes) {
+  try {
+    const rows = await supabaseGetAll('v_global_summary', '?select=clubes,jugadores,partidos,partidos_con_resultado,goles,promedio_goles');
+    const row = rows[0];
+    if (!row) throw new Error('Vista sin filas');
+    return {
+      clubs: Number(row.clubes || 0),
+      players: Number(row.jugadores || 0),
+      matches: Number(row.partidos || 0),
+      finished: Number(row.partidos_con_resultado || 0),
+      goals: Number(row.goles || 0),
+      avgGoals: row.promedio_goles === null || row.promedio_goles === undefined ? null : Number(row.promedio_goles)
+    };
+  } catch (error) {
+    console.warn('7Metros: v_global_summary no disponible, usando fallback.', error);
+    return loadGlobalSummaryFallback(partidos, clubes);
+  }
+}
+
 export async function loadPublicDataset(seasonId) {
   const season = Number(seasonId);
-
-  // Equipos es la primera consulta porque define el alcance real de la temporada.
-  const equipos = await supabaseGetAll(
-    'equipos',
-    `?select=id,club_id,temporada_id,categoria,division,rama,equipo_codigo,nombre_femebal,activo&temporada_id=eq.${season}`
-  );
-
+  const equipos = await supabaseGetAll('equipos', `?select=id,club_id,temporada_id,categoria,division,rama,equipo_codigo,nombre_femebal,activo&temporada_id=eq.${season}&activo=eq.true`);
   const teamIds = equipos.map(row => Number(row.id)).filter(Number.isFinite);
-  const clubIds = equipos.map(row => Number(row.club_id)).filter(Number.isFinite);
 
-  const [clubes, planteles, totalClubes, totalJugadores] = await Promise.all([
-    supabaseGetByIds('clubes', 'id', clubIds, 'id,nombre,abreviatura,ciudad,logo_url'),
-    supabaseGetByIds('planteles', 'equipo_id', teamIds, 'id,jugador_id,equipo_id,dorsal,posicion'),
-    supabaseCount('clubes'),
-    supabaseCount('jugadores')
+  // Clubes es deliberadamente global: Inicio debe mostrar todas las instituciones
+  // cargadas, incluso si en una temporada futura alguna no tiene equipo activo.
+  const [clubes, planteles] = await Promise.all([
+    supabaseGetAll('clubes', '?select=id,nombre,abreviatura,ciudad,logo_url&activo=eq.true&order=nombre.asc'),
+    supabaseGetByIds('planteles', 'equipo_id', teamIds, 'id,jugador_id,equipo_id,dorsal,posicion')
   ]);
-
   const playerIds = planteles.map(row => Number(row.jugador_id)).filter(Number.isFinite);
 
-  // Partidos se pagina. La tabla actual no garantiza que temporada_id exista en
-  // todas las instalaciones, por eso filtramos de forma segura luego usando equipos.
-  const [jugadores, partidos, participaciones] = await Promise.all([
+  let partidos;
+  try {
+    partidos = await supabaseGetAll('partidos', `?select=*&temporada_id=eq.${season}`);
+  } catch (error) {
+    // Compatibilidad con instalaciones antiguas sin temporada_id.
+    console.warn('7Metros: filtro de temporada no disponible en partidos; cargando tabla completa.', error);
+    partidos = await supabaseGetAll('partidos', '?select=*');
+  }
+
+  const [jugadores, participaciones, globalSummary] = await Promise.all([
     supabaseGetByIds('jugadores', 'id', playerIds, 'id,nombre,apellido,fecha_nacimiento,brazo_habil,altura_cm,peso_kg'),
-    supabaseGetAll('partidos', '?select=*'),
-    supabaseGetByIds('participaciones', 'equipo_id', teamIds, '*')
+    supabaseGetByIds('participaciones', 'equipo_id', teamIds, '*'),
+    loadGlobalSummary(partidos, clubes)
   ]);
-
-  const finalizadosGlobales = partidos.filter(row => {
-    const estado = String(row.estado || '').toLowerCase();
-    const tieneResultado = row.goles_local !== null && row.goles_local !== undefined && row.goles_visitante !== null && row.goles_visitante !== undefined;
-    return estado === 'finalizado' || estado === 'final' || (tieneResultado && estado !== 'programado');
-  });
-  const golesGlobales = finalizadosGlobales.reduce((sum, row) =>
-    sum + Number(row.goles_local || 0) + Number(row.goles_visitante || 0), 0
-  );
-
-  const globalSummary = {
-    clubs: totalClubes,
-    players: totalJugadores,
-    matches: partidos.length,
-    finished: finalizadosGlobales.length,
-    goals: golesGlobales,
-    avgGoals: finalizadosGlobales.length ? Number((golesGlobales / finalizadosGlobales.length).toFixed(1)) : null
-  };
 
   return { clubes, equipos, jugadores, planteles, partidos, participaciones, globalSummary };
 }
