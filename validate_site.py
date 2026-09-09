@@ -52,28 +52,24 @@ for path in html_files:
         errors.append(f'{path.name}: stale /js module reference')
 
 required_assets = [
-    'script.js',
-    'config.js',
-    'api.js',
-    'store.js',
-    'ui.js',
-    'pages.js',
-    'utils.js',
-    'style.css',
-    'v3.css',
-    'identity.css',
+    'script.js', 'config.js', 'api.js', 'store.js', 'ui.js', 'pages.js', 'features.js', 'utils.js',
+    'style.css', 'v3.css', 'identity.css', 'features.css', 'competiciones.html'
 ]
 for name in required_assets:
     if not (ROOT / name).exists():
         errors.append(f'missing {name}')
 
 script = (ROOT / 'script.js').read_text(encoding='utf-8') if (ROOT / 'script.js').exists() else ''
-if "loadStylesheet('seven-metros-v3-theme', 'v3.css')" not in script:
-    errors.append('script.js: V3 theme is not loaded')
-if "loadStylesheet('seven-metros-identity-theme', 'identity.css')" not in script:
-    errors.append('script.js: identity theme is not loaded')
+for needle, label in [
+    ("loadStylesheet('seven-metros-v3-theme', 'v3.css')", 'V3 theme'),
+    ("loadStylesheet('seven-metros-identity-theme', 'identity.css')", 'identity theme'),
+    ("loadStylesheet('seven-metros-features-theme', 'features.css')", 'features theme'),
+    ("import('./features.js')", 'features module'),
+]:
+    if needle not in script:
+        errors.append(f'script.js: {label} is not loaded')
 
-for css_name in ('v3.css', 'identity.css'):
+for css_name in ('v3.css', 'identity.css', 'features.css'):
     css_path = ROOT / css_name
     if css_path.exists():
         css = css_path.read_text(encoding='utf-8')
@@ -84,6 +80,10 @@ v3_path = ROOT / 'v3.css'
 if v3_path.exists() and '@media' not in v3_path.read_text(encoding='utf-8'):
     errors.append('v3.css: responsive rules are missing')
 
+features_css = ROOT / 'features.css'
+if features_css.exists() and '@media' not in features_css.read_text(encoding='utf-8'):
+    errors.append('features.css: responsive rules are missing')
+
 identity_path = ROOT / 'identity.css'
 if identity_path.exists():
     identity = identity_path.read_text(encoding='utf-8')
@@ -91,6 +91,19 @@ if identity_path.exists():
         errors.append('identity.css: shields are still forced into rounded containers')
     if 'object-fit:contain!important' not in identity:
         errors.append('identity.css: shield normalization is missing')
+
+features_path = ROOT / 'features.js'
+if features_path.exists():
+    features = features_path.read_text(encoding='utf-8')
+    for needle in ('renderCompetitionDirectory', 'renderClubProfile', 'renderMatchProfile', 'enhanceTeamLinks'):
+        if needle not in features:
+            errors.append(f'features.js: missing {needle}')
+
+competition_page = ROOT / 'competiciones.html'
+if competition_page.exists():
+    text = competition_page.read_text(encoding='utf-8')
+    if 'id="competition-directory"' not in text or 'data-page="competiciones"' not in text:
+        errors.append('competiciones.html: competition directory root is missing')
 
 if (ROOT / '.identity-placeholder').exists():
     errors.append('temporary identity placeholder must not ship')
@@ -101,4 +114,4 @@ if errors:
         print('-', error)
     sys.exit(1)
 
-print(f'✓ validate_site: {len(html_files)} HTML, enlaces, módulos, V3 e identidad de equipos OK')
+print(f'✓ validate_site: {len(html_files)} HTML, enlaces, módulos, V3, identidad y perfiles OK')
