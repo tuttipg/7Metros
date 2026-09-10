@@ -19,3 +19,6 @@ export const STORAGE_KEYS = Object.freeze({
   compact: '7m_setting_compact',
   motion: '7m_setting_motion'
 });
+
+// Vision Lab is additive: if it fails to load, the rest of 7Metros keeps working.
+import('./vision-nav.js').then(module => module.installVisionNav()).catch(() => {});
