@@ -105,7 +105,6 @@ export async function supabaseCount(table) {
   const match = contentRange.match(/\/(\d+)$/);
   if (match) return Number(match[1]);
 
-  // Fallback útil para mocks o instalaciones que no devuelven Content-Range.
   const page = await response.json();
   return Array.isArray(page) ? page.length : 0;
 }
@@ -123,10 +122,64 @@ export async function supabaseGetByIds(table, field, ids, select = '*', { chunkS
   return result;
 }
 
+function summaryFromMatches(matches, clubs, players) {
+  const finalizados = matches.filter(row => {
+    const estado = String(row.estado || '').toLowerCase();
+    const tieneResultado = row.goles_local !== null && row.goles_local !== undefined
+      && row.goles_visitante !== null && row.goles_visitante !== undefined;
+    return estado === 'finalizado' || estado === 'final' || (tieneResultado && estado !== 'programado');
+  });
+  const goals = finalizados.reduce((sum, row) =>
+    sum + Number(row.goles_local || 0) + Number(row.goles_visitante || 0), 0
+  );
+  return {
+    clubs,
+    players,
+    matches: matches.length,
+    finished: finalizados.length,
+    goals,
+    avgGoals: finalizados.length ? Number((goals / finalizados.length).toFixed(1)) : null
+  };
+}
+
+async function loadGlobalSummaryView() {
+  try {
+    const rows = await supabaseGetAll(
+      'v_global_summary',
+      '?select=clubes,jugadores,partidos,partidos_con_resultado,goles,promedio_goles'
+    );
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      clubs: Number(row.clubes || 0),
+      players: Number(row.jugadores || 0),
+      matches: Number(row.partidos || 0),
+      finished: Number(row.partidos_con_resultado || 0),
+      goals: Number(row.goles || 0),
+      avgGoals: row.promedio_goles === null || row.promedio_goles === undefined
+        ? null
+        : Number(row.promedio_goles)
+    };
+  } catch {
+    // Compatibilidad con instalaciones anteriores a v_global_summary.
+    return null;
+  }
+}
+
+async function loadSeasonMatches(season) {
+  try {
+    return await supabaseGetAll('partidos', `?select=*&temporada_id=eq.${season}`);
+  } catch {
+    // Fallback para esquemas antiguos: el store descarta cruces fuera del catálogo
+    // de equipos de la temporada, por lo que sigue siendo correcto aunque sea menos eficiente.
+    return supabaseGetAll('partidos', '?select=*');
+  }
+}
+
 export async function loadPublicDataset(seasonId) {
   const season = Number(seasonId);
+  if (!Number.isInteger(season) || season <= 0) throw new DataError('La temporada configurada no es válida.');
 
-  // Equipos es la primera consulta porque define el alcance real de la temporada.
   const equipos = await supabaseGetAll(
     'equipos',
     `?select=id,club_id,temporada_id,categoria,division,rama,equipo_codigo,nombre_femebal,activo&temporada_id=eq.${season}`
@@ -135,40 +188,29 @@ export async function loadPublicDataset(seasonId) {
   const teamIds = equipos.map(row => Number(row.id)).filter(Number.isFinite);
   const clubIds = equipos.map(row => Number(row.club_id)).filter(Number.isFinite);
 
-  const [clubes, planteles, totalClubes, totalJugadores] = await Promise.all([
+  const [clubes, planteles, summaryView] = await Promise.all([
     supabaseGetByIds('clubes', 'id', clubIds, 'id,nombre,abreviatura,ciudad,logo_url'),
     supabaseGetByIds('planteles', 'equipo_id', teamIds, 'id,jugador_id,equipo_id,dorsal,posicion'),
-    supabaseCount('clubes'),
-    supabaseCount('jugadores')
+    loadGlobalSummaryView()
   ]);
 
   const playerIds = planteles.map(row => Number(row.jugador_id)).filter(Number.isFinite);
 
-  // Partidos se pagina. La portada usa además totales globales, por eso esta consulta
-  // conserva el alcance completo y el store filtra luego la temporada mediante equipos.
   const [jugadores, partidos, participaciones] = await Promise.all([
     supabaseGetByIds('jugadores', 'id', playerIds, 'id,nombre,apellido,fecha_nacimiento,brazo_habil,altura_cm,peso_kg'),
-    supabaseGetAll('partidos', '?select=*'),
+    loadSeasonMatches(season),
     supabaseGetByIds('participaciones', 'equipo_id', teamIds, '*')
   ]);
 
-  const finalizadosGlobales = partidos.filter(row => {
-    const estado = String(row.estado || '').toLowerCase();
-    const tieneResultado = row.goles_local !== null && row.goles_local !== undefined && row.goles_visitante !== null && row.goles_visitante !== undefined;
-    return estado === 'finalizado' || estado === 'final' || (tieneResultado && estado !== 'programado');
-  });
-  const golesGlobales = finalizadosGlobales.reduce((sum, row) =>
-    sum + Number(row.goles_local || 0) + Number(row.goles_visitante || 0), 0
-  );
-
-  const globalSummary = {
-    clubs: totalClubes,
-    players: totalJugadores,
-    matches: partidos.length,
-    finished: finalizadosGlobales.length,
-    goals: golesGlobales,
-    avgGoals: finalizadosGlobales.length ? Number((golesGlobales / finalizadosGlobales.length).toFixed(1)) : null
-  };
+  let globalSummary = summaryView;
+  if (!globalSummary) {
+    const [totalClubes, totalJugadores, globalMatches] = await Promise.all([
+      supabaseCount('clubes'),
+      supabaseCount('jugadores'),
+      supabaseGetAll('partidos', '?select=*')
+    ]);
+    globalSummary = summaryFromMatches(globalMatches, totalClubes, totalJugadores);
+  }
 
   return { clubes, equipos, jugadores, planteles, partidos, participaciones, globalSummary };
 }
