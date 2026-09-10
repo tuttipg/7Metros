@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#06192d">
+  <meta name="description" content="7Metros Vision Lab: análisis asistido de video de handball.">
+  <title>IA / Video — 7Metros</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="ia-video.css">
+  <script src="config.js"></script>
+  <script type="module" src="script.js"></script>
+</head>
+<body data-page="ia">
+  <a class="skip-link" href="#main-content">Saltar al contenido</a>
+  <div id="mobile-bar" class="mobile-bar"></div>
+  <div id="overlay" class="overlay"></div>
+  <aside id="sidebar" class="sidebar" aria-label="Navegación principal"></aside>
+  <main id="main-content" class="app-main"><div class="content-wrap">
+    <header class="page-header">
+      <div class="page-title-wrap"><span class="eyebrow">7METROS VISION LAB</span><h1>IA / Video</h1><p>Pipeline experimental para detección, tracking, pelota e identificación. Los resultados no validados se muestran como candidatos.</p></div>
+      <div class="header-tools"><span id="vision-api-pill" class="vision-status offline">API sin verificar</span><span class="season-chip" data-season-label>CLAUSURA 2026</span></div>
+    </header>
+    <div id="data-status" class="data-status" aria-live="polite"></div>
+    <section class="vision-grid">
+      <article class="card section-card vision-upload">
+        <div class="section-head"><div><span class="section-kicker">ANÁLISIS</span><h2>Nuevo trabajo</h2></div><button id="vision-refresh" class="btn light" type="button">Comprobar API</button></div>
+        <label class="vision-field"><span>Partido 7Metros</span><select id="vision-match"><option value="">Sin asociar a partido</option></select></label>
+        <div id="vision-roster-context" class="vision-context">Cargando contexto de equipos…</div>
+        <label class="vision-field"><span>Video</span><input id="vision-file" type="file" accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska"></label>
+        <label class="vision-field"><span>Motor</span><select id="vision-engine"><option value="rfdetr">RF-DETR — producción (requiere checkpoint entrenado)</option><option value="smoke_color">Smoke sintético — solo prueba técnica</option></select></label>
+        <details class="vision-advanced"><summary>Configuración avanzada</summary><label class="vision-field"><span>URL del backend</span><input id="vision-api-url" type="url" spellcheck="false"></label><label class="vision-field"><span>Límite de frames (vacío = completo)</span><input id="vision-max-frames" type="number" min="1" step="1"></label></details>
+        <button id="vision-run" class="btn gold vision-run" type="button">Analizar video</button>
+        <p id="vision-message" class="vision-message" aria-live="polite"></p>
+      </article>
+      <article class="card section-card">
+        <div class="section-head"><div><span class="section-kicker">ESTADO REAL</span><h2>Capacidades</h2></div></div>
+        <div id="vision-capabilities" class="vision-capabilities"><div class="vision-empty">Conectá el backend para consultar capacidades.</div></div>
+        <div class="vision-warning"><b>Regla de validación</b><span>“Implementado” no significa “preciso en FEMEBAL”. La precisión real se publica recién con un conjunto anotado independiente.</span></div>
+      </article>
+    </section>
+    <section class="card section-card vision-result-card">
+      <div class="section-head"><div><span class="section-kicker">ÚLTIMO RESULTADO</span><h2 id="vision-result-title">Todavía no hay análisis</h2></div><span id="vision-job-status" class="status-pill">—</span></div>
+      <div id="vision-kpis" class="vision-kpis"><div class="vision-empty">Cuando finalice un trabajo se mostrarán frames, tracks, pelota y eventos.</div></div>
+      <video id="vision-video" class="vision-video" controls playsinline hidden></video>
+      <div id="vision-events" class="vision-events"></div>
+    </section>
+    <section class="card section-card">
+      <div class="section-head"><div><span class="section-kicker">TRAZABILIDAD</span><h2>Trabajos recientes</h2></div><button id="vision-jobs-refresh" class="btn light" type="button">Actualizar</button></div>
+      <div id="vision-jobs" class="vision-jobs"><div class="vision-empty">Sin datos.</div></div>
+    </section>
+    <footer class="footer"><div class="footer-brand"><strong>7<b>METROS</b></strong><span>VISION LAB · RESULTADOS EXPERIMENTALES</span></div><div class="footer-meta"><span>Los eventos automáticos se consideran candidatos hasta validación humana.</span></div></footer>
+  </div></main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div><div id="global-search-root"></div>
+  <script type="module" src="ia-video.js"></script>
+</body></html>
