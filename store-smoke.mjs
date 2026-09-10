@@ -20,6 +20,9 @@ window.SEVEN_METROS_CONFIG = {
 };
 
 const db = {
+  v_global_summary: [
+    {clubes:2,jugadores:3,partidos:3,partidos_con_resultado:2,goles:108,promedio_goles:54}
+  ],
   equipos: [
     {id:101,club_id:1,temporada_id:3,categoria:'Mayores',division:'LHC Hipotecario Seguros',rama:'M',equipo_codigo:'A',activo:true},
     {id:103,club_id:1,temporada_id:3,categoria:'Mayores',division:'LHC Hipotecario Seguros',rama:'M',equipo_codigo:'B',activo:true},
@@ -78,6 +81,10 @@ assert.throws(
   () => api.validatePublicConfig({ supabaseUrl:'https://mock.7metros.test', supabaseKey:'' }),
   error => error instanceof api.DataError && /clave pública/.test(error.message)
 );
+assert.rejects(
+  () => api.loadPublicDataset(0),
+  error => error instanceof api.DataError && /temporada configurada/.test(error.message)
+);
 
 const store = await import('./store.js');
 await store.loadData();
@@ -88,6 +95,14 @@ assert.equal(store.getPlayers().length, 3);
 assert.equal(store.getMatches().length, 3);
 assert.equal(store.dataSummary().finished, 2);
 assert.equal(store.dataSummary().goals, 108);
+assert.deepEqual(store.globalDataSummary(), {
+  clubs: 2,
+  players: 3,
+  matches: 3,
+  finished: 2,
+  goals: 108,
+  avgGoals: 54
+});
 assert.equal(store.getBaseClub(1).abbr, 'FCO');
 assert.equal(store.getBaseClub(1).logoUrl, 'https://example.test/ferro.png');
 assert.equal(store.getBaseClub(2).logoUrl, null);
@@ -112,4 +127,4 @@ assert.equal(table[1].name, 'Ferro Carril Oeste · Equipo B');
 assert.equal(table[1].points, 2);
 assert.equal(table[2].points, 0);
 
-console.log('✓ store-smoke: configuración, carga, logos, equipos A/B, filtros, estadísticas y posiciones OK');
+console.log('✓ store-smoke: configuración, resumen global, carga, logos, equipos A/B, filtros, estadísticas y posiciones OK');
