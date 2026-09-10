@@ -8,15 +8,17 @@ integrity_rpc = ROOT / 'supabase/migrations/20260909_add_integrity_report_rpc.sq
 support = ROOT / 'supabase/migrations/20260909_version_importer_support_contract.sql'
 hardening = ROOT / 'supabase/migrations/20260910_harden_importer_fail_closed_v2.sql'
 explicit_context = ROOT / 'supabase/migrations/20260910_require_explicit_import_context_v2.sql'
+atomic_preflight = ROOT / 'supabase/migrations/20260910_enforce_import_preflight_atomic_v2.sql'
 integrity = ROOT / 'supabase_integrity_check.sql'
 audit = ROOT / 'docs/importador-femebal-v8.2-audit.md'
 v9 = ROOT / 'docs/importador-femebal-v9-rpc-contract.md'
+v9_atomic = ROOT / 'docs/importador-femebal-v9-atomic-preflight.md'
 importer_core = ROOT / 'n8n/importer-core.mjs'
 importer_smoke = ROOT / 'n8n/importer-core-smoke.mjs'
 
 for path in (
-    integrity_rpc, support, hardening, explicit_context, integrity,
-    audit, v9, importer_core, importer_smoke
+    integrity_rpc, support, hardening, explicit_context, atomic_preflight, integrity,
+    audit, v9, v9_atomic, importer_core, importer_smoke
 ):
     if not path.exists():
         errors.append(f'missing backend contract file: {path.relative_to(ROOT)}')
@@ -96,6 +98,21 @@ if explicit_context.exists():
         if needle not in sql:
             errors.append(f'explicit importer context migration missing safeguard: {needle}')
 
+if atomic_preflight.exists():
+    sql = atomic_preflight.read_text(encoding='utf-8').lower()
+    required = [
+        'having count(distinct (fecha,hora))>1',
+        'sync_partidos_7metros_bulk_impl_v2',
+        'v_preflight := public.importador_preflight_partidos_7metros(p_partidos)',
+        'preflight femebal rechazado',
+        'revoke all on function public.sync_partidos_7metros_bulk(jsonb) from public, anon, authenticated',
+        'grant execute on function public.sync_partidos_7metros_bulk(jsonb) to service_role',
+        'revoke all on function public.sync_partidos_7metros_bulk_impl_v2(jsonb) from public, anon, authenticated',
+    ]
+    for needle in required:
+        if needle not in sql:
+            errors.append(f'atomic importer preflight migration missing safeguard: {needle}')
+
 if integrity.exists():
     sql = integrity.read_text(encoding='utf-8').lower()
     for needle in (
@@ -119,6 +136,15 @@ if v9.exists():
     ):
         if needle not in text:
             errors.append(f'V9 RPC contract missing dependency: {needle}')
+
+if v9_atomic.exists():
+    text = v9_atomic.read_text(encoding='utf-8').lower()
+    for needle in (
+        'preflight atómico', 'sync_partidos_7metros_bulk_impl_v2',
+        'ambiguous_schedule_pairs', 'service_role', 'importación parcialmente válida'
+    ):
+        if needle not in text:
+            errors.append(f'V9 atomic preflight doc missing contract concept: {needle}')
 
 if importer_core.exists():
     text = importer_core.read_text(encoding='utf-8')
@@ -148,4 +174,4 @@ if errors:
         print('-', error)
     sys.exit(1)
 
-print('✓ backend contract: importer V9, fail-closed RPCs, integrity and n8n regression tests OK')
+print('✓ backend contract: importer V9, atomic fail-closed RPCs, integrity and n8n regression tests OK')
