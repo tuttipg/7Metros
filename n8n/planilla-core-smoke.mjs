@@ -108,7 +108,10 @@ assert.throws(
 );
 
 assert.throws(
-  () => parseOfficialFemebalSheet(n8nCloudFixture.replace('P 0', 'P 1')),
+  () => parseOfficialFemebalSheet(n8nCloudFixture.replace(
+    'Goles PT 12 ST 15 PTE 0 STE 0 P 0',
+    'Goles PT 12 ST 15 PTE 0 STE 0 P 1',
+  )),
   /requiere validación específica/,
 );
 
