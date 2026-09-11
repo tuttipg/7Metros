@@ -80,7 +80,9 @@ export function safeHttpUrl(value) {
   if (!value) return null;
   try {
     const url = new URL(String(value));
-    return ['http:', 'https:'].includes(url.protocol) ? url.href : null;
+    if (!['http:', 'https:'].includes(url.protocol)) return null;
+    if (url.username || url.password) return null;
+    return url.href;
   } catch {
     return null;
   }
