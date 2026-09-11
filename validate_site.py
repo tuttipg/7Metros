@@ -8,8 +8,9 @@ errors = []
 
 
 class Parser(HTMLParser):
-    def __init__(self):
+    def __init__(self, source_name):
         super().__init__()
+        self.source_name = source_name
         self.links = []
         self.ids = set()
 
@@ -17,13 +18,18 @@ class Parser(HTMLParser):
         data = dict(attrs)
         if 'id' in data:
             if data['id'] in self.ids:
-                errors.append(f'duplicate id: {data["id"]}')
+                errors.append(f'{self.source_name}: duplicate id: {data["id"]}')
             self.ids.add(data['id'])
 
         if tag in ('a', 'link', 'script', 'img'):
             attr = {'a': 'href', 'link': 'href', 'script': 'src', 'img': 'src'}[tag]
             if data.get(attr):
                 self.links.append(data[attr])
+
+        if tag == 'a' and data.get('target', '').lower() == '_blank':
+            rel_tokens = {token.lower() for token in str(data.get('rel', '')).split()}
+            if 'noopener' not in rel_tokens:
+                errors.append(f'{self.source_name}: target="_blank" link missing rel="noopener"')
 
 
 html_files = sorted(ROOT.glob('*.html'))
@@ -32,7 +38,7 @@ if not html_files:
 
 for path in html_files:
     text = path.read_text(encoding='utf-8')
-    parser = Parser()
+    parser = Parser(path.name)
     parser.feed(text)
 
     for ref in parser.links:
@@ -71,21 +77,22 @@ for needle, label in [
         errors.append(f'script.js: {label} is not loaded')
 
 # El frontend público de 7Metros es deliberadamente de solo lectura.
-# Si alguien introduce una escritura REST accidental, CI debe bloquearla antes de publicar.
-api_path = ROOT / 'api.js'
-if api_path.exists():
-    api = api_path.read_text(encoding='utf-8')
-    methods = {m.upper() for m in re.findall(r"method\s*:\s*['\"]([A-Za-z]+)['\"]", api)}
+# Cualquier escritura HTTP/Supabase introducida en un módulo público debe bloquear CI.
+public_js = ['api.js', 'store.js', 'ui.js', 'pages.js', 'features.js', 'script.js', 'utils.js', 'config.js']
+for js_name in public_js:
+    js_path = ROOT / js_name
+    if not js_path.exists():
+        continue
+    source = js_path.read_text(encoding='utf-8')
+    methods = {m.upper() for m in re.findall(r"method\s*:\s*['\"]([A-Za-z]+)['\"]", source)}
     forbidden_methods = sorted(methods - {'GET', 'HEAD', 'OPTIONS'})
     if forbidden_methods:
         errors.append(
-            'api.js: public frontend must remain read-only; forbidden HTTP methods: '
+            f'{js_name}: public frontend must remain read-only; forbidden HTTP methods: '
             + ', '.join(forbidden_methods)
         )
-    for verb in ('POST', 'PUT', 'PATCH', 'DELETE'):
-        if re.search(rf"\.\s*(insert|update|delete|upsert)\s*\(", api, re.IGNORECASE):
-            errors.append('api.js: write-style Supabase call detected in public frontend')
-            break
+    if re.search(r"\.\s*(insert|update|delete|upsert)\s*\(", source, re.IGNORECASE):
+        errors.append(f'{js_name}: write-style Supabase call detected in public frontend')
 
 for css_name in ('v3.css', 'identity.css', 'features.css'):
     css_path = ROOT / css_name
