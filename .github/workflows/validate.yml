@@ -35,6 +35,8 @@ jobs:
           node --check script.js
           node --check utils.js
           node --check config.js
+          node --check store-smoke.mjs
+          node --check navigation-smoke.mjs
           node --check n8n/importer-core.mjs
           node --check n8n/importer-core-smoke.mjs
           node --check n8n/planilla-core.mjs
@@ -44,6 +46,9 @@ jobs:
 
       - name: Store smoke test
         run: node store-smoke.mjs
+
+      - name: Navigation smoke test
+        run: node navigation-smoke.mjs
 
       - name: FEMEBAL importer core smoke test
         run: node n8n/importer-core-smoke.mjs
