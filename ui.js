@@ -60,6 +60,7 @@ export function renderShell() {
   const page = document.body.dataset.page || 'inicio';
   const primary = [
     ['inicio', 'index.html', 'home', 'Inicio'],
+    ['competiciones', 'competiciones.html', 'ball', 'Competiciones'],
     ['posiciones', 'posiciones.html', 'standings', 'Posiciones'],
     ['partidos', 'partidos.html', 'calendar', 'Partidos'],
     ['clubes', 'clubes.html', 'shield', 'Clubes'],
