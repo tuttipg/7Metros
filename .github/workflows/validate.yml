@@ -37,6 +37,7 @@ jobs:
           node --check config.js
           node --check store-smoke.mjs
           node --check navigation-smoke.mjs
+          node --check category-order-smoke.mjs
           node --check n8n/importer-core.mjs
           node --check n8n/importer-core-smoke.mjs
           node --check n8n/planilla-core.mjs
@@ -49,6 +50,9 @@ jobs:
 
       - name: Navigation smoke test
         run: node navigation-smoke.mjs
+
+      - name: Category order smoke test
+        run: node category-order-smoke.mjs
 
       - name: FEMEBAL importer core smoke test
         run: node n8n/importer-core-smoke.mjs
