@@ -39,6 +39,7 @@ jobs:
           node --check navigation-smoke.mjs
           node --check category-order-smoke.mjs
           node --check dashboard-scope-smoke.mjs
+          node --check csv-safety-smoke.mjs
           node --check n8n/importer-core.mjs
           node --check n8n/importer-core-smoke.mjs
           node --check n8n/planilla-core.mjs
@@ -60,6 +61,9 @@ jobs:
 
       - name: Dashboard scope smoke test
         run: node dashboard-scope-smoke.mjs
+
+      - name: CSV safety smoke test
+        run: node csv-safety-smoke.mjs
 
       - name: FEMEBAL importer core smoke test
         run: node n8n/importer-core-smoke.mjs
