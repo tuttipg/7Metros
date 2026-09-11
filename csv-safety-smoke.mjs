@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import { csvCell } from './utils.js';
+
+globalThis.window = {};
+const { csvCell } = await import('./utils.js');
 
 assert.equal(csvCell('Ferro Carril Oeste'), '"Ferro Carril Oeste"');
 assert.equal(csvCell('Juan "Pepe" Pérez'), '"Juan ""Pepe"" Pérez"');
