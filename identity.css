@@ -67,7 +67,43 @@
 }
 .team-code.secondary{background:#e9eef3;color:var(--navy);border:1px solid #d8e0e7}
 
+/* =========================================================
+   Identidad 7Metros — fondo parquet
+   v3.css redefine el fondo general; esta capa se carga después
+   y preserva el parquet original en todas las páginas.
+   ========================================================= */
+html{
+  background:#d6a95d!important;
+}
+body{
+  background-color:#d6a95d!important;
+  background-image:
+    linear-gradient(rgba(255,255,255,.09),rgba(255,255,255,.09)),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.13) 0 2px,transparent 2px 118px),
+    repeating-linear-gradient(0deg,rgba(90,54,15,.08) 0 2px,transparent 2px 74px),
+    linear-gradient(90deg,
+      #dab16c 0 14%,
+      #efca86 14% 29%,
+      #d7a95f 29% 44%,
+      #edc57e 44% 59%,
+      #d4a259 59% 73%,
+      #ebc27a 73% 88%,
+      #d6a660 88% 100%)!important;
+  background-size:auto,118px 100%,100% 74px,720px 100%!important;
+  background-repeat:repeat!important;
+  background-attachment:scroll!important;
+}
+.app-main,.content-wrap{
+  background:transparent!important;
+}
+
 @media (max-width:760px){
   .club-badge{width:56px!important;height:56px!important}
   .mini-badge{width:29px!important;height:29px!important}
+}
+
+@media(max-width:650px){
+  body{
+    background-size:auto,92px 100%,100% 62px,560px 100%!important;
+  }
 }
