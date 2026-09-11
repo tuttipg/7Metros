@@ -127,9 +127,16 @@ export function ageFromBirthDate(value) {
   return age >= 0 && age < 100 ? age : null;
 }
 
+export function csvCell(value) {
+  const text = String(value ?? '');
+  const spreadsheetFormula = typeof value === 'string' && /^[\t\r\n ]*[=+\-@]/.test(text);
+  const safeText = spreadsheetFormula ? `'${text}` : text;
+  return `"${safeText.replaceAll('"', '""')}"`;
+}
+
 export function csvDownload(rows, filename) {
   const csv = rows
-    .map(row => row.map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))
+    .map(row => row.map(csvCell).join(','))
     .join('\n');
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
