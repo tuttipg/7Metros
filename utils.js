@@ -116,14 +116,23 @@ export function ratio(numerator, denominator, digits = 1) {
   return Number((Number(numerator || 0) / d).toFixed(digits));
 }
 
-export function ageFromBirthDate(value) {
-  if (!value) return null;
-  const dob = new Date(`${value}T12:00:00`);
-  if (Number.isNaN(dob.getTime())) return null;
-  const now = new Date();
-  let age = now.getFullYear() - dob.getFullYear();
-  const monthDiff = now.getMonth() - dob.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) age -= 1;
+export function ageFromBirthDate(value, referenceDate = new Date()) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
+  if (!match || !(referenceDate instanceof Date) || Number.isNaN(referenceDate.getTime())) return null;
+
+  const birthYear = Number(match[1]);
+  const birthMonth = Number(match[2]);
+  const birthDay = Number(match[3]);
+  const birthCheck = new Date(Date.UTC(birthYear, birthMonth - 1, birthDay));
+  if (
+    birthCheck.getUTCFullYear() !== birthYear ||
+    birthCheck.getUTCMonth() + 1 !== birthMonth ||
+    birthCheck.getUTCDate() !== birthDay
+  ) return null;
+
+  const [currentYear, currentMonth, currentDay] = localISODate(referenceDate).split('-').map(Number);
+  let age = currentYear - birthYear;
+  if (currentMonth < birthMonth || (currentMonth === birthMonth && currentDay < birthDay)) age -= 1;
   return age >= 0 && age < 100 ? age : null;
 }
 
