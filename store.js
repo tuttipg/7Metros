@@ -1,6 +1,7 @@
 import { loadPublicDataset } from './api.js';
 import { DEFAULT_FILTERS, SEASON_ID, STORAGE_KEYS } from './config.js';
 import { field, numericField, initials, ratio, toNumber, unique, bySpanishName, normalizeText } from './utils.js';
+import { sortStandingsOlympic } from './standings-core.mjs';
 
 function settingEnabled(key, defaultValue = false) {
   const stored = localStorage.getItem(key);
@@ -479,12 +480,7 @@ export function getTeam(teamId) {
 }
 
 function sortStandings(clubs) {
-  return clubs.slice().sort((a, b) =>
-    b.points - a.points ||
-    b.gd - a.gd ||
-    b.gf - a.gf ||
-    bySpanishName(a.name, b.name)
-  );
+  return sortStandingsOlympic(clubs, state.matches);
 }
 
 export function getStandingsForTeamIds(teamIds) {
