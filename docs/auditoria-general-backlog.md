@@ -37,6 +37,27 @@ El Sistema de Competencia de Liga de Honor Hipotecario Seguros 2026 indica que, 
 
 **Acción siguiente:** incorporar una señal explícita de desempate pendiente únicamente cuando pueda determinarse que la fase terminó; no declarar campeón por criterios secundarios en ese caso.
 
+### RESUELTO — Fichas de club y partido podían mostrar otra entidad
+
+**Estado:** COMPROBADO, CORREGIDO Y VALIDADO EN CI
+
+Las fichas usaban fallback silencioso al primer club/partido del filtro cuando el ID solicitado no existía en el contexto actual. Se agregó resolución fail-closed y contexto efímero:
+- IDs inexistentes dejan de convertirse en otra entidad;
+- `?team=` explícito se valida contra la entidad;
+- un único contexto compatible se resuelve sin persistir filtros;
+- clubes con múltiples contextos obligan a elegir competencia;
+- partidos con equipos/contextos inconsistentes no se muestran como si fueran válidos.
+
+La regresión `scoped-route-smoke.mjs` quedó integrada a CI. PR #19 pasó `Validate 7Metros` y fue mergeado a `main`; issue #17 cerrado.
+
+### RESUELTO — Fixtures vencidos se confundían con próximos partidos
+
+**Estado:** COMPROBADO, CORREGIDO Y VALIDADO EN CI
+
+Los partidos con fecha pasada, sin marcador y estado persistido `programado` ahora reciben únicamente en UI el rótulo derivado `Resultado pendiente`. No se modifica `partidos.estado`, no se infiere que el encuentro se haya disputado y no se inventa marcador.
+
+La capa de presentación actualiza tarjetas, compactos, tablas y ficha de partido después de cada render. `match-freshness-smoke.mjs` cubre pasado sin resultado, hoy, futuro y finalizado. PR #20 pasó toda la suite de CI y fue mergeado a `main`; issue #18 cerrado.
+
 ### RESUELTO — Ficha de jugador podía mostrar otra persona por filtros guardados
 
 **Estado:** COMPROBADO, CORREGIDO Y VALIDADO EN CI
@@ -117,7 +138,7 @@ Se cerró PR #5 como supersedido por PR #6 ya mergeado, reduciendo ruido y riesg
 - `integrity_report_7metros(3).ok=true`.
 - `integrity_report_7metros(4).ok=true`.
 - Security Advisor: 0 lints tras el hardening de `v_standings`.
-- CI pasa para puntaje 3-2-1, desempate olímpico y contexto seguro de perfiles de jugador.
+- CI pasa para puntaje 3-2-1, desempate olímpico, contexto seguro de jugador, contexto seguro de club/partido y frescura de resultados.
 
 ## REQUIERE INTERVENCIÓN DE TOMÁS
 
@@ -127,7 +148,7 @@ Nada obligatorio en este momento. El frente específico de FEMEBAL Community/n8n
 
 1. Diseñar y validar representación explícita de no-presentación/sanciones administrativas sin inferir datos.
 2. Representar correctamente el desempate a partido por 1.º puesto una vez finalizada la fase.
-3. Auditar UX ante temporadas con fixtures vencidos pero resultados todavía no importados, para mostrar cobertura/frescura con claridad sin inventar marcadores.
-4. Revisar integridad de jugadores que cambien de equipo/temporada y evitar agregaciones históricas ambiguas más allá de la navegación ya corregida.
-5. Auditar responsive/mobile de tablas, filtros, partidos y perfiles con regresiones estáticas donde sea posible.
-6. Completar logos/metadatos de clubes solo desde fuentes verificables.
+3. Revisar integridad de jugadores que cambien de equipo/temporada y evitar agregaciones históricas ambiguas más allá de la navegación ya corregida.
+4. Auditar responsive/mobile de tablas, filtros, partidos y perfiles con regresiones estáticas donde sea posible.
+5. Completar logos/metadatos de clubes solo desde fuentes verificables.
+6. Revisar rendimiento y paginación del frontend a medida que participaciones/jugadores crezcan desde el volumen actual reducido.
