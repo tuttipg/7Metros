@@ -41,15 +41,25 @@ n8n dispone del nodo core `Extract From File` con la operación `Extract From PD
 
 `parseN8nExtractedPlanillaDryRun()` conecta esa salida con `planilla-dry-run-core.mjs` y exige también la metadata del PDF descargado. El contrato vuelve a comprobar que la proveniencia siga en modo SAFE/DRY RUN, que `source_url` coincida exactamente con el work item, que el tipo siga siendo PDF, que el tamaño sea válido y que el SHA-256 tenga formato hexadecimal de 64 caracteres. El resultado del parser conserva esa proveniencia y repite el hash como `extraction.source_sha256`, de forma que una planilla parseada pueda vincularse inequívocamente al PDF binario del que salió. La metadata no habilita persistencia ni escritura.
 
+### Wiring SAFE alrededor de Extract From File
+
+`n8n/pdf-extraction-wiring.mjs` protege el límite entre el binario descargado y la salida de `Extract From File`. Antes de la extracción crea un envelope separado que contiene un snapshot mínimo e inmutable del work item, la proveniencia validada y un `correlation_id` igual al SHA-256 del PDF.
+
+El envelope vuelve a calcular el SHA-256 directamente sobre `pdfArtifact.bytes` y exige que coincidan `byte_length`, hash y URL antes de permitir el handoff. Esto evita aceptar metadata correcta asociada accidentalmente a bytes de otro PDF.
+
+Después de `Extract From File`, `parseExtractionWithEnvelopeDryRun()` exige que el mismo envelope se vuelva a unir explícitamente con el texto extraído. El rejoin falla cerrado si cambia el work item, si se pierde o altera el `correlation_id`, si la proveniencia deja de ser SAFE o si el hash final no coincide con `extraction.source_sha256`. Por diseño el envelope se mantiene separado del contenido que transforma `Extract From File`: el workflow real debe transportar/reunir ambas ramas usando `correlation_id`; no se asume que el nodo preserve campos JSON auxiliares.
+
 La topología prevista para n8n queda así:
 
 1. discovery manifest SAFE;
 2. manifest bridge → work item;
 3. HTTP/PDF fetch SAFE + SHA-256;
-4. binary data → nodo core `Extract From File` (`operation=pdf`);
-5. `pdf-extract-contract.mjs` + validación de proveniencia;
-6. `planilla-dry-run-core.mjs`;
-7. validación final sin persistencia.
+4. crear envelope SAFE con `correlation_id=sha256`;
+5. rama binaria → nodo core `Extract From File` (`operation=pdf`);
+6. rejoin explícito del texto extraído con el envelope por `correlation_id`;
+7. `pdf-extract-contract.mjs` + validación de proveniencia;
+8. `planilla-dry-run-core.mjs`;
+9. validación final sin persistencia.
 
 `n8n/planilla-dry-run-core.mjs` recibe el work item y el texto extraído. Antes de parsear vuelve a validar URL, host, HTTPS, procedencia `/wp-content/uploads/`, ausencia de query/fragment/userinfo, método GET y flags SAFE. Luego usa `planilla-core.mjs` para extraer partido y jugadores, manteniendo la regla de que la suma de goles de jugadores debe cerrar exactamente con el marcador.
 
@@ -58,7 +68,7 @@ Opcionalmente acepta una identidad esperada (fecha, local, visitante y marcador)
 ## Caso de regresión oficial
 La página oficial de Fecha 1 del Apertura 2026 enlaza `Sabado-21-3.pdf`. En la página 1 del PDF figura `Mayores / LHC Hipotecario Seguros / 20:15 / M / Argentinos Juniors / Ferro Carril Oeste`. Esto valida el descubrimiento del fixture.
 
-El parser de planilla tiene además una regresión separada para la planilla digital oficial del partido Argentinos Juniors 20–27 Ferro del 2026-03-21: 16 jugadores por equipo, 47 goles totales y cierre exacto 20–27. La regresión del contrato PDF usa el mismo partido para verificar el tramo `Extract From File → contrato SAFE → parser` y ahora comprueba además que el SHA-256 del PDF se propague hasta el resultado parseado. Esas regresiones se ejecutan en CI, pero la programación y la planilla digital se mantienen conceptualmente separadas como fuentes.
+El parser de planilla tiene además una regresión separada para la planilla digital oficial del partido Argentinos Juniors 20–27 Ferro del 2026-03-21: 16 jugadores por equipo, 47 goles totales y cierre exacto 20–27. La regresión del contrato PDF usa el mismo partido para verificar el tramo `Extract From File → contrato SAFE → parser` y comprueba que el SHA-256 del PDF se propague hasta el resultado parseado. La regresión del wiring agrega la comprobación de que la correlación SHA-256 sobreviva al rejoin y rechaza bytes, metadata, URL o work items cruzados. Esas regresiones se ejecutan en CI, pero la programación y la planilla digital se mantienen conceptualmente separadas como fuentes.
 
 ## Ejecución
 
