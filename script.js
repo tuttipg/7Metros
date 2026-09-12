@@ -164,6 +164,7 @@ async function autoStart() {
     const ui = await import('./ui.js');
     const pages = await import('./pages.js');
     const features = await import('./features.js');
+    const freshness = await import('./match-freshness.js');
 
     ui.renderShell();
     ui.initSettingsPage();
@@ -178,6 +179,7 @@ async function autoStart() {
       ui.renderCompetitionBar();
       pages.renderCurrentPage();
       features.enhanceCurrentPage();
+      freshness.enhanceMatchFreshness();
       ui.renderSuccessStatus();
     } catch (error) {
       console.error('7Metros: error cargando datos', error);
@@ -190,6 +192,7 @@ async function autoStart() {
       if (!store.state.loaded) return;
       pages.renderCurrentPage();
       features.enhanceCurrentPage();
+      freshness.enhanceMatchFreshness();
       ui.showToast('Filtros actualizados.');
     });
   } catch (error) {
