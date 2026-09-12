@@ -42,6 +42,7 @@ jobs:
           node --check csv-safety-smoke.mjs
           node --check date-utils-smoke.mjs
           node --check url-safety-smoke.mjs
+          node --check standings-points-smoke.mjs
           node --check n8n/importer-core.mjs
           node --check n8n/importer-core-smoke.mjs
           node --check n8n/planilla-core.mjs
@@ -72,6 +73,9 @@ jobs:
 
       - name: URL safety smoke test
         run: node url-safety-smoke.mjs
+
+      - name: FEMEBAL standings points smoke test
+        run: node standings-points-smoke.mjs
 
       - name: FEMEBAL importer core smoke test
         run: node n8n/importer-core-smoke.mjs
