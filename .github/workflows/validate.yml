@@ -47,6 +47,8 @@ jobs:
           node --check standings-core-smoke.mjs
           node --check n8n/importer-core.mjs
           node --check n8n/importer-core-smoke.mjs
+          node --check n8n/discovery-manifest-bridge.mjs
+          node --check n8n/discovery-manifest-bridge-smoke.mjs
           node --check n8n/planilla-core.mjs
           node --check n8n/planilla-core-smoke.mjs
           node --check n8n/community-api-core.mjs
@@ -84,6 +86,9 @@ jobs:
 
       - name: FEMEBAL importer core smoke test
         run: node n8n/importer-core-smoke.mjs
+
+      - name: FEMEBAL discovery manifest bridge smoke test
+        run: node n8n/discovery-manifest-bridge-smoke.mjs
 
       - name: FEMEBAL planilla parser smoke test
         run: node n8n/planilla-core-smoke.mjs
