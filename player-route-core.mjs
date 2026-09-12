@@ -8,7 +8,8 @@ function positiveId(value) {
  *
  * Reglas:
  * - un `team` explícito en la URL solo se acepta si el jugador pertenece a ese equipo;
- * - si el jugador ya existe en el filtro actual, se conserva ese contexto;
+ * - si exactamente una pertenencia del jugador está visible en el filtro actual, se conserva;
+ * - si más de una pertenencia está visible, el contexto es ambiguo y debe elegirse;
  * - fuera del filtro actual, una única pertenencia de temporada puede resolverse sola;
  * - múltiples pertenencias sin contexto son ambiguas y deben mostrarse para elegir;
  * - IDs inexistentes nunca deben caer silenciosamente en otro jugador.
@@ -16,15 +17,16 @@ function positiveId(value) {
 export function resolvePlayerRouteContext({
   playerId,
   requestedTeamId = null,
-  currentPlayerTeamId = null,
+  visibleMembershipTeamIds = [],
   membershipTeamIds = []
 } = {}) {
   const targetPlayerId = positiveId(playerId);
   if (!targetPlayerId) return { status: 'missing', playerId: null, teamId: null };
 
   const memberships = [...new Set((membershipTeamIds || []).map(positiveId).filter(Boolean))];
+  const visibleMemberships = [...new Set((visibleMembershipTeamIds || []).map(positiveId).filter(Boolean))]
+    .filter(teamId => memberships.includes(teamId));
   const requested = positiveId(requestedTeamId);
-  const current = positiveId(currentPlayerTeamId);
 
   if (requested) {
     return memberships.includes(requested)
@@ -32,8 +34,12 @@ export function resolvePlayerRouteContext({
       : { status: 'invalid-team', playerId: targetPlayerId, teamId: null };
   }
 
-  if (current && memberships.includes(current)) {
-    return { status: 'current', playerId: targetPlayerId, teamId: current };
+  if (visibleMemberships.length === 1) {
+    return { status: 'current', playerId: targetPlayerId, teamId: visibleMemberships[0] };
+  }
+
+  if (visibleMemberships.length > 1) {
+    return { status: 'ambiguous', playerId: targetPlayerId, teamId: null, choices: visibleMemberships };
   }
 
   if (memberships.length === 1) {
