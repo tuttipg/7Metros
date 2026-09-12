@@ -345,26 +345,30 @@ export function getPlayersForTeamIds(teamIds) {
   const result = [];
 
   for (const player of state.players) {
-    const memberships = (state.index.rosterByPlayer.get(player.id) || []).filter(m => allowedTeams.has(Number(m.equipo_id)));
-    if (!memberships.length) continue;
-    const membership = memberships[0];
-    const team = state.index.teamById.get(Number(membership.equipo_id));
-    const club = team ? state.index.clubById.get(Number(team.club_id)) : null;
-    const stats = participationStats(player.id, allowedTeams);
+    const memberships = (state.index.rosterByPlayer.get(player.id) || [])
+      .filter(membership => allowedTeams.has(Number(membership.equipo_id)));
 
-    result.push({
-      ...player,
-      teamId: team?.id ?? null,
-      teamCode: team ? teamCode(team) : 'A',
-      clubId: club?.id ?? null,
-      clubName: club?.name || 'Sin club',
-      club: team ? teamDisplayName(team, club) : (club?.name || 'Sin club'),
-      number: membership.dorsal ?? '—',
-      position: membership.posicion || 'Sin posición',
-      branch: team?.rama || '',
-      division: team?.division || '',
-      ...stats
-    });
+    for (const membership of memberships) {
+      const teamId = Number(membership.equipo_id);
+      const team = state.index.teamById.get(teamId);
+      if (!team) continue;
+      const club = state.index.clubById.get(Number(team.club_id)) || null;
+      const stats = participationStats(player.id, new Set([teamId]));
+
+      result.push({
+        ...player,
+        teamId: team.id,
+        teamCode: teamCode(team),
+        clubId: club?.id ?? null,
+        clubName: club?.name || 'Sin club',
+        club: teamDisplayName(team, club),
+        number: membership.dorsal ?? '—',
+        position: membership.posicion || 'Sin posición',
+        branch: team.rama || '',
+        division: team.division || '',
+        ...stats
+      });
+    }
   }
   return result;
 }
