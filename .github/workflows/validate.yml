@@ -51,6 +51,9 @@ jobs:
           node --check scoped-route-core.mjs
           node --check scoped-route-fix.js
           node --check scoped-route-smoke.mjs
+          node --check match-freshness-core.mjs
+          node --check match-freshness.js
+          node --check match-freshness-smoke.mjs
           node --check n8n/importer-core.mjs
           node --check n8n/importer-core-smoke.mjs
           node --check n8n/planilla-core.mjs
@@ -93,6 +96,9 @@ jobs:
 
       - name: Club and match route context smoke test
         run: node scoped-route-smoke.mjs
+
+      - name: Match freshness smoke test
+        run: node match-freshness-smoke.mjs
 
       - name: FEMEBAL importer core smoke test
         run: node n8n/importer-core-smoke.mjs
