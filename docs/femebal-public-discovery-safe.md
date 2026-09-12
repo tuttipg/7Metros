@@ -61,6 +61,14 @@ La topología prevista para n8n queda así:
 8. `planilla-dry-run-core.mjs`;
 9. validación final sin persistencia.
 
+### Blueprint n8n SAFE versionado
+
+`n8n/femebal-safe-pdf-extraction.workflow.json` materializa el tramo 4→7 como un blueprint n8n inactivo por defecto. Recibe exactamente un PDF por invocación (`binary.data`) junto con su envelope SAFE, bifurca el item en una rama de envelope y otra de extracción, usa `n8n-nodes-base.extractFromFile` con `operation=pdf`, vuelve a unir ambas ramas y revalida los flags SAFE y el `correlation_id` SHA-256 antes de emitir la extracción.
+
+El blueprint no contiene nodos HTTP, Supabase, bases de datos, webhooks, persistencia ni `credentials`. Tampoco activa el workflow. Está pensado como artefacto importable/de referencia para el wiring DRY RUN; la ejecución real dentro de una instancia n8n sigue requiriendo conectar la entrada binaria producida por el downloader SAFE. No se afirma compatibilidad runtime hasta probarlo en una instancia n8n concreta.
+
+`n8n/femebal-safe-workflow-smoke.mjs` valida estáticamente en CI que el workflow permanezca inactivo, que solo use tipos de nodo allowlisted, que no aparezcan marcadores de credenciales/Authorization/cookies/tokens, que `Extract From File` siga configurado para PDF sobre `binary.data`, que la bifurcación y el rejoin no desaparezcan y que los Code nodes conserven las comprobaciones `dry_run=true`, `write_enabled=false`, `auth_used=false` y SHA-256.
+
 `n8n/planilla-dry-run-core.mjs` recibe el work item y el texto extraído. Antes de parsear vuelve a validar URL, host, HTTPS, procedencia `/wp-content/uploads/`, ausencia de query/fragment/userinfo, método GET y flags SAFE. Luego usa `planilla-core.mjs` para extraer partido y jugadores, manteniendo la regla de que la suma de goles de jugadores debe cerrar exactamente con el marcador.
 
 Opcionalmente acepta una identidad esperada (fecha, local, visitante y marcador) y falla cerrado si la planilla no corresponde al partido esperado. La salida conserva `dry_run=true`, `write_enabled=false` y `auth_used=false`.
