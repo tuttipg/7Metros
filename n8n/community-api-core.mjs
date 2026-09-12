@@ -79,10 +79,10 @@ export function summarizeCommunityDiscovery(results) {
   const publicJson = normalized.filter(item => item.state === 'public_json');
   const authRequired = normalized.filter(item => item.state === 'auth_required');
 
-  let nextStep = 'discover_routes';
-  if (matches?.state === 'auth_required') nextStep = 'reverse_engineer_app_auth_flow';
+  let nextStep = 'discover_public_routes';
+  if (matches?.state === 'auth_required') nextStep = 'skip_protected_matches_expand_public_routes';
   else if (matches?.state === 'public_json') nextStep = 'extract_match_filters_and_ids';
-  else if (authRequired.length) nextStep = 'map_protected_routes_and_auth_flow';
+  else if (authRequired.length) nextStep = 'skip_protected_routes_expand_public_routes';
   else if (publicJson.length) nextStep = 'expand_public_route_discovery';
 
   return {
@@ -92,6 +92,8 @@ export function summarizeCommunityDiscovery(results) {
     nextStep,
     constraints: {
       publicEndpointDoesNotImplyMatchesArePublic: Boolean(publicJson.length && matches?.state === 'auth_required'),
+      protectedRoutesOutOfScope: authRequired.map(item => item.path),
+      authDiscoveryEnabled: false,
       firebaseAuthValidated: false
     },
     results: normalized.map(({ json, ...item }) => item)
