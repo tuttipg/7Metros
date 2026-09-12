@@ -92,7 +92,7 @@ export function renderShell() {
 
   const mobile = document.getElementById('mobile-bar');
   if (mobile) {
-    mobile.innerHTML = `<a class="mobile-brand" href="index.html">7<b>METROS</b></a><div class="mobile-actions"><button id="mobile-search" class="icon-btn" aria-label="Buscar">${icon('search')}</button><button id="menu-open" class="icon-btn" aria-label="Abrir menú">${icon('menu')}</button></div>`;
+    mobile.innerHTML = `<a class="mobile-brand" href="index.html">7<b>METROS</b></a><div class="mobile-actions"><button id="mobile-search" class="icon-btn" aria-label="Buscar">${icon('search')}</button><button id="menu-open" class="icon-btn" aria-label="Abrir menú" aria-controls="sidebar" aria-expanded="false">${icon('menu')}</button></div>`;
   }
 
   document.querySelectorAll('[data-current-date]').forEach(el => el.textContent = currentDateLabel());
@@ -102,10 +102,26 @@ export function renderShell() {
 
   const overlay = document.getElementById('overlay');
   const menuOpen = document.getElementById('menu-open');
-  const closeMenu = () => { sidebar?.classList.remove('open'); overlay?.classList.remove('show'); };
-  menuOpen?.addEventListener('click', () => { sidebar?.classList.add('open'); overlay?.classList.add('show'); });
-  overlay?.addEventListener('click', closeMenu);
-  sidebar?.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMenu));
+  const setMenuState = open => {
+    sidebar?.classList.toggle('open', open);
+    overlay?.classList.toggle('show', open);
+    menuOpen?.setAttribute('aria-expanded', String(open));
+    menuOpen?.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+  };
+  const openMenu = () => setMenuState(true);
+  const closeMenu = ({ returnFocus = false } = {}) => {
+    setMenuState(false);
+    if (returnFocus) menuOpen?.focus();
+  };
+  menuOpen?.addEventListener('click', openMenu);
+  overlay?.addEventListener('click', () => closeMenu({ returnFocus: true }));
+  sidebar?.querySelectorAll('a').forEach(a => a.addEventListener('click', () => closeMenu()));
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && sidebar?.classList.contains('open')) {
+      event.preventDefault();
+      closeMenu({ returnFocus: true });
+    }
+  });
 
   applySettings();
   initGlobalSearch();
