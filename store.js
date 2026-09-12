@@ -446,7 +446,7 @@ export function getClubsForTeamIds(teamIds) {
       gf,
       ga,
       gd: gf - ga,
-      points: won * 2 + drawn,
+      points: won * 3 + drawn * 2 + lost,
       goals: teamPlayers.reduce((sum, player) => sum + player.goals, 0),
       form
     };
