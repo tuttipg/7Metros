@@ -94,6 +94,32 @@ La web ordenaba empates por diferencia de gol general antes de considerar los en
 
 ## MEDIO
 
+### RESUELTO — Estadísticas ambiguas para jugadores con múltiples planteles
+
+**Estado:** COMPROBADO EN CÓDIGO, CORREGIDO Y VALIDADO EN CI
+
+`getPlayersForTeamIds()` tomaba solo el primer plantel de un jugador para identificar club/equipo, pero agregaba sus participaciones de todos los equipos permitidos. Ante un jugador con más de un plantel en el mismo scope, goles, partidos y sanciones podían terminar atribuidos al equipo equivocado.
+
+Se corrigió para generar una fila deportiva por combinación jugador↔equipo y calcular estadísticas restringidas a ese equipo. `store-smoke.mjs` incluye ahora un jugador presente en dos equipos y exige separar sus goles/partidos. PR #22 pasó CI y fue mergeado.
+
+La auditoría de Supabase confirmó además que hoy no existen jugadores con más de un equipo dentro de una misma temporada ni participaciones sin un plantel jugador↔equipo coincidente, por lo que la corrección es preventiva y no requirió tocar datos reales.
+
+### RESUELTO — La ficha multi-plantel podía aceptar un equipo visible arbitrario
+
+**Estado:** COMPROBADO EN CÓDIGO, CORREGIDO Y VALIDADO EN CI
+
+Si un jugador llegara a tener dos planteles visibles simultáneamente y el enlace no incluyera `?team=`, la navegación podía considerar válido el primer equipo devuelto por el store. El resolvedor ahora recibe todas las pertenencias visibles: exactamente una conserva contexto; más de una falla cerrado y obliga a elegir. Un `?team=` explícito sigue validándose contra los planteles reales.
+
+PR #23 amplió `player-route-smoke.mjs`, pasó CI y fue mergeado.
+
+### ABIERTO — `main` no está protegida por checks obligatorios
+
+**Estado:** COMPROBADO · issue #24
+
+La API de GitHub reporta `main` con `protected=false` y sin `required_status_checks`. Como GitHub Pages y la versión desplegada dependen de `main`, un push o merge accidental puede saltarse `Validate 7Metros` y reintroducir regresiones.
+
+**Acción siguiente:** activar branch protection/ruleset para exigir `Validate 7Metros` antes de mergear y bloquear force-push/delete. La conexión disponible no expone escritura administrativa de branch protection, por eso quedó registrado en issue #24.
+
 ### ABIERTO — Metadatos incompletos de clubes
 
 **Estado:** COMPROBADO
@@ -138,17 +164,19 @@ Se cerró PR #5 como supersedido por PR #6 ya mergeado, reduciendo ruido y riesg
 - `integrity_report_7metros(3).ok=true`.
 - `integrity_report_7metros(4).ok=true`.
 - Security Advisor: 0 lints tras el hardening de `v_standings`.
-- CI pasa para puntaje 3-2-1, desempate olímpico, contexto seguro de jugador, contexto seguro de club/partido y frescura de resultados.
+- CI pasa para puntaje 3-2-1, desempate olímpico, contexto seguro de jugador/club/partido, frescura de resultados y multi-plantel por equipo.
 
 ## REQUIERE INTERVENCIÓN DE TOMÁS
 
-Nada obligatorio en este momento. El frente específico de FEMEBAL Community/n8n puede seguir requiriendo pruebas manuales independientes, pero este auditor general tiene trabajo seguro para continuar sin intervención.
+No hay intervención funcional urgente. Para cerrar issue #24 hace falta habilitar manualmente una regla de protección/ruleset de `main` en GitHub porque la conexión disponible no permite modificar esa configuración administrativa.
+
+El frente específico de FEMEBAL Community/n8n puede seguir requiriendo pruebas manuales independientes, pero este auditor general tiene trabajo seguro para continuar sin intervención.
 
 ## Próximas prioridades
 
 1. Diseñar y validar representación explícita de no-presentación/sanciones administrativas sin inferir datos.
 2. Representar correctamente el desempate a partido por 1.º puesto una vez finalizada la fase.
-3. Revisar integridad de jugadores que cambien de equipo/temporada y evitar agregaciones históricas ambiguas más allá de la navegación ya corregida.
-4. Auditar responsive/mobile de tablas, filtros, partidos y perfiles con regresiones estáticas donde sea posible.
-5. Completar logos/metadatos de clubes solo desde fuentes verificables.
-6. Revisar rendimiento y paginación del frontend a medida que participaciones/jugadores crezcan desde el volumen actual reducido.
+3. Auditar responsive/mobile de tablas, filtros, partidos y perfiles con regresiones estáticas donde sea posible.
+4. Completar logos/metadatos de clubes solo desde fuentes verificables.
+5. Revisar rendimiento y paginación del frontend a medida que participaciones/jugadores crezcan desde el volumen actual reducido.
+6. Proteger `main` con CI obligatorio cuando pueda aplicarse la configuración administrativa.
