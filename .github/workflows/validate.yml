@@ -43,6 +43,7 @@ jobs:
           node --check date-utils-smoke.mjs
           node --check url-safety-smoke.mjs
           node --check standings-points-smoke.mjs
+          node --check standings-copy-smoke.mjs
           node --check standings-core.mjs
           node --check standings-core-smoke.mjs
           node --check player-route-core.mjs
@@ -87,6 +88,9 @@ jobs:
 
       - name: FEMEBAL standings points smoke test
         run: node standings-points-smoke.mjs
+
+      - name: Standings copy smoke test
+        run: node standings-copy-smoke.mjs
 
       - name: FEMEBAL standings Olympic tiebreak smoke test
         run: node standings-core-smoke.mjs
