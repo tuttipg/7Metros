@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { normalizeN8nPdfExtraction, parseN8nExtractedPlanillaDryRun } from './pdf-extract-contract.mjs';
+import { normalizeN8nPdfExtraction, normalizePdfProvenance, parseN8nExtractedPlanillaDryRun } from './pdf-extract-contract.mjs';
 
 const sourceUrl='https://femebal.com/wp-content/uploads/2026/03/control.pdf';
 const workItem={kind:'femebal_official_pdf',method:'GET',url:sourceUrl,allow_redirects:false,auth_used:false,write_enabled:false,source:{page_url:'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',page_title:'Programación Fecha 1',pdf_url:sourceUrl,anchor_text:'Sábado 21/3',source_type:'fecha_normal',phase:'apertura',round_number:1}};
+const pdfArtifact={dry_run:true,write_enabled:false,auth_used:false,source_url:sourceUrl,content_type:'application/pdf',byte_length:12345,sha256:'f581fc87f30296eff11777c3ce1b9a8b7077071ad8abedfcba317fef0c807224'};
 const players=`Nº Local G TAm 2 TR TAz
 1 Perznianko, Alan Nahuel - - - - -
 2 Berardinelli, Mauro 2 - - - -
@@ -53,12 +54,19 @@ ${players}`;
 
 const normalized=normalizeN8nPdfExtraction({text,numpages:2});
 assert.equal(normalized.dry_run,true); assert.equal(normalized.write_enabled,false); assert.equal(normalized.auth_used,false); assert.equal(normalized.page_count,2);
-const result=parseN8nExtractedPlanillaDryRun({workItem,extraction:{text,numpages:2},expected:{fecha:'2026-03-21',local:'Argentinos Juniors',visitante:'Ferro Carril Oeste',goles_local:20,goles_visitante:27}});
+const provenance=normalizePdfProvenance(pdfArtifact,workItem);
+assert.equal(provenance.sha256,pdfArtifact.sha256); assert.equal(provenance.source_url,sourceUrl); assert.equal(provenance.byte_length,12345);
+const result=parseN8nExtractedPlanillaDryRun({workItem,pdfArtifact,extraction:{text,numpages:2},expected:{fecha:'2026-03-21',local:'Argentinos Juniors',visitante:'Ferro Carril Oeste',goles_local:20,goles_visitante:27}});
 assert.equal(result.parsed.resumen.jugadores,32); assert.equal(result.parsed.resumen.goles,47); assert.equal(result.extraction.engine,'n8n_extract_from_file_pdf');
+assert.equal(result.provenance.sha256,pdfArtifact.sha256); assert.equal(result.extraction.source_sha256,pdfArtifact.sha256);
 assert.throws(()=>normalizeN8nPdfExtraction({numpages:2}),/no devolvió texto/);
 assert.throws(()=>normalizeN8nPdfExtraction({text:'   '}),/no devolvió texto/);
 assert.throws(()=>normalizeN8nPdfExtraction({text,numpages:0}),/páginas PDF inválida/);
 assert.throws(()=>normalizeN8nPdfExtraction({text:'x'.repeat(1001)},{maxTextChars:1000}),/excede límite/);
-assert.throws(()=>parseN8nExtractedPlanillaDryRun({workItem:{...workItem,write_enabled:true},extraction:{text}}),/no puede habilitar escritura/);
-assert.throws(()=>parseN8nExtractedPlanillaDryRun({workItem,extraction:{text},expected:{goles_visitante:26}}),/Marcador visitante inesperado/);
-console.log('✓ n8n PDF extraction contract SAFE y partido control validados');
+assert.throws(()=>normalizePdfProvenance({...pdfArtifact,source_url:'https://femebal.com/wp-content/uploads/2026/03/otro.pdf'},workItem),/no coincide/);
+assert.throws(()=>normalizePdfProvenance({...pdfArtifact,sha256:'abc'},workItem),/SHA-256/);
+assert.throws(()=>normalizePdfProvenance({...pdfArtifact,write_enabled:true},workItem),/no es SAFE/);
+assert.throws(()=>parseN8nExtractedPlanillaDryRun({workItem,extraction:{text}}),/Proveniencia PDF ausente/);
+assert.throws(()=>parseN8nExtractedPlanillaDryRun({workItem:{...workItem,write_enabled:true},pdfArtifact,extraction:{text}}),/no puede habilitar escritura/);
+assert.throws(()=>parseN8nExtractedPlanillaDryRun({workItem,pdfArtifact,extraction:{text},expected:{goles_visitante:26}}),/Marcador visitante inesperado/);
+console.log('✓ n8n PDF extraction contract SAFE + SHA-256 provenance + partido control validados');
