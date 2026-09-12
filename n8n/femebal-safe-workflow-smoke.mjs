@@ -36,12 +36,12 @@ assert.equal(extract.parameters?.operation, 'pdf');
 assert.equal(extract.parameters?.binaryPropertyName, 'data');
 
 const preserveCode = byName.get('Preserve SAFE Envelope')?.parameters?.jsCode ?? '';
-for (const guard of ['dry_run !== true', 'write_enabled !== false', 'auth_used !== false', "^[0-9a-f]{64}$"]) {
+for (const guard of ['$input.all()', 'items.length !== 1', 'exactamente 1 item', 'dry_run !== true', 'write_enabled !== false', 'auth_used !== false', "^[0-9a-f]{64}$"]) {
   assert.ok(preserveCode.includes(guard), `Falta guard SAFE en Preserve SAFE Envelope: ${guard}`);
 }
 
 const validateCode = byName.get('Validate SAFE Correlation')?.parameters?.jsCode ?? '';
-for (const guard of ['dry_run !== true', 'write_enabled !== false', 'auth_used !== false', 'Correlación SHA-256 perdida', 'no produjo texto']) {
+for (const guard of ['$input.all()', 'items.length !== 1', 'exactamente 1 item', 'dry_run !== true', 'write_enabled !== false', 'auth_used !== false', 'Correlación SHA-256 perdida', 'no produjo texto']) {
   assert.ok(validateCode.includes(guard), `Falta guard SAFE en Validate SAFE Correlation: ${guard}`);
 }
 
@@ -57,6 +57,8 @@ assert.equal(workflow.connections?.['Rejoin Envelope + Extraction']?.main?.[0]?.
 const merge = byName.get('Rejoin Envelope + Extraction');
 assert.equal(merge?.parameters?.mode, 'combine');
 assert.equal(merge?.parameters?.combineBy, 'combineByPosition');
+assert.match(workflow.meta?.input_contract ?? '', /exactly one PDF item per invocation/i);
+assert.match(workflow.meta?.input_contract ?? '', /multi-item batches fail closed/i);
 
 assert.match(workflow.meta?.validated_against ?? '', /Argentinos Juniors 20-27 Ferro/);
 assert.match(workflow.meta?.validated_against ?? '', /2026-03-21/);
