@@ -10,7 +10,7 @@ from dataclasses import dataclass, asdict
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import Request, HTTPRedirectHandler, build_opener
 
 ALLOWED_HOSTS = {"femebal.com", "www.femebal.com"}
 PROGRAMACIONES_URL = "https://femebal.com/programaciones/"
@@ -52,12 +52,29 @@ def _assert_allowed(url: str) -> None:
     p=urlparse(url)
     if p.scheme != "https" or p.hostname not in ALLOWED_HOSTS:
         raise ValueError(f"URL fuera de allowlist: {url}")
+    if p.username is not None or p.password is not None:
+        raise ValueError(f"URL con userinfo rechazada: {url}")
+    try:
+        port=p.port
+    except ValueError as e:
+        raise ValueError(f"Puerto inválido: {url}") from e
+    if port not in (None,443):
+        raise ValueError(f"Puerto fuera de allowlist: {url}")
+
+
+class SafeRedirectHandler(HTTPRedirectHandler):
+    """Prevent urllib from following a redirect outside the FEMEBAL allowlist."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        absolute=urljoin(req.full_url,newurl)
+        _assert_allowed(absolute)
+        return super().redirect_request(req,fp,code,msg,headers,absolute)
 
 
 def get_text(url: str, timeout=20) -> str:
     _assert_allowed(url)
     req=Request(url, headers={"User-Agent":UA, "Accept":"text/html,application/xhtml+xml,*/*"}, method="GET")
-    with urlopen(req, timeout=timeout) as r:
+    opener=build_opener(SafeRedirectHandler())
+    with opener.open(req, timeout=timeout) as r:
         final=r.geturl(); _assert_allowed(final)
         return r.read().decode("utf-8", errors="replace")
 
