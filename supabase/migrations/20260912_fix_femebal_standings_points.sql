@@ -75,5 +75,10 @@ left join agg a
  and a.equipo_id = e.id
 where e.activo;
 
+-- CREATE OR REPLACE VIEW puede perder las opciones de seguridad de una vista ya
+-- existente. Fijamos explícitamente SECURITY INVOKER para que RLS/permisos se
+-- evalúen con el rol que consulta y no con el propietario de la vista.
+alter view public.v_standings set (security_invoker = true);
+
 comment on view public.v_standings is
 'Posiciones deportivas 7Metros. Puntaje ordinario Fe.Me.Bal.: victoria 3, empate 2, derrota 1. Las sanciones/no-presentaciones requieren un override explícito y trazable; no se infieren del marcador.';
