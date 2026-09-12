@@ -1,0 +1,24 @@
+/* Mobile table hardening: keep wide sports-data tables usable without overflowing the page. */
+.table-scroll{
+  width:100%;
+  max-width:100%;
+  overflow-x:auto;
+  overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-inline:contain;
+}
+
+.table-scroll > table{
+  min-width:720px;
+}
+
+@media (max-width:720px){
+  .table-scroll{
+    margin-inline:0;
+    scrollbar-width:thin;
+  }
+
+  .table-scroll > table{
+    min-width:680px;
+  }
+}
