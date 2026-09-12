@@ -2,7 +2,7 @@ import { parseOfficialFemebalSheet } from './planilla-core.mjs';
 
 const ALLOWED_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
 
-function validatePdfWorkItem(item) {
+export function validatePdfWorkItem(item) {
   if (!item || typeof item !== 'object' || Array.isArray(item)) {
     throw new Error('Work item PDF inválido');
   }
