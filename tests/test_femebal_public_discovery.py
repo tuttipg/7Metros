@@ -1,5 +1,6 @@
 import unittest
-from tools.femebal_public_discovery import discover_pages, discover_pdfs, Source, _assert_allowed
+from urllib.request import Request
+from tools.femebal_public_discovery import discover_pages, discover_pdfs, Source, _assert_allowed, SafeRedirectHandler
 
 INDEX='''<html><body>
 <a href="https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/">Programación Fecha 1 – Torneo Metropolitano Apertura 2026</a>
@@ -27,8 +28,23 @@ class T(unittest.TestCase):
         self.assertEqual(len(rows),2)
         self.assertTrue(all(x.pdf_url.startswith('https://femebal.com/') for x in rows))
 
-    def test_reject_non_https_or_non_femebal(self):
-        for url in ['http://femebal.com/x','https://evil.example/x']:
-            with self.assertRaises(ValueError): _assert_allowed(url)
+    def test_reject_unsafe_urls(self):
+        bad=[
+            'http://femebal.com/x',
+            'https://evil.example/x',
+            'https://user:pass@femebal.com/x',
+            'https://femebal.com:444/x',
+        ]
+        for url in bad:
+            with self.subTest(url=url):
+                with self.assertRaises(ValueError): _assert_allowed(url)
+        _assert_allowed('https://femebal.com/x')
+        _assert_allowed('https://www.femebal.com:443/x')
+
+    def test_redirect_handler_blocks_external_destination(self):
+        h=SafeRedirectHandler()
+        req=Request('https://femebal.com/programaciones/')
+        with self.assertRaises(ValueError):
+            h.redirect_request(req,None,302,'Found',{},'https://evil.example/collect')
 
 if __name__=='__main__': unittest.main()
