@@ -1,5 +1,5 @@
 import { SEASON_ID } from './config.js';
-import { state, getPlayer } from './store.js';
+import { state, filteredTeamIds } from './store.js';
 import { renderCurrentPage } from './pages.js';
 import { renderCompetitionBar } from './ui.js';
 import { resolvePlayerRouteContext } from './player-route-core.mjs';
@@ -73,11 +73,15 @@ function guardPlayerRoute() {
   const playerId = Number(params.get('id'));
   const requestedTeamId = Number(params.get('team'));
   const memberships = seasonMemberships(playerId);
-  const current = getPlayer(playerId);
+  const visibleTeamIds = filteredTeamIds();
+  const visibleMembershipTeamIds = memberships
+    .map(row => Number(row.equipo_id))
+    .filter(teamId => visibleTeamIds.has(teamId));
+
   const resolution = resolvePlayerRouteContext({
     playerId,
     requestedTeamId,
-    currentPlayerTeamId: current?.teamId,
+    visibleMembershipTeamIds,
     membershipTeamIds: memberships.map(row => row.equipo_id)
   });
 
@@ -91,11 +95,13 @@ function guardPlayerRoute() {
   }
 
   if (resolution.status === 'ambiguous') {
+    const choiceSet = new Set(resolution.choices || []);
+    const choices = memberships.filter(row => choiceSet.has(Number(row.equipo_id)));
     renderRouteError(
       root,
       'Elegí el equipo del jugador',
-      'Este jugador tiene más de un plantel en la temporada. Para no mezclar estadísticas, elegí el contexto correcto.',
-      memberships,
+      'Este jugador tiene más de un plantel posible para este enlace. Para no mezclar estadísticas, elegí el contexto correcto.',
+      choices,
       resolution.playerId
     );
     return;
