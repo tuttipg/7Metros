@@ -31,18 +31,32 @@ Un manifiesto parcial o con cualquier señal de escritura/autenticación queda b
 
 La salida de esa etapa sigue siendo DRY RUN (`write_enabled=false`, `auth_used=false`) y entrega bytes en memoria; no guarda archivos ni escribe en Supabase.
 
-`n8n/planilla-dry-run-core.mjs` recibe el work item y el texto ya extraído del PDF. Antes de parsear vuelve a validar URL, host, HTTPS, procedencia `/wp-content/uploads/`, ausencia de query/fragment/userinfo, método GET y flags SAFE. Luego usa `planilla-core.mjs` para extraer partido y jugadores, manteniendo la regla de que la suma de goles de jugadores debe cerrar exactamente con el marcador.
+### Extracción PDF → texto con n8n nativo
+
+n8n dispone del nodo core `Extract From File` con la operación `Extract From PDF`, por lo que este pipeline no necesita incorporar una librería externa ni un servicio con credenciales para extraer texto.
+
+`n8n/pdf-extract-contract.mjs` define el contrato de handoff para la salida del nodo. Solo acepta una salida objeto con `text` no vacío, limita el tamaño del texto y valida la cantidad de páginas cuando está disponible (`numpages`, `numPages` o `pages`). No intenta OCR, no consulta servicios externos y no convierte metadata ambigua en datos del partido.
+
+`parseN8nExtractedPlanillaDryRun()` conecta esa salida con `planilla-dry-run-core.mjs`. El work item se vuelve a validar antes del parser y la salida conserva `dry_run=true`, `write_enabled=false` y `auth_used=false`.
+
+La topología prevista para n8n queda así:
+
+1. discovery manifest SAFE;
+2. manifest bridge → work item;
+3. HTTP/PDF fetch SAFE;
+4. binary data → nodo core `Extract From File` (`operation=pdf`);
+5. `pdf-extract-contract.mjs`;
+6. `planilla-dry-run-core.mjs`;
+7. validación final sin persistencia.
+
+`n8n/planilla-dry-run-core.mjs` recibe el work item y el texto extraído. Antes de parsear vuelve a validar URL, host, HTTPS, procedencia `/wp-content/uploads/`, ausencia de query/fragment/userinfo, método GET y flags SAFE. Luego usa `planilla-core.mjs` para extraer partido y jugadores, manteniendo la regla de que la suma de goles de jugadores debe cerrar exactamente con el marcador.
 
 Opcionalmente acepta una identidad esperada (fecha, local, visitante y marcador) y falla cerrado si la planilla no corresponde al partido esperado. La salida conserva `dry_run=true`, `write_enabled=false` y `auth_used=false`.
-
-### Pendiente deliberado: extracción PDF → texto
-
-La descarga binaria ya queda cubierta por una capa SAFE testeable. La extracción de texto todavía debe implementarse con una librería/servicio explícitamente fijado y testeado; no se debe asumir que un PDF descargado es parseable ni introducir una dependencia no verificada en producción. Hasta entonces, `planilla-dry-run-core.mjs` continúa recibiendo texto ya extraído y falla si llega vacío.
 
 ## Caso de regresión oficial
 La página oficial de Fecha 1 del Apertura 2026 enlaza `Sabado-21-3.pdf`. En la página 1 del PDF figura `Mayores / LHC Hipotecario Seguros / 20:15 / M / Argentinos Juniors / Ferro Carril Oeste`. Esto valida el descubrimiento del fixture.
 
-El parser de planilla tiene además una regresión separada para la planilla digital oficial del partido Argentinos Juniors 20–27 Ferro del 2026-03-21: 16 jugadores por equipo, 47 goles totales y cierre exacto 20–27. Esa regresión se ejecuta en CI, pero la programación y la planilla digital se mantienen conceptualmente separadas como fuentes.
+El parser de planilla tiene además una regresión separada para la planilla digital oficial del partido Argentinos Juniors 20–27 Ferro del 2026-03-21: 16 jugadores por equipo, 47 goles totales y cierre exacto 20–27. La nueva regresión del contrato PDF usa el mismo partido para verificar el tramo `Extract From File → contrato SAFE → parser`. Esas regresiones se ejecutan en CI, pero la programación y la planilla digital se mantienen conceptualmente separadas como fuentes.
 
 ## Ejecución
 
