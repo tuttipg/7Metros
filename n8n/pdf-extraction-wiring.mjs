@@ -36,7 +36,12 @@ export function buildPdfExtractionEnvelope({ workItem, pdfArtifact } = {}) {
     write_enabled: false,
     auth_used: false,
     work_item: stableWorkItemSnapshot(workItem),
-    provenance,
+    provenance: {
+      dry_run: true,
+      write_enabled: false,
+      auth_used: false,
+      ...provenance,
+    },
   };
 }
 
