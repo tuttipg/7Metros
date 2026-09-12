@@ -46,6 +46,8 @@ jobs:
           node --check standings-copy-smoke.mjs
           node --check standings-core.mjs
           node --check standings-core-smoke.mjs
+          node --check standings-adjustments.mjs
+          node --check standings-adjustments-smoke.mjs
           node --check player-route-core.mjs
           node --check player-route-fix.js
           node --check player-route-smoke.mjs
@@ -96,6 +98,9 @@ jobs:
 
       - name: FEMEBAL standings Olympic tiebreak smoke test
         run: node standings-core-smoke.mjs
+
+      - name: Administrative standings adjustments smoke test
+        run: node standings-adjustments-smoke.mjs
 
       - name: Player route context smoke test
         run: node player-route-smoke.mjs
