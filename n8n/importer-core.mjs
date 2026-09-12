@@ -11,6 +11,40 @@ export function normalizeText(value) {
     .trim();
 }
 
+/**
+ * Gate fail-closed entre el descubrimiento público SAFE y cualquier etapa
+ * posterior del importador. No habilita escrituras; solamente valida que el
+ * manifiesto tenga el contrato seguro esperado antes de consumirlo.
+ */
+export function validateDiscoveryManifest(manifest) {
+  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
+    throw new Error('Manifest de descubrimiento inválido');
+  }
+  if (manifest.schema_version !== 2) {
+    throw new Error(`schema_version no soportado: ${manifest.schema_version ?? 'ausente'}`);
+  }
+  if (manifest.safe !== true) throw new Error('Manifest sin safe=true');
+  if (manifest.complete !== true) throw new Error('Manifest incompleto: importación bloqueada');
+  if (manifest.write_enabled !== false) throw new Error('Manifest no es read-only');
+  if (manifest.auth_used !== false) throw new Error('Manifest usó autenticación');
+  if (!Array.isArray(manifest.pages) || !Array.isArray(manifest.pdfs) || !Array.isArray(manifest.fetch_errors)) {
+    throw new Error('Manifest con colecciones inválidas');
+  }
+  if (manifest.fetch_errors.length !== 0) {
+    throw new Error('Manifest declara errores de fetch');
+  }
+
+  return {
+    schema_version: manifest.schema_version,
+    safe: true,
+    complete: true,
+    write_enabled: false,
+    auth_used: false,
+    page_count: manifest.pages.length,
+    pdf_count: manifest.pdfs.length,
+  };
+}
+
 function requiredText(fixture, field) {
   const value = String(fixture?.[field] ?? '').trim();
   if (!value) throw new Error(`Fixture sin ${field}`);
