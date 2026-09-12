@@ -40,7 +40,8 @@ const db = {
   planteles: [
     {id:1,jugador_id:11,equipo_id:101,dorsal:7,posicion:'Lateral'},
     {id:2,jugador_id:12,equipo_id:102,dorsal:9,posicion:'Central'},
-    {id:3,jugador_id:13,equipo_id:103,dorsal:10,posicion:'Extremo'}
+    {id:3,jugador_id:13,equipo_id:103,dorsal:10,posicion:'Extremo'},
+    {id:4,jugador_id:11,equipo_id:103,dorsal:17,posicion:'Lateral'}
   ],
   partidos: [
     {id:201,fecha:'2026-09-01',hora:'20:00:00',jornada:1,local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:30,goles_visitante:28},
@@ -50,7 +51,8 @@ const db = {
   participaciones: [
     {id:1,partido_id:201,jugador_id:11,equipo_id:101,goles:10,exclusiones_2min:1,tarjeta_amarilla:0,tarjeta_roja:0},
     {id:2,partido_id:201,jugador_id:12,equipo_id:102,goles:8,exclusiones_2min:0,tarjeta_amarilla:1,tarjeta_roja:0},
-    {id:3,partido_id:203,jugador_id:13,equipo_id:103,goles:6,exclusiones_2min:0,tarjeta_amarilla:0,tarjeta_roja:0}
+    {id:3,partido_id:203,jugador_id:13,equipo_id:103,goles:6,exclusiones_2min:0,tarjeta_amarilla:0,tarjeta_roja:0},
+    {id:4,partido_id:203,jugador_id:11,equipo_id:103,goles:4,exclusiones_2min:0,tarjeta_amarilla:0,tarjeta_roja:0}
   ]
 };
 
@@ -91,7 +93,7 @@ await store.loadData();
 
 assert.equal(store.state.loaded, true);
 assert.equal(store.getClubs().length, 3, 'A y B deben ser filas deportivas separadas');
-assert.equal(store.getPlayers().length, 3);
+assert.equal(store.getPlayers().length, 4, 'Un jugador con dos planteles debe tener una fila deportiva por equipo');
 assert.equal(store.getMatches().length, 3);
 assert.equal(store.dataSummary().finished, 2);
 assert.equal(store.dataSummary().goals, 108);
@@ -108,14 +110,30 @@ assert.equal(store.getBaseClub(1).logoUrl, 'https://example.test/ferro.png');
 assert.equal(store.getBaseClub(2).logoUrl, null);
 
 const juan = store.getPlayer(11);
+assert.equal(juan.teamId, 101);
 assert.equal(juan.goals, 10);
 assert.equal(juan.matchesPlayed, 1);
 assert.equal(juan.goalsPerMatch, 10);
 assert.equal(juan.assists, null, 'Métricas ausentes no deben inventarse como 0');
 
+const juanMemberships = store.getPlayersForTeamIds(new Set([101, 103]))
+  .filter(player => player.id === 11)
+  .sort((a, b) => a.teamId - b.teamId);
+assert.equal(juanMemberships.length, 2);
+assert.deepEqual(
+  juanMemberships.map(player => ({ teamId: player.teamId, number: player.number, goals: player.goals, matchesPlayed: player.matchesPlayed })),
+  [
+    { teamId: 101, number: 7, goals: 10, matchesPlayed: 1 },
+    { teamId: 103, number: 17, goals: 4, matchesPlayed: 1 }
+  ],
+  'Las estadísticas deben permanecer separadas por equipo y no mezclarse entre planteles'
+);
+
 const bTeam = store.getClubs().find(row => row.teamId === 103);
 assert.equal(bTeam.name, 'Ferro Carril Oeste · Equipo B');
 assert.equal(bTeam.teamCode, 'B');
+assert.equal(bTeam.players, 2, 'El jugador multi-plantel debe contar también en el Equipo B');
+assert.equal(bTeam.goals, 10, 'Los goles del Equipo B deben sumar solo participaciones del Equipo B');
 assert.equal(bTeam.points, 3, 'Fe.Me.Bal. otorga 3 puntos por victoria');
 assert.equal(store.state.matches.find(row => row.id === 203).away, 'Ferro Carril Oeste · Equipo B');
 
@@ -127,4 +145,4 @@ assert.equal(table[1].name, 'Ferro Carril Oeste · Equipo B');
 assert.equal(table[1].points, 3);
 assert.equal(table[2].points, 2, 'Dos derrotas ordinarias valen un punto cada una');
 
-console.log('✓ store-smoke: configuración, resumen global, carga, logos, equipos A/B, filtros, estadísticas y posiciones FEMEBAL 3-2-1 OK');
+console.log('✓ store-smoke: configuración, resumen global, carga, logos, equipos A/B, multi-plantel, filtros, estadísticas y posiciones FEMEBAL 3-2-1 OK');
