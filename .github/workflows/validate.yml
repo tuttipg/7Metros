@@ -56,6 +56,7 @@ jobs:
           node --check match-freshness.js
           node --check match-freshness-smoke.mjs
           node --check responsive-table-smoke.mjs
+          node --check mobile-menu-a11y-smoke.mjs
           node --check n8n/importer-core.mjs
           node --check n8n/importer-core-smoke.mjs
           node --check n8n/planilla-core.mjs
@@ -107,6 +108,9 @@ jobs:
 
       - name: Responsive table smoke test
         run: node responsive-table-smoke.mjs
+
+      - name: Mobile menu accessibility smoke test
+        run: node mobile-menu-a11y-smoke.mjs
 
       - name: FEMEBAL importer core smoke test
         run: node n8n/importer-core-smoke.mjs
