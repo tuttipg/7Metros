@@ -45,6 +45,9 @@ jobs:
           node --check standings-points-smoke.mjs
           node --check standings-core.mjs
           node --check standings-core-smoke.mjs
+          node --check player-route-core.mjs
+          node --check player-route-fix.js
+          node --check player-route-smoke.mjs
           node --check n8n/importer-core.mjs
           node --check n8n/importer-core-smoke.mjs
           node --check n8n/planilla-core.mjs
@@ -81,6 +84,9 @@ jobs:
 
       - name: FEMEBAL standings Olympic tiebreak smoke test
         run: node standings-core-smoke.mjs
+
+      - name: Player route context smoke test
+        run: node player-route-smoke.mjs
 
       - name: FEMEBAL importer core smoke test
         run: node n8n/importer-core-smoke.mjs
