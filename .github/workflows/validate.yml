@@ -65,6 +65,8 @@ jobs:
           node --check n8n/planilla-dry-run-core-smoke.mjs
           node --check n8n/official-pdf-fetch-core.mjs
           node --check n8n/official-pdf-fetch-core-smoke.mjs
+          node --check n8n/pdf-extract-contract.mjs
+          node --check n8n/pdf-extract-contract-smoke.mjs
           node --check n8n/community-api-core.mjs
           node --check n8n/community-api-core-smoke.mjs
 
@@ -124,6 +126,9 @@ jobs:
 
       - name: FEMEBAL official PDF fetch smoke test
         run: node n8n/official-pdf-fetch-core-smoke.mjs
+
+      - name: FEMEBAL n8n PDF extraction contract smoke test
+        run: node n8n/pdf-extract-contract-smoke.mjs
 
       - name: FEMEBAL Community discovery smoke test
         run: node n8n/community-api-core-smoke.mjs
