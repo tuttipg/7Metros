@@ -50,11 +50,16 @@ export function classifyCommunityResponse({ statusCode, body }) {
   const authMessage = /unauthori|forbidden|missing authorization|missing token|authentication required|access token|invalid token|jwt/i.test(sample);
   const notFoundMessage = /cannot get|not found/i.test(sample);
 
+  // El status HTTP manda sobre palabras accidentales del payload. Un 2xx público puede
+  // contener términos como "token" o "JWT" en noticias/configuración y no debe
+  // reclasificarse como protegido. Sólo 401/403 (o un 400 explícitamente de auth)
+  // se consideran evidencia suficiente para marcar la ruta fuera de alcance.
   let state = 'transport_or_server_error';
-  if (status === 401 || status === 403 || authMessage) state = 'auth_required';
-  else if (status === 404 || notFoundMessage) state = 'not_found';
+  if (status === 401 || status === 403) state = 'auth_required';
+  else if (status === 404 || (status == null && notFoundMessage)) state = 'not_found';
   else if (status != null && status >= 200 && status < 300 && json !== null) state = 'public_json';
   else if (status != null && status >= 200 && status < 300) state = 'public_non_json';
+  else if (status === 400 && authMessage) state = 'auth_required';
 
   return {
     state,
