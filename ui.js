@@ -14,7 +14,7 @@ const ICONS = {
   clipboard: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 9h6M9 13h6M9 17h4"/>',
   chart: '<path d="M4 20V10M9 20V4M14 20v-7M19 20V7M2 20h20"/>',
   ball: '<circle cx="12" cy="12" r="9"/><path d="m12 7 3 2-1 4h-4L9 9l3-2ZM6 11l4 2M18 11l-4 2M9 18l1-5M15 18l-1-5"/>',
-  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.5 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.2.36.6.7 1 .9.2.1.6.1.9.1H21v4h-.09a1.7 1.7 0 0 0-1.51 1Z"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.5 4.6a1.7 1.7 0 0 0 1.88-.34l.06.06 2.83 2.83-.06-.06A1.7 1.7 0 0 0 19.4 9c.2.36.6.7 1 .9.2.1.6.1.9.1H21v4h-.09a1.7 1.7 0 0 0-1.51 1Z"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
   download: '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
@@ -92,7 +92,7 @@ export function renderShell() {
 
   const mobile = document.getElementById('mobile-bar');
   if (mobile) {
-    mobile.innerHTML = `<a class="mobile-brand" href="index.html">7<b>METROS</b></a><div class="mobile-actions"><button id="mobile-search" class="icon-btn" aria-label="Buscar">${icon('search')}</button><button id="menu-open" class="icon-btn" aria-label="Abrir menú">${icon('menu')}</button></div>`;
+    mobile.innerHTML = `<a class="mobile-brand" href="index.html">7<b>METROS</b></a><div class="mobile-actions"><button id="mobile-search" class="icon-btn" aria-label="Buscar">${icon('search')}</button><button id="menu-open" class="icon-btn" aria-label="Abrir menú" aria-controls="sidebar" aria-expanded="false">${icon('menu')}</button></div>`;
   }
 
   document.querySelectorAll('[data-current-date]').forEach(el => el.textContent = currentDateLabel());
@@ -102,10 +102,26 @@ export function renderShell() {
 
   const overlay = document.getElementById('overlay');
   const menuOpen = document.getElementById('menu-open');
-  const closeMenu = () => { sidebar?.classList.remove('open'); overlay?.classList.remove('show'); };
-  menuOpen?.addEventListener('click', () => { sidebar?.classList.add('open'); overlay?.classList.add('show'); });
-  overlay?.addEventListener('click', closeMenu);
-  sidebar?.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMenu));
+  const setMenuState = open => {
+    sidebar?.classList.toggle('open', open);
+    overlay?.classList.toggle('show', open);
+    menuOpen?.setAttribute('aria-expanded', String(open));
+    menuOpen?.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+  };
+  const openMenu = () => setMenuState(true);
+  const closeMenu = ({ returnFocus = false } = {}) => {
+    setMenuState(false);
+    if (returnFocus) menuOpen?.focus();
+  };
+  menuOpen?.addEventListener('click', openMenu);
+  overlay?.addEventListener('click', () => closeMenu({ returnFocus: true }));
+  sidebar?.querySelectorAll('a').forEach(a => a.addEventListener('click', () => closeMenu()));
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && sidebar?.classList.contains('open')) {
+      event.preventDefault();
+      closeMenu({ returnFocus: true });
+    }
+  });
 
   applySettings();
   initGlobalSearch();
