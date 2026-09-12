@@ -116,15 +116,15 @@ assert.equal(juan.assists, null, 'Métricas ausentes no deben inventarse como 0'
 const bTeam = store.getClubs().find(row => row.teamId === 103);
 assert.equal(bTeam.name, 'Ferro Carril Oeste · Equipo B');
 assert.equal(bTeam.teamCode, 'B');
-assert.equal(bTeam.points, 2);
+assert.equal(bTeam.points, 3, 'Fe.Me.Bal. otorga 3 puntos por victoria');
 assert.equal(store.state.matches.find(row => row.id === 203).away, 'Ferro Carril Oeste · Equipo B');
 
 const table = store.getStandings();
 assert.equal(table[0].name, 'Ferro Carril Oeste');
-assert.equal(table[0].points, 2);
+assert.equal(table[0].points, 3);
 assert.equal(table[0].gd, 2);
 assert.equal(table[1].name, 'Ferro Carril Oeste · Equipo B');
-assert.equal(table[1].points, 2);
-assert.equal(table[2].points, 0);
+assert.equal(table[1].points, 3);
+assert.equal(table[2].points, 2, 'Dos derrotas ordinarias valen un punto cada una');
 
-console.log('✓ store-smoke: configuración, resumen global, carga, logos, equipos A/B, filtros, estadísticas y posiciones OK');
+console.log('✓ store-smoke: configuración, resumen global, carga, logos, equipos A/B, filtros, estadísticas y posiciones FEMEBAL 3-2-1 OK');
