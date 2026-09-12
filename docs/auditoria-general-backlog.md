@@ -29,6 +29,14 @@ Fe.Me.Bal. usa 3 puntos por victoria, 2 por empate, 1 por derrota ordinaria y 0 
 
 **Acción siguiente:** definir un modelo explícito de resultado administrativo/override con fuente oficial antes de implementarlo en posiciones.
 
+### ABIERTO — Desempate a partido por el 1.º puesto de LHC
+
+**Estado:** COMPROBADO · semántica final pendiente
+
+El Sistema de Competencia de Liga de Honor Hipotecario Seguros 2026 indica que, si dos equipos terminan empatados en el 1.º puesto del Apertura o Clausura, el campeonato se define con un partido desempate. El ordenamiento web ya aplica correctamente el Sistema Olímpico para empates ordinarios, pero todavía no representa el estado especial “1.º puesto pendiente de desempate”.
+
+**Acción siguiente:** incorporar una señal explícita de desempate pendiente únicamente cuando pueda determinarse que la fase terminó; no declarar campeón por criterios secundarios en ese caso.
+
 ### RESUELTO — Puntaje incorrecto 2-1-0 en posiciones
 
 **Estado:** COMPROBADO Y CORREGIDO
@@ -100,7 +108,8 @@ Nada obligatorio en este momento. El frente específico de FEMEBAL Community/n8n
 ## Próximas prioridades
 
 1. Diseñar y validar representación explícita de no-presentación/sanciones administrativas sin inferir datos.
-2. Auditar UX ante temporadas con fixtures vencidos pero resultados todavía no importados, para mostrar cobertura/frescura con claridad sin inventar marcadores.
-3. Revisar integridad de jugadores que cambien de equipo/temporada y evitar agregaciones históricas ambiguas.
-4. Auditar responsive/mobile de tablas, filtros, partidos y perfiles con regresiones estáticas donde sea posible.
-5. Completar logos/metadatos de clubes solo desde fuentes verificables.
+2. Representar correctamente el desempate a partido por 1.º puesto una vez finalizada la fase.
+3. Auditar UX ante temporadas con fixtures vencidos pero resultados todavía no importados, para mostrar cobertura/frescura con claridad sin inventar marcadores.
+4. Revisar integridad de jugadores que cambien de equipo/temporada y evitar agregaciones históricas ambiguas.
+5. Auditar responsive/mobile de tablas, filtros, partidos y perfiles con regresiones estáticas donde sea posible.
+6. Completar logos/metadatos de clubes solo desde fuentes verificables.
