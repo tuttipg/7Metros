@@ -32,15 +32,44 @@ assert.equal(classifyCommunityResponse({
   body: '[{"id":"100","name":"Mayores"}]'
 }).state, 'public_json');
 
+// Palabras relacionadas con auth dentro de un 2xx público no deben convertirlo
+// en ruta protegida: el status HTTP es la señal autoritativa.
+assert.equal(classifyCommunityResponse({
+  statusCode: 200,
+  body: '{"title":"Cómo renovar tu access token","body":"JWT informativo"}'
+}).state, 'public_json');
+
+assert.equal(classifyCommunityResponse({
+  statusCode: 200,
+  body: '<html>JWT token informativo</html>'
+}).state, 'public_non_json');
+
 assert.equal(classifyCommunityResponse({
   statusCode: 401,
   body: '{"error":"Unauthorized","message":"Missing authorization header"}'
 }).state, 'auth_required');
 
 assert.equal(classifyCommunityResponse({
+  statusCode: 403,
+  body: '{"message":"Forbidden"}'
+}).state, 'auth_required');
+
+assert.equal(classifyCommunityResponse({
+  statusCode: 400,
+  body: '{"message":"Missing token"}'
+}).state, 'auth_required');
+
+assert.equal(classifyCommunityResponse({
   statusCode: 404,
   body: '<pre>Cannot GET /top-scorers</pre>'
 }).state, 'not_found');
+
+// Un error de servidor que casualmente menciona token no se presenta como
+// evidencia de auth: queda en error de transporte/servidor y no dispara auth discovery.
+assert.equal(classifyCommunityResponse({
+  statusCode: 500,
+  body: '{"message":"token service temporarily unavailable"}'
+}).state, 'transport_or_server_error');
 
 assert.equal(classifyCommunityResponse({
   statusCode: 200,
