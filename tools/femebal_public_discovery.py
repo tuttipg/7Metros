@@ -15,6 +15,7 @@ from urllib.request import Request, HTTPRedirectHandler, build_opener
 ALLOWED_HOSTS = {"femebal.com", "www.femebal.com"}
 PROGRAMACIONES_URL = "https://femebal.com/programaciones/"
 UA = "7Metros-public-discovery/1.0 (+read-only; official-public-pages-only)"
+MANIFEST_SCHEMA_VERSION = 2
 
 class LinkParser(HTMLParser):
     def __init__(self):
@@ -60,6 +61,12 @@ def _assert_allowed(url: str) -> None:
         raise ValueError(f"Puerto inválido: {url}") from e
     if port not in (None,443):
         raise ValueError(f"Puerto fuera de allowlist: {url}")
+
+
+def _is_official_upload_pdf(url: str) -> bool:
+    """Accept only PDF attachments from FEMEBAL's WordPress uploads tree."""
+    p=urlparse(url)
+    return p.path.lower().startswith("/wp-content/uploads/") and p.path.lower().endswith(".pdf")
 
 
 class SafeRedirectHandler(HTTPRedirectHandler):
@@ -112,20 +119,30 @@ def discover_pdfs(page_html: str, source: Source):
     out={}
     for href,text in links_from_html(page_html):
         url=urljoin(source.page_url,href)
-        if not urlparse(url).path.lower().endswith(".pdf"): continue
+        if not _is_official_upload_pdf(url): continue
         try: _assert_allowed(url)
         except ValueError: continue
         out[url]=PdfSource(source.page_url, source.title, url, text, source.source_type, source.phase, source.round_number)
     return sorted(out.values(), key=lambda x:x.pdf_url)
 
 
-def build_manifest(index_html: str, page_html_by_url: dict[str,str]):
+def build_manifest(index_html: str, page_html_by_url: dict[str,str], fetch_errors: list[dict]|None=None):
     pages=discover_pages(index_html)
     pdfs=[]
     for page in pages:
         if page.page_url in page_html_by_url:
             pdfs.extend(discover_pdfs(page_html_by_url[page.page_url], page))
-    return {"safe":True,"write_enabled":False,"auth_used":False,"pages":[asdict(x) for x in pages],"pdfs":[asdict(x) for x in pdfs]}
+    errors=list(fetch_errors or [])
+    return {
+        "schema_version": MANIFEST_SCHEMA_VERSION,
+        "safe": True,
+        "write_enabled": False,
+        "auth_used": False,
+        "complete": len(errors)==0,
+        "pages": [asdict(x) for x in pages],
+        "pdfs": [asdict(x) for x in pdfs],
+        "fetch_errors": errors,
+    }
 
 
 def main():
@@ -136,18 +153,29 @@ def main():
     else:
         idx=get_text(PROGRAMACIONES_URL)
     pages=discover_pages(idx)
-    mapping={}
+    mapping={}; fetch_errors=[]
     if args.pages_dir:
         d=Path(args.pages_dir)
         for p in pages:
             f=d/(re.sub(r"[^a-zA-Z0-9]+","_",p.page_url).strip("_")+".html")
-            if f.exists(): mapping[p.page_url]=f.read_text(encoding="utf-8")
+            if f.exists():
+                mapping[p.page_url]=f.read_text(encoding="utf-8")
+            else:
+                fetch_errors.append({"stage":"fixture_file","url":p.page_url,"error":"missing_fixture_html"})
     else:
         for p in pages:
-            try: mapping[p.page_url]=get_text(p.page_url)
-            except Exception as e: mapping[p.page_url]=f"<!-- fetch failed: {e} -->"
-    manifest=build_manifest(idx,mapping)
+            try:
+                mapping[p.page_url]=get_text(p.page_url)
+            except Exception as e:
+                fetch_errors.append({"stage":"fetch_page","url":p.page_url,"error":type(e).__name__})
+    manifest=build_manifest(idx,mapping,fetch_errors)
     Path(args.output).write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
-    print(json.dumps({"pages":len(manifest["pages"]),"pdfs":len(manifest["pdfs"]),"write_enabled":False},ensure_ascii=False))
+    print(json.dumps({
+        "pages":len(manifest["pages"]),
+        "pdfs":len(manifest["pdfs"]),
+        "fetch_errors":len(manifest["fetch_errors"]),
+        "complete":manifest["complete"],
+        "write_enabled":False,
+    },ensure_ascii=False))
 
 if __name__=="__main__": main()
