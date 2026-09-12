@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { validatePdfWorkItem } from './planilla-dry-run-core.mjs';
 
 const DEFAULT_MAX_BYTES = 12 * 1024 * 1024;
@@ -33,5 +34,6 @@ export async function fetchOfficialFemebalPdf(workItem, { fetchImpl = globalThis
   if (bytes.byteLength > maxBytes) throw new Error(`PDF excede límite real de ${maxBytes} bytes`);
   if (declaredLength !== null && declaredLength !== bytes.byteLength) throw new Error(`Content-Length no coincide: declarado=${declaredLength} real=${bytes.byteLength}`);
   assertPdfMagic(bytes);
-  return { dry_run: true, write_enabled: false, auth_used: false, source_url: sourceUrl, content_type: contentType, byte_length: bytes.byteLength, bytes };
+  const sha256 = createHash('sha256').update(bytes).digest('hex');
+  return { dry_run: true, write_enabled: false, auth_used: false, source_url: sourceUrl, content_type: contentType, byte_length: bytes.byteLength, sha256, bytes };
 }
