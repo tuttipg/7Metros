@@ -67,7 +67,7 @@ jobs:
           node --check n8n/community-api-core-smoke.mjs
 
       - name: Check Python syntax
-        run: python -m py_compile validate_site.py validate_backend_contract.py
+        run: python -m py_compile validate_site.py validate_backend_contract.py validate_admin_adjustments_persistence.py
 
       - name: Store smoke test
         run: node store-smoke.mjs
@@ -101,6 +101,9 @@ jobs:
 
       - name: Administrative standings adjustments smoke test
         run: node standings-adjustments-smoke.mjs
+
+      - name: Administrative adjustments persistence contract
+        run: python validate_admin_adjustments_persistence.py
 
       - name: Player route context smoke test
         run: node player-route-smoke.mjs
