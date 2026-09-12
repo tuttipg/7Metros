@@ -29,6 +29,8 @@ Un manifiesto parcial o con cualquier señal de escritura/autenticación queda b
 
 `n8n/official-pdf-fetch-core.mjs` implementa la descarga controlada del PDF. Revalida el work item antes de tocar la red y ejecuta únicamente `GET` con `credentials=omit`, `redirect=manual` y `Accept: application/pdf`. Falla cerrado ante cualquier redirect, status distinto de 200, Content-Type no PDF, Content-Length inválido/inconsistente, archivo que supere el límite configurado o contenido que no comience con la firma `%PDF-`. No agrega `Authorization`, `Cookie` ni headers secretos.
 
+Cuando la respuesta expone un body stream, la lectura es incremental y aplica el límite de bytes durante la descarga: si el cuerpo supera `maxBytes`, cancela el reader y falla antes de acumular el resto del archivo en memoria. Esto cubre también respuestas sin `Content-Length`. Se conserva un fallback a `arrayBuffer()` para entornos/mocks sin stream, aplicando igualmente el límite antes de aceptar el artefacto.
+
 La salida de esa etapa sigue siendo DRY RUN (`write_enabled=false`, `auth_used=false`) y entrega bytes en memoria; no guarda archivos ni escribe en Supabase. Además calcula un SHA-256 determinístico sobre los bytes exactos descargados y expone `source_url`, `content_type`, `byte_length` y `sha256` como metadata de proveniencia.
 
 ### Extracción PDF → texto con n8n nativo
