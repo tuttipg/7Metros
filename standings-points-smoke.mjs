@@ -24,8 +24,13 @@ assert.match(
 );
 assert.match(
   migration,
+  /alter\s+view\s+public\.v_standings\s+set\s*\(security_invoker\s*=\s*true\)/,
+  'La migración debe preservar SECURITY INVOKER en v_standings'
+);
+assert.match(
+  migration,
   /no presentación|no-presentación/,
   'La migración debe documentar que la no-presentación necesita tratamiento explícito'
 );
 
-console.log('✓ standings-points-smoke: frontend y v_standings fijados al puntaje FEMEBAL 3-2-1');
+console.log('✓ standings-points-smoke: frontend/v_standings 3-2-1 y security_invoker protegidos');
