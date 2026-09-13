@@ -17,7 +17,9 @@ export function canonicalizeFemebalTournamentTrackerUrl(value) {
   for (const key of url.searchParams.keys()) {
     if (!allowedParams.has(key)) throw new Error(`Query TournamentTracker no permitida: ${key}`);
   }
-  if (url.searchParams.has('noAdv') && !['0', '1'].includes(url.searchParams.get('noAdv'))) {
+  const noAdvValues = url.searchParams.getAll('noAdv');
+  if (noAdvValues.length > 1) throw new Error('Query noAdv duplicada o ambigua');
+  if (noAdvValues.length === 1 && !['0', '1'].includes(noAdvValues[0])) {
     throw new Error('Valor noAdv no permitido');
   }
 
