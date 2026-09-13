@@ -1,6 +1,6 @@
 # FEMEBAL public discovery — SAFE
 
-Descubridor GET-only para programaciones públicas oficiales de FEMEBAL. No usa LarrySport, login, cookies, tokens ni Supabase.
+Descubridor GET-only para superficies públicas oficiales de FEMEBAL. No usa login, cookies, tokens ni Supabase. TournamentTracker/LarrySport se trata como una superficie pública separada y fail-closed: sólo shell HTML y assets JavaScript estáticos explícitamente publicados por FEMEBAL hasta que exista evidencia reproducible de endpoints públicos.
 
 ## Política
 - páginas HTML y redirects limitados estrictamente a `https://femebal.com` / `https://www.femebal.com`;
@@ -13,6 +13,24 @@ Descubridor GET-only para programaciones públicas oficiales de FEMEBAL. No usa 
 - no interpreta un PDF como resultado final: una programación prueba fixture/fecha/hora, no marcador.
 
 La ampliación al host CloudFront aplica **solo a enlaces PDF**. No amplía la superficie de navegación: `get_text()` y `SafeRedirectHandler` siguen aceptando exclusivamente hosts web FEMEBAL. Por lo tanto el discovery puede recoger una planilla digital oficial enlazada desde una página pública FEMEBAL sin convertir CloudFront en una fuente navegable genérica.
+
+## TournamentTracker público / LarrySport
+
+FEMEBAL enlaza públicamente `https://www.femebal.com/tournament-tracker/?noAdv=0` como su superficie `Torneos & Fixtures`. La respuesta sin ejecutar JavaScript es un shell SPA público. FEMEBAL también documentó públicamente en marzo de 2026 que su aplicación oficial desarrollada por LarrySport expone partidos, goles, tablas, goleadores e incidencias y que los datos provienen de las planillas digitales confeccionadas por los clubes.
+
+Ese contexto **no autoriza a asumir endpoints internos**. `n8n/tournamenttracker-public-core.mjs` aplica estas reglas:
+
+- sólo HTTPS y hosts `femebal.com` / `www.femebal.com`;
+- sólo la ruta `/tournament-tracker/` para el shell;
+- sólo el parámetro observado `noAdv=0|1`;
+- sin userinfo, fragments, cookies, `Authorization` ni credenciales;
+- un 401/403 corta esa superficie como protegida;
+- un redirect fuera del host permitido se clasifica como inseguro;
+- detectar un SPA público habilita únicamente **análisis estático**, no ejecución del JavaScript ni consumo automático de APIs.
+
+La etapa estática puede extraer de HTML únicamente `script src` y preloads JavaScript que resuelvan a archivos `.js`/`.mjs` dentro de `https://www.femebal.com/tournament-tracker/`. Rechaza assets HTTP, externos, con query/fragment, fuera del prefijo o de otros tipos. El plan resultante sigue siendo GET-only, `dry_run=true`, `write_enabled=false`, `auth_used=false` y declara expresamente `executableEvaluationAllowed=false`: los bundles pueden descargarse sólo como **texto estático para buscar rutas/contratos publicados**, nunca para ejecutarlos.
+
+Hasta que un endpoint candidato aparezca explícitamente en un asset público y pueda validarse mediante GET anónimo, no se considera parte del pipeline. Aun después, debe validarse preferentemente contra el partido control Argentinos Juniors 20–27 Ferro del 21/03/2026 y conservar proveniencia antes de incorporarlo.
 
 ## Contrato con el importador
 El núcleo `n8n/importer-core.mjs` valida el manifiesto antes de que una etapa posterior pueda consumirlo. El gate falla cerrado salvo que se cumplan simultáneamente:
