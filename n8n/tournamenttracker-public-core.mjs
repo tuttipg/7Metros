@@ -58,49 +58,62 @@ export function canonicalizeTournamentTrackerStaticAssetUrl(value, baseUrl = FEM
 
 function parseHtmlTagAttributes(tag) {
   const attrs = new Map();
+  const duplicateKeys = new Set();
   const attrPattern = /\b([a-zA-Z_:][\w:.-]*)\s*=\s*(?:["']([^"']*)["']|([^\s>]+))/g;
   for (const match of String(tag ?? '').matchAll(attrPattern)) {
     const key = match[1].toLowerCase();
     const value = match[2] ?? match[3] ?? '';
-    if (!attrs.has(key)) attrs.set(key, value);
+    if (attrs.has(key)) duplicateKeys.add(key);
+    else attrs.set(key, value);
   }
-  return attrs;
+  return { attrs, duplicateKeys };
 }
 
 function collectTournamentTrackerAssetCandidates(html) {
   const text = String(html ?? '');
   const candidates = [];
+  const rejected = [];
 
   for (const match of text.matchAll(/<script\b[^>]*>/gi)) {
-    const attrs = parseHtmlTagAttributes(match[0]);
-    const src = attrs.get('src');
+    const parsed = parseHtmlTagAttributes(match[0]);
+    if (parsed.duplicateKeys.has('src')) {
+      rejected.push({ candidate: match[0], reason: 'Tag script ambiguo: atributo src duplicado' });
+      continue;
+    }
+    const src = parsed.attrs.get('src');
     if (src) candidates.push(src);
   }
 
   for (const match of text.matchAll(/<link\b[^>]*>/gi)) {
-    const attrs = parseHtmlTagAttributes(match[0]);
-    const href = attrs.get('href');
+    const parsed = parseHtmlTagAttributes(match[0]);
+    const ambiguousKey = ['href', 'rel', 'as'].find((key) => parsed.duplicateKeys.has(key));
+    if (ambiguousKey) {
+      rejected.push({ candidate: match[0], reason: `Tag link ambiguo: atributo ${ambiguousKey} duplicado` });
+      continue;
+    }
+
+    const href = parsed.attrs.get('href');
     if (!href) continue;
 
-    const relTokens = String(attrs.get('rel') ?? '')
+    const relTokens = String(parsed.attrs.get('rel') ?? '')
       .toLowerCase()
       .split(/\s+/)
       .filter(Boolean);
-    const asValue = String(attrs.get('as') ?? '').toLowerCase();
+    const asValue = String(parsed.attrs.get('as') ?? '').toLowerCase();
     const isModulePreload = relTokens.includes('modulepreload');
     const isScriptPreload = relTokens.includes('preload') && asValue === 'script';
     if (isModulePreload || isScriptPreload) candidates.push(href);
   }
 
-  return candidates;
+  return { candidates, rejected };
 }
 
 export function extractTournamentTrackerStaticAssetUrls(html, baseUrl = FEMEBAL_TOURNAMENTTRACKER_URL) {
-  const rawCandidates = collectTournamentTrackerAssetCandidates(html);
+  const collected = collectTournamentTrackerAssetCandidates(html);
   const accepted = [];
-  const rejected = [];
+  const rejected = [...collected.rejected];
 
-  for (const candidate of rawCandidates) {
+  for (const candidate of collected.candidates) {
     try {
       accepted.push(canonicalizeTournamentTrackerStaticAssetUrl(candidate, baseUrl));
     } catch (error) {
