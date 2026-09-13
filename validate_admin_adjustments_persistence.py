@@ -11,7 +11,8 @@ else:
     sql = SQL_PATH.read_text(encoding='utf-8').lower()
     required = [
         'borrador no aplicado',
-        'create table if not exists public.administrative_standings_adjustments',
+        'create table public.administrative_standings_adjustments',
+        'create index idx_admin_standings_adjustments_scope',
         'team_id bigint not null references public.equipos(id) on delete restrict',
         'season_id bigint not null references public.temporadas(id) on delete restrict',
         'competition_id bigint not null references public.competencias(id) on delete restrict',
@@ -33,12 +34,15 @@ else:
         'revoke all on table public.administrative_standings_adjustments from service_role',
         'grant select, insert on table public.administrative_standings_adjustments to service_role',
         'no se concede update/delete',
+        'no ocultar schema drift con if not exists',
     ]
     for needle in required:
         if needle not in sql:
             errors.append(f'missing persistence safeguard: {needle}')
 
     forbidden = [
+        'create table if not exists public.administrative_standings_adjustments',
+        'create index if not exists idx_admin_standings_adjustments_scope',
         'grant update on table public.administrative_standings_adjustments',
         'grant delete on table public.administrative_standings_adjustments',
         'grant all on table public.administrative_standings_adjustments to anon',
@@ -56,4 +60,4 @@ if errors:
         print('-', error)
     sys.exit(1)
 
-print('✓ administrative adjustments persistence draft: fail-closed, append-only and scoped')
+print('✓ administrative adjustments persistence draft: fail-closed, append-only, scoped and drift-sensitive')
