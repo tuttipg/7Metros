@@ -53,6 +53,27 @@ class T(unittest.TestCase):
     def test_manifest_without_fetch_failures_is_complete(self):
         page=discover_pages(INDEX)[0]; manifest=build_manifest(INDEX,{page.page_url:PAGE})
         self.assertTrue(manifest['complete']); self.assertEqual(manifest['fetch_errors'],[])
+    def test_manifest_deduplicates_same_pdf_from_same_source(self):
+        page=[x for x in discover_pages(INDEX) if x.source_type=='fecha_normal'][0]
+        duplicate=PAGE.replace('</body>',f'<a href="{CONTROL_PLANILLA}">Mismo PDF, otro texto visible</a></body>')
+        manifest=build_manifest(INDEX,{page.page_url:duplicate})
+        control=[row for row in manifest['pdfs'] if row['pdf_url']==CONTROL_PLANILLA]
+        self.assertEqual(len(control),1)
+        self.assertTrue(manifest['complete']); self.assertEqual(manifest['fetch_errors'],[])
+    def test_manifest_fails_closed_on_contradictory_pdf_provenance(self):
+        normal=[x for x in discover_pages(INDEX) if x.source_type=='fecha_normal'][0]
+        reprogram=[x for x in discover_pages(INDEX) if x.source_type=='reprogramacion'][0]
+        manifest=build_manifest(INDEX,{
+            normal.page_url:f'<a href="{CONTROL_PLANILLA}">Control normal</a>',
+            reprogram.page_url:f'<a href="{CONTROL_PLANILLA}">Control reprogramado</a>',
+        })
+        self.assertFalse(manifest['complete'])
+        self.assertFalse(any(row['pdf_url']==CONTROL_PLANILLA for row in manifest['pdfs']))
+        conflicts=[e for e in manifest['fetch_errors'] if e['stage']=='metadata_conflict']
+        self.assertEqual(len(conflicts),1)
+        self.assertEqual(conflicts[0]['url'],CONTROL_PLANILLA)
+        self.assertEqual(conflicts[0]['error'],'contradictory_pdf_provenance')
+        self.assertFalse(manifest['write_enabled']); self.assertFalse(manifest['auth_used'])
     def test_reject_unsafe_page_urls_and_do_not_expand_page_scope_to_cloudfront(self):
         for url in ['http://femebal.com/x','https://evil.example/x','https://user:pass@femebal.com/x','https://femebal.com:444/x',CONTROL_PLANILLA]:
             with self.subTest(url=url):
