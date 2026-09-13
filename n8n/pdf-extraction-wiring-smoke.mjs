@@ -1,12 +1,40 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
+import { buildDiscoveryPdfWorkItems } from './discovery-manifest-bridge.mjs';
+import { fetchOfficialFemebalPdf } from './official-pdf-fetch-core.mjs';
 import { buildPdfExtractionEnvelope, validatePdfExtractionEnvelope, parseExtractionWithEnvelopeDryRun } from './pdf-extraction-wiring.mjs';
 
-const sourceUrl='https://femebal.com/wp-content/uploads/2026/03/control.pdf';
-const workItem={kind:'femebal_official_pdf',method:'GET',url:sourceUrl,allow_redirects:false,auth_used:false,write_enabled:false,source:{page_url:'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',page_title:'Programación Fecha 1',pdf_url:sourceUrl,anchor_text:'Sábado 21/3',source_type:'fecha_normal',phase:'apertura',round_number:1}};
+const sourceUrl='https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf';
+const manifest={schema_version:2,safe:true,complete:true,write_enabled:false,auth_used:false,pages:[],fetch_errors:[],pdfs:[{page_url:'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',page_title:'Programación Fecha 1',pdf_url:sourceUrl,anchor_text:'Sábado 21/3',source_type:'fecha_normal',phase:'apertura',round_number:1}]};
+const [workItem]=buildDiscoveryPdfWorkItems(manifest);
+assert.ok(workItem);
+assert.equal(workItem.url,sourceUrl);
+assert.equal(workItem.method,'GET');
+assert.equal(workItem.allow_redirects,false);
+assert.equal(workItem.auth_used,false);
+assert.equal(workItem.write_enabled,false);
+
 const bytes=new TextEncoder().encode('%PDF-1.7 control fixture bytes');
-const sha256=createHash('sha256').update(bytes).digest('hex');
-const pdfArtifact={dry_run:true,write_enabled:false,auth_used:false,source_url:sourceUrl,content_type:'application/pdf',byte_length:bytes.byteLength,sha256,bytes};
+let fetchCalls=0;
+let observedInit=null;
+const pdfArtifact=await fetchOfficialFemebalPdf(workItem,{fetchImpl:async(url,init)=>{
+  fetchCalls+=1;
+  assert.equal(url,sourceUrl);
+  observedInit=init;
+  return {status:200,headers:{get(name){const key=String(name).toLowerCase();if(key==='content-type') return 'application/pdf';if(key==='content-length') return String(bytes.byteLength);return null;}},async arrayBuffer(){return bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);}};
+}});
+assert.equal(fetchCalls,1);
+assert.equal(observedInit.method,'GET');
+assert.equal(observedInit.redirect,'manual');
+assert.equal(observedInit.credentials,'omit');
+assert.deepEqual(Object.keys(observedInit.headers),['Accept']);
+assert.equal(observedInit.headers.Accept,'application/pdf');
+assert.equal(pdfArtifact.source_url,sourceUrl);
+assert.equal(pdfArtifact.dry_run,true);
+assert.equal(pdfArtifact.write_enabled,false);
+assert.equal(pdfArtifact.auth_used,false);
+const sha256=pdfArtifact.sha256;
+assert.match(sha256,/^[0-9a-f]{64}$/);
+
 const players=`Nº Local G TAm 2 TR TAz
 1 Perznianko, Alan Nahuel - - - - -
 2 Berardinelli, Mauro 2 - - - -
@@ -77,7 +105,7 @@ const alteredBytes=new TextEncoder().encode('%PDF-1.7 different bytes');
 assert.throws(()=>buildPdfExtractionEnvelope({workItem,pdfArtifact:{...pdfArtifact,bytes:alteredBytes,byte_length:alteredBytes.byteLength}}),/SHA-256 no coincide/);
 assert.throws(()=>validatePdfExtractionEnvelope({...envelope,correlation_id:'a'.repeat(64)},workItem),/correlation_id no coincide/);
 assert.throws(()=>validatePdfExtractionEnvelope({...envelope,write_enabled:true},workItem),/no es SAFE/);
-assert.throws(()=>validatePdfExtractionEnvelope({...envelope,work_item:{...envelope.work_item,url:'https://femebal.com/wp-content/uploads/2026/03/otro.pdf'}},workItem),/snapshot no coincide/);
+assert.throws(()=>validatePdfExtractionEnvelope({...envelope,work_item:{...envelope.work_item,url:'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/otro.pdf'}},workItem),/snapshot no coincide/);
 assert.throws(()=>parseExtractionWithEnvelopeDryRun({workItem:{...workItem,write_enabled:true},envelope,extraction:{text}}),/no puede habilitar escritura|snapshot no coincide/);
 assert.throws(()=>parseExtractionWithEnvelopeDryRun({workItem,envelope,extraction:{text},expected:{goles_visitante:26}}),/Marcador visitante inesperado/);
-console.log('✓ n8n PDF wiring envelope + SHA-256 rejoin + partido control validados');
+console.log('✓ SAFE E2E FEMEBAL: manifest → GET-only PDF → SHA-256 → envelope → parser control 20–27');
