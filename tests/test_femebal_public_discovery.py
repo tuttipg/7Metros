@@ -42,6 +42,10 @@ class T(unittest.TestCase):
         self.assertFalse(_is_official_upload_pdf(CONTROL_PLANILLA+'#page=1'))
         self.assertFalse(_is_official_upload_pdf('https://djfhz848yeeat.cloudfront.net/pdf_planillas/%2e%2e/file.pdf'))
         self.assertFalse(_is_official_upload_pdf('https://djfhz848yeeat.cloudfront.net/pdf_planillas/../file.pdf'))
+    def test_pdf_path_prefix_policy_matches_node_case_sensitivity(self):
+        self.assertFalse(_is_official_upload_pdf('https://djfhz848yeeat.cloudfront.net/PDF_PLANILLAS/5/c/e/5ce377051ea0acb1.pdf'))
+        self.assertFalse(_is_official_upload_pdf('https://femebal.com/WP-CONTENT/uploads/2026/03/Sabado-21-3.pdf'))
+        self.assertTrue(_is_official_upload_pdf('https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5CE377051EA0ACB1.PDF'))
     def test_manifest_carries_control_planilla_without_enabling_writes(self):
         page=[x for x in discover_pages(INDEX) if x.source_type=='fecha_normal'][0]
         manifest=build_manifest(INDEX,{page.page_url:PAGE})
