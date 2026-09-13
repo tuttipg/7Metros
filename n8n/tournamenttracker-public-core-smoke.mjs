@@ -86,6 +86,19 @@ assert.deepEqual(scriptPreloadAttributeOrder.assets, [
   'https://www.femebal.com/tournament-tracker/static/js/ordered.js',
 ]);
 
+const ambiguousAttributes = extractTournamentTrackerStaticAssetUrls(`
+<script src='./static/js/first.js' src='./static/js/second.js'></script>
+<link rel='preload' as='script' href='./static/js/first-link.js' href='./static/js/second-link.js'>
+<link rel='preload' rel='modulepreload' as='script' href='./static/js/duplicate-rel.js'>
+<link rel='preload' as='script' as='style' href='./static/js/duplicate-as.js'>
+`);
+assert.deepEqual(ambiguousAttributes.assets, []);
+assert.equal(ambiguousAttributes.rejected.length, 4);
+assert.match(ambiguousAttributes.rejected[0].reason, /src duplicado/i);
+assert.match(ambiguousAttributes.rejected[1].reason, /href duplicado/i);
+assert.match(ambiguousAttributes.rejected[2].reason, /rel duplicado/i);
+assert.match(ambiguousAttributes.rejected[3].reason, /as duplicado/i);
+
 const staticPlan = buildTournamentTrackerStaticAssetProbePlan(shellWithAssets);
 assert.equal(staticPlan.safe, true);
 assert.equal(staticPlan.dry_run, true);
