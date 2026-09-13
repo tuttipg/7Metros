@@ -41,10 +41,20 @@ def _assert_allowed(url:str, *, allow_planilla:bool=False)->None:
 def _is_official_upload_pdf(url:str)->bool:
     p=urlparse(url)
     if p.scheme!="https" or p.query or p.fragment: return False
+    # Official FEMEBAL PDF URLs observed by this discovery use plain path segments.
+    # Reject encoded or dot segments rather than relying on downstream/server normalization.
+    if '%' in p.path or any(segment in {'.','..'} for segment in p.path.split('/')): return False
     path=p.path.lower()
     wordpress_pdf=p.hostname in FEMEBAL_WEB_HOSTS and path.startswith('/wp-content/uploads/')
     planilla_pdf=p.hostname==FEMEBAL_PLANILLA_HOST and path.startswith('/pdf_planillas/')
     return (wordpress_pdf or planilla_pdf) and path.endswith('.pdf')
+
+def _canonical_official_pdf_url(url:str)->str:
+    if not _is_official_upload_pdf(url): raise ValueError(f"PDF oficial fuera de allowlist: {url}")
+    _assert_allowed(url,allow_planilla=True)
+    p=urlparse(url)
+    # Drop an explicit default :443 so equivalent links have one manifest identity.
+    return f"https://{p.hostname}{p.path}"
 
 class SafeRedirectHandler(HTTPRedirectHandler):
     def redirect_request(self,req,fp,code,msg,headers,newurl):
@@ -79,9 +89,8 @@ def discover_pages(index_html:str,base=PROGRAMACIONES_URL):
 def discover_pdfs(page_html:str,source:Source):
     out={}
     for href,text in links_from_html(page_html):
-        url=urljoin(source.page_url,href)
-        if not _is_official_upload_pdf(url): continue
-        try: _assert_allowed(url,allow_planilla=True)
+        raw_url=urljoin(source.page_url,href)
+        try: url=_canonical_official_pdf_url(raw_url)
         except ValueError: continue
         out[url]=PdfSource(source.page_url,source.title,url,text,source.source_type,source.phase,source.round_number)
     return sorted(out.values(),key=lambda x:x.pdf_url)
