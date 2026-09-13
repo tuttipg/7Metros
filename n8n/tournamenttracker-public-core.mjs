@@ -1,6 +1,7 @@
 export const FEMEBAL_TOURNAMENTTRACKER_URL = 'https://www.femebal.com/tournament-tracker/?noAdv=0';
 
 const ALLOWED_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
+const STATIC_ASSET_EXTENSIONS = new Set(['.js', '.mjs']);
 
 export function canonicalizeFemebalTournamentTrackerUrl(value) {
   const url = new URL(String(value ?? ''));
@@ -25,6 +26,87 @@ export function canonicalizeFemebalTournamentTrackerUrl(value) {
   url.pathname = '/tournament-tracker/';
   url.searchParams.sort();
   return url.toString();
+}
+
+export function canonicalizeTournamentTrackerStaticAssetUrl(value, baseUrl = FEMEBAL_TOURNAMENTTRACKER_URL) {
+  const base = canonicalizeFemebalTournamentTrackerUrl(baseUrl);
+  const url = new URL(String(value ?? ''), base);
+
+  if (url.protocol !== 'https:') throw new Error('Asset TournamentTracker requiere HTTPS');
+  if (!ALLOWED_HOSTS.has(url.hostname.toLowerCase())) throw new Error('Host de asset TournamentTracker no permitido');
+  if (url.username || url.password) throw new Error('Asset TournamentTracker no admite credenciales en URL');
+  if (url.hash) throw new Error('Asset TournamentTracker no admite fragments');
+  if (url.search) throw new Error('Asset TournamentTracker no admite query strings');
+
+  const lowerPath = url.pathname.toLowerCase();
+  const extension = [...STATIC_ASSET_EXTENSIONS].find((ext) => lowerPath.endsWith(ext));
+  if (!extension) throw new Error('Tipo de asset TournamentTracker no permitido');
+  if (!lowerPath.startsWith('/tournament-tracker/')) {
+    throw new Error('Ruta de asset TournamentTracker fuera del prefijo permitido');
+  }
+
+  url.hostname = 'www.femebal.com';
+  url.port = '';
+  return url.toString();
+}
+
+export function extractTournamentTrackerStaticAssetUrls(html, baseUrl = FEMEBAL_TOURNAMENTTRACKER_URL) {
+  const text = String(html ?? '');
+  const rawCandidates = [];
+  const patterns = [
+    /<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi,
+    /<link\b[^>]*\brel\s*=\s*["'](?:modulepreload|preload)["'][^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>/gi,
+    /<link\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*\brel\s*=\s*["'](?:modulepreload|preload)["'][^>]*>/gi,
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern)) rawCandidates.push(match[1]);
+  }
+
+  const accepted = [];
+  const rejected = [];
+  for (const candidate of rawCandidates) {
+    try {
+      accepted.push(canonicalizeTournamentTrackerStaticAssetUrl(candidate, baseUrl));
+    } catch (error) {
+      rejected.push({
+        candidate,
+        reason: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return {
+    assets: [...new Set(accepted)].sort(),
+    rejected,
+  };
+}
+
+export function buildTournamentTrackerStaticAssetProbePlan(html, baseUrl = FEMEBAL_TOURNAMENTTRACKER_URL) {
+  const extracted = extractTournamentTrackerStaticAssetUrls(html, baseUrl);
+  return {
+    safe: true,
+    dry_run: true,
+    write_enabled: false,
+    auth_used: false,
+    probes: extracted.assets.map((url, index) => ({
+      key: `femebal_tournament_tracker_static_js_${index + 1}`,
+      method: 'GET',
+      url,
+      headers: { Accept: 'application/javascript,text/javascript,*/*;q=0.1' },
+      auth: false,
+      writes: false,
+    })),
+    rejected: extracted.rejected,
+    constraints: {
+      credentialsAllowed: false,
+      cookiesAllowed: false,
+      authorizationAllowed: false,
+      productionWritesAllowed: false,
+      executableEvaluationAllowed: false,
+      javascriptStaticTextOnly: true,
+    },
+  };
 }
 
 export function buildTournamentTrackerPublicProbePlan() {
