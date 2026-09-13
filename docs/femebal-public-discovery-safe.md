@@ -29,7 +29,9 @@ Un manifiesto parcial o con cualquier señal de escritura/autenticación queda b
 
 ## Handoff a planillas en DRY RUN
 
-`n8n/discovery-manifest-bridge.mjs` transforma PDFs descubiertos en work items explícitos. Cada work item fija `GET`, `allow_redirects=false`, `auth_used=false` y `write_enabled=false`.
+`n8n/discovery-manifest-bridge.mjs` valida todos los PDFs descubiertos, pero **solo emite work items de planilla** para el árbol oficial `https://djfhz848yeeat.cloudfront.net/pdf_planillas/`. Los PDFs bajo `femebal.com/wp-content/uploads/` se conservan como fuentes oficiales de programación/fixture y no se envían al parser de planillas individuales. Esta separación evita interpretar como acta de un partido un PDF agregado que contiene decenas de encuentros de una jornada.
+
+Cada work item de planilla fija `GET`, `allow_redirects=false`, `auth_used=false` y `write_enabled=false`.
 
 `n8n/official-pdf-fetch-core.mjs` implementa la descarga controlada del PDF. Revalida el work item antes de tocar la red y ejecuta únicamente `GET` con `credentials=omit`, `redirect=manual` y `Accept: application/pdf`. Falla cerrado ante cualquier redirect, status distinto de 200, Content-Type no PDF, Content-Length inválido/inconsistente, archivo que supere el límite configurado o contenido que no comience con la firma `%PDF-`. No agrega `Authorization`, `Cookie` ni headers secretos.
 
@@ -79,6 +81,8 @@ Opcionalmente acepta una identidad esperada (fecha, local, visitante y marcador)
 
 ## Caso de regresión oficial
 La página oficial de Fecha 1 del Apertura 2026 enlaza `Sabado-21-3.pdf`. En la página 1 del PDF figura `Mayores / LHC Hipotecario Seguros / 20:15 / M / Argentinos Juniors / Ferro Carril Oeste`. Esto valida el descubrimiento del fixture.
+
+Ese PDF de programación es `https://femebal.com/wp-content/uploads/2026/03/Sabado-21-3.pdf` y contiene múltiples partidos de la jornada; por diseño el bridge no lo envía al parser de planillas.
 
 La planilla digital oficial usada como control es `https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf`, correspondiente a Argentinos Juniors 20–27 Ferro del 2026-03-21. El discovery tiene una regresión que demuestra que ese enlace puede entrar al manifiesto desde una página FEMEBAL sin ampliar la navegación a CloudFront y manteniendo `write_enabled=false` / `auth_used=false`.
 
