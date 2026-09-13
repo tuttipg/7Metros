@@ -61,6 +61,7 @@ jobs:
           node --check mobile-menu-a11y-smoke.mjs
           node --check n8n/importer-core.mjs
           node --check n8n/importer-core-smoke.mjs
+          node --check n8n/official-url-policy.mjs
           node --check n8n/discovery-manifest-bridge.mjs
           node --check n8n/discovery-manifest-bridge-smoke.mjs
           node --check n8n/planilla-core.mjs
