@@ -106,6 +106,36 @@ assert.equal(leapDate.complete, true);
 assert.equal(leapDate.match_date, '2028-02-29');
 assert.equal(leapDate.candidates.length, 1);
 
+const repeatedSameDate = extractTopDivisionProgrammingCandidates({
+  text: '21 de marzo de 2026\n21 de marzo de 2026\nMayores LHC Hipotecario Seguros 20:15 M Argentinos Juniors Ferro Carril Oeste',
+  sourceUrl: SOURCE,
+  clubCatalog: CLUBS,
+});
+assert.equal(repeatedSameDate.complete, true, 'La misma fecha repetida en encabezados no debe considerarse ambigua');
+assert.equal(repeatedSameDate.match_date, '2026-03-21');
+assert.equal(repeatedSameDate.candidates.length, 1);
+
+const ambiguousDates = extractTopDivisionProgrammingCandidates({
+  text: '21 de marzo de 2026\n22 de marzo de 2026\nMayores LHC Hipotecario Seguros 20:15 M Argentinos Juniors Ferro Carril Oeste',
+  sourceUrl: SOURCE,
+  clubCatalog: CLUBS,
+});
+assert.equal(ambiguousDates.complete, false);
+assert.equal(ambiguousDates.match_date, null);
+assert.equal(ambiguousDates.candidates.length, 0, 'Un PDF multi-fecha no debe asignar la primera fecha a todas las filas');
+assert.equal(ambiguousDates.errors[0].error, 'ambiguous_programming_dates');
+assert.deepEqual(ambiguousDates.errors[0].dates, ['2026-03-21', '2026-03-22']);
+
+const mixedValidInvalidDates = extractTopDivisionProgrammingCandidates({
+  text: '21 de marzo de 2026\n31 de febrero de 2026\nMayores LHC Hipotecario Seguros 20:15 M Argentinos Juniors Ferro Carril Oeste',
+  sourceUrl: SOURCE,
+  clubCatalog: CLUBS,
+});
+assert.equal(mixedValidInvalidDates.complete, false);
+assert.equal(mixedValidInvalidDates.match_date, null);
+assert.equal(mixedValidInvalidDates.candidates.length, 0);
+assert.equal(mixedValidInvalidDates.errors[0].error, 'missing_or_invalid_programming_date');
+
 const invalidTime = extractTopDivisionProgrammingCandidates({
   text: '21 de marzo de 2026\nMayores LHC Hipotecario Seguros 24:00 M Argentinos Juniors Ferro Carril Oeste',
   sourceUrl: SOURCE,
