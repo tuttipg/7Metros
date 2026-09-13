@@ -44,7 +44,61 @@ function assertProgrammingPdfUrl(sourceUrl) {
   return canonical;
 }
 
-export function extractTopDivisionProgrammingCandidates({ text, sourceUrl }) {
+function catalogAliases(clubCatalog) {
+  const aliases = [];
+  for (const club of Array.isArray(clubCatalog) ? clubCatalog : []) {
+    if (!club || club.id == null || !normalizeLine(club.name)) continue;
+    const values = [club.name, ...(Array.isArray(club.aliases) ? club.aliases : [])];
+    for (const value of values) {
+      const alias = normalizeLine(value);
+      if (!alias) continue;
+      aliases.push({ id: club.id, name: normalizeLine(club.name), alias });
+    }
+  }
+  return aliases.sort((a, b) => b.alias.length - a.alias.length || String(a.id).localeCompare(String(b.id)));
+}
+
+function consumeAlias(text, alias) {
+  if (text === alias) return '';
+  if (!text.startsWith(`${alias} `)) return null;
+  return text.slice(alias.length).trimStart();
+}
+
+export function resolveProgrammingTeams(rawMatchupAndOfficials, clubCatalog) {
+  const raw = normalizeLine(rawMatchupAndOfficials);
+  const aliases = catalogAliases(clubCatalog);
+  if (!raw || aliases.length === 0) {
+    return { status: 'unresolved', reason: 'catalog_unavailable_or_empty' };
+  }
+
+  const matches = [];
+  const seen = new Set();
+  for (const local of aliases) {
+    const afterLocal = consumeAlias(raw, local.alias);
+    if (afterLocal == null) continue;
+
+    for (const visitor of aliases) {
+      if (String(visitor.id) === String(local.id)) continue;
+      const trailing = consumeAlias(afterLocal, visitor.alias);
+      if (trailing == null) continue;
+
+      const key = `${String(local.id)}\u0000${String(visitor.id)}\u0000${trailing}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      matches.push({
+        local: { id: local.id, name: local.name, matched_alias: local.alias },
+        visitor: { id: visitor.id, name: visitor.name, matched_alias: visitor.alias },
+        trailing_officials: trailing || null,
+      });
+    }
+  }
+
+  if (matches.length === 1) return { status: 'resolved', ...matches[0] };
+  if (matches.length === 0) return { status: 'unresolved', reason: 'no_exact_catalog_match' };
+  return { status: 'ambiguous', reason: 'multiple_exact_catalog_matches', match_count: matches.length };
+}
+
+export function extractTopDivisionProgrammingCandidates({ text, sourceUrl, clubCatalog = [] }) {
   const canonicalSourceUrl = assertProgrammingPdfUrl(sourceUrl);
   const rawText = String(text ?? '');
   const matchDate = isoDateFromProgrammingText(rawText);
@@ -66,13 +120,15 @@ export function extractTopDivisionProgrammingCandidates({ text, sourceUrl }) {
       continue;
     }
 
+    const rawMatchupAndOfficials = prefix[3];
     candidates.push({
       date: matchDate,
       category: 'Mayores',
       division,
       time: prefix[1],
       branch: prefix[2],
-      raw_matchup_and_officials: prefix[3],
+      raw_matchup_and_officials: rawMatchupAndOfficials,
+      team_resolution: resolveProgrammingTeams(rawMatchupAndOfficials, clubCatalog),
       raw_line: line,
       source_url: canonicalSourceUrl,
       source_kind: 'official_programming_pdf',
