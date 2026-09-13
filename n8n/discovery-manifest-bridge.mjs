@@ -1,33 +1,5 @@
 import { validateDiscoveryManifest } from './importer-core.mjs';
-
-const FEMEBAL_WEB_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
-const FEMEBAL_PLANILLA_HOST = 'djfhz848yeeat.cloudfront.net';
-
-function parseOfficialHttpsUrl(value, { pdf = false } = {}) {
-  let url;
-  try {
-    url = new URL(String(value ?? ''));
-  } catch {
-    throw new Error('URL FEMEBAL inválida');
-  }
-
-  if (url.protocol !== 'https:') throw new Error('URL FEMEBAL debe usar HTTPS');
-  const hostAllowed = FEMEBAL_WEB_HOSTS.has(url.hostname) || (pdf && url.hostname === FEMEBAL_PLANILLA_HOST);
-  if (!hostAllowed) throw new Error(`Host FEMEBAL fuera de allowlist: ${url.hostname}`);
-  if (url.username || url.password) throw new Error('URL FEMEBAL con userinfo rechazada');
-  if (url.port && url.port !== '443') throw new Error(`Puerto FEMEBAL fuera de allowlist: ${url.port}`);
-  if (url.hash) throw new Error('URL FEMEBAL con fragmento rechazada');
-
-  if (pdf) {
-    const wordpressPdf = FEMEBAL_WEB_HOSTS.has(url.hostname) && url.pathname.startsWith('/wp-content/uploads/');
-    const planillaPdf = url.hostname === FEMEBAL_PLANILLA_HOST && url.pathname.startsWith('/pdf_planillas/');
-    if (!wordpressPdf && !planillaPdf) throw new Error('PDF fuera de los árboles oficiales permitidos');
-    if (!url.pathname.toLowerCase().endsWith('.pdf')) throw new Error('Adjunto FEMEBAL no es PDF');
-    if (url.search) throw new Error('PDF FEMEBAL con query string rechazada');
-  }
-
-  return url.toString();
-}
+import { canonicalizeOfficialFemebalUrl } from './official-url-policy.mjs';
 
 function sourceMetadata(row) {
   if (!row || typeof row !== 'object' || Array.isArray(row)) {
@@ -53,8 +25,8 @@ function sourceMetadata(row) {
     }
   }
 
-  const pageUrl = parseOfficialHttpsUrl(row.page_url);
-  const pdfUrl = parseOfficialHttpsUrl(row.pdf_url, { pdf: true });
+  const pageUrl = canonicalizeOfficialFemebalUrl(row.page_url);
+  const pdfUrl = canonicalizeOfficialFemebalUrl(row.pdf_url, { pdf: true });
 
   return {
     page_url: pageUrl,
