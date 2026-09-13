@@ -4,7 +4,7 @@ import argparse, html, json, re
 from dataclasses import dataclass, asdict
 from html.parser import HTMLParser
 from pathlib import Path
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qsl, urljoin, urlparse
 from urllib.request import Request, HTTPRedirectHandler, build_opener
 
 FEMEBAL_WEB_HOSTS={"femebal.com","www.femebal.com"}
@@ -12,6 +12,7 @@ FEMEBAL_PLANILLA_HOST="djfhz848yeeat.cloudfront.net"
 PROGRAMACIONES_URL="https://femebal.com/programaciones/"
 UA="7Metros-public-discovery/1.0 (+read-only; official-public-pages-only)"
 MANIFEST_SCHEMA_VERSION=2
+TRACKING_QUERY_KEYS={"fbclid","gclid","dclid","msclkid","mc_cid","mc_eid"}
 
 class LinkParser(HTMLParser):
     def __init__(self): super().__init__(); self.links=[]; self._href=None; self._text=[]
@@ -38,12 +39,22 @@ def _assert_allowed(url:str, *, allow_planilla:bool=False)->None:
     except ValueError as e: raise ValueError(f"Puerto inválido: {url}") from e
     if port not in (None,443): raise ValueError(f"Puerto fuera de allowlist: {url}")
 
+def _has_tracking_query(query:str)->bool:
+    for key,_ in parse_qsl(query,keep_blank_values=True):
+        normalized=key.lower()
+        if normalized.startswith('utm_') or normalized in TRACKING_QUERY_KEYS:
+            return True
+    return False
+
 def _canonical_official_page_url(url:str)->str:
     _assert_allowed(url)
     p=urlparse(url)
     # Match n8n/official-url-policy.mjs for non-PDF URLs: fragments are rejected,
-    # explicit :443 is collapsed, the host is normalized, and query strings are preserved.
+    # explicit :443 is collapsed, the host is normalized, and semantic query strings are preserved.
+    # Known analytics/tracking parameters are rejected fail-closed instead of becoming distinct
+    # discovery identities for the same official page.
     if p.fragment: raise ValueError(f"URL FEMEBAL con fragmento rechazada: {url}")
+    if _has_tracking_query(p.query): raise ValueError(f"URL FEMEBAL con tracking query rechazada: {url}")
     path=p.path or '/'
     query=f"?{p.query}" if p.query else ''
     return f"https://{p.hostname}{path}{query}"
