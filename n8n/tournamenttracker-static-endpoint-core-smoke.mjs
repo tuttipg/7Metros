@@ -68,7 +68,7 @@ assert.deepEqual(extracted.candidates, [
     requiresPolicyReview: true,
   },
 ]);
-assert.equal(extracted.rejectedCount, 4);
+assert.equal(extracted.rejectedCount, 5);
 assert.equal(extracted.candidates.some((item) => /secret|pass|token=/i.test(item.url)), false);
 
 console.log('TournamentTracker static endpoint candidate SAFE smoke OK');
