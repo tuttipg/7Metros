@@ -92,9 +92,6 @@ export function resolveProgrammingTeams(rawMatchupAndOfficials, clubCatalog) {
     return { status: 'unresolved', reason: 'catalog_unavailable_or_empty' };
   }
 
-  // Multiple aliases for the same club pair are not ambiguity. Keep the most
-  // specific (longest) alias combination for each pair, then detect ambiguity
-  // only when distinct club IDs can explain the same raw row exactly.
   const matchesByPair = new Map();
   for (const local of aliases) {
     const afterLocal = consumeAlias(raw, local.alias);
@@ -132,6 +129,24 @@ export function extractTopDivisionProgrammingCandidates({ text, sourceUrl, clubC
   if (!matchDate) errors.push({ stage: 'programming_parse', error: 'missing_or_invalid_programming_date' });
 
   const candidates = [];
+
+  // A match candidate without a valid calendar date is not a stable identity.
+  // Fail closed instead of emitting date:null rows that downstream stages could
+  // accidentally correlate with an unrelated planilla.
+  if (!matchDate) {
+    return {
+      safe: true,
+      dry_run: true,
+      write_enabled: false,
+      auth_used: false,
+      complete: false,
+      source_url: canonicalSourceUrl,
+      match_date: null,
+      candidates,
+      errors,
+    };
+  }
+
   for (const rawLine of rawText.split(/\r?\n/)) {
     const line = normalizeLine(rawLine);
     if (!line.startsWith('Mayores ')) continue;
