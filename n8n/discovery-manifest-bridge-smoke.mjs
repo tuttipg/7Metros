@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { buildDiscoveryPdfWorkItems } from './discovery-manifest-bridge.mjs';
 
+const CONTROL_PDF='https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf';
+
 function manifest(pdfs, overrides = {}) {
   return {
     schema_version: 2,
@@ -19,7 +21,7 @@ function pdf(overrides = {}) {
   return {
     page_url: 'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',
     page_title: 'Programación Fecha 1 – Torneo Metropolitano Apertura 2026',
-    pdf_url: 'https://femebal.com/wp-content/uploads/2026/03/Sabado-21-3.pdf',
+    pdf_url: CONTROL_PDF,
     anchor_text: 'Sábado 21-3',
     source_type: 'fecha_normal',
     phase: 'apertura',
@@ -36,6 +38,7 @@ function pdf(overrides = {}) {
   assert.equal(items[0].allow_redirects, false);
   assert.equal(items[0].auth_used, false);
   assert.equal(items[0].write_enabled, false);
+  assert.equal(items[0].url, CONTROL_PDF);
   assert.equal(items[0].source.phase, 'apertura');
   assert.equal(items[0].source.round_number, 1);
 }
@@ -51,12 +54,13 @@ assert.throws(
 );
 
 for (const badUrl of [
-  'https://evil.example/wp-content/uploads/2026/03/x.pdf',
-  'http://femebal.com/wp-content/uploads/2026/03/x.pdf',
-  'https://user:pass@femebal.com/wp-content/uploads/2026/03/x.pdf',
-  'https://femebal.com:444/wp-content/uploads/2026/03/x.pdf',
-  'https://femebal.com/documentos/x.pdf',
-  'https://femebal.com/wp-content/uploads/2026/03/x.pdf?token=abc',
+  'https://evil.example/pdf_planillas/5/c/e/x.pdf',
+  'https://another.cloudfront.net/pdf_planillas/5/c/e/x.pdf',
+  'http://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/x.pdf',
+  'https://user:pass@djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/x.pdf',
+  'https://djfhz848yeeat.cloudfront.net:444/pdf_planillas/5/c/e/x.pdf',
+  'https://djfhz848yeeat.cloudfront.net/documentos/x.pdf',
+  'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/x.pdf?token=abc',
 ]) {
   assert.throws(() => buildDiscoveryPdfWorkItems(manifest([pdf({ pdf_url: badUrl })])));
 }
@@ -69,4 +73,4 @@ assert.throws(() => buildDiscoveryPdfWorkItems(manifest([pdf()], { complete: fal
 assert.throws(() => buildDiscoveryPdfWorkItems(manifest([pdf()], { write_enabled: true })), /read-only/);
 assert.throws(() => buildDiscoveryPdfWorkItems(manifest([pdf()], { auth_used: true })), /autenticación/);
 
-console.log('✓ discovery-manifest bridge: PDF work items SAFE/fail-closed OK');
+console.log('✓ discovery-manifest bridge: host oficial de planillas + work items SAFE/fail-closed OK');
