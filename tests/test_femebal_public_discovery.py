@@ -46,6 +46,26 @@ class T(unittest.TestCase):
         rows=discover_pages(duplicate_index)
         self.assertEqual(len(rows),1)
         self.assertEqual(rows[0].page_url,'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/')
+    def test_page_tracking_queries_are_rejected_fail_closed(self):
+        for url in [
+            'https://femebal.com/programaciones/?utm_source=instagram',
+            'https://femebal.com/programaciones/?UTM_CAMPAIGN=apertura',
+            'https://femebal.com/programaciones/?fbclid=abc123',
+            'https://femebal.com/programaciones/?fase=apertura&utm_medium=social',
+        ]:
+            with self.subTest(url=url):
+                with self.assertRaises(ValueError): _canonical_official_page_url(url)
+        self.assertEqual(
+            _canonical_official_page_url('https://femebal.com/programaciones/?fase=apertura'),
+            'https://femebal.com/programaciones/?fase=apertura',
+        )
+        tracking_index='''<html><body>
+<a href="https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/?utm_source=x">Programación Fecha 1 – Torneo Metropolitano Apertura 2026</a>
+<a href="https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/">Programación Fecha 1 – Torneo Metropolitano Apertura 2026</a>
+</body></html>'''
+        rows=discover_pages(tracking_index)
+        self.assertEqual(len(rows),1)
+        self.assertEqual(rows[0].page_url,'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/')
     def test_pdf_discovery_allowlist_and_provenance(self):
         s=Source('https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/','Programación Fecha 1 – Torneo Metropolitano Apertura 2026','fecha_normal','apertura',1)
         rows=discover_pdfs(PAGE,s); self.assertEqual(len(rows),3)
@@ -112,9 +132,9 @@ class T(unittest.TestCase):
                 with self.assertRaises(ValueError): _assert_allowed(url)
         _assert_allowed('https://femebal.com/x'); _assert_allowed('https://www.femebal.com:443/x')
         _assert_allowed(CONTROL_PLANILLA,allow_planilla=True)
-    def test_redirect_handler_blocks_external_planilla_and_fragment_destinations(self):
+    def test_redirect_handler_blocks_external_planilla_fragment_and_tracking_destinations(self):
         h=SafeRedirectHandler(); req=Request('https://femebal.com/programaciones/')
-        for target in ['https://evil.example/collect',CONTROL_PLANILLA,'https://femebal.com/programaciones/#fecha-1']:
+        for target in ['https://evil.example/collect',CONTROL_PLANILLA,'https://femebal.com/programaciones/#fecha-1','https://femebal.com/programaciones/?utm_source=redirect']:
             with self.subTest(target=target):
                 with self.assertRaises(ValueError): h.redirect_request(req,None,302,'Found',{},target)
 
