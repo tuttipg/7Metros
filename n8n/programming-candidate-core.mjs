@@ -20,6 +20,11 @@ const TOP_DIVISIONS = Object.freeze([
   'LHD Hipotecario Seguros',
 ]);
 
+const EXPECTED_BRANCH_BY_DIVISION = Object.freeze({
+  'LHC Hipotecario Seguros': 'M',
+  'LHD Hipotecario Seguros': 'F',
+});
+
 function isoDateFromProgrammingText(text) {
   const match = String(text ?? '').match(/\b(\d{1,2})\s+de\s+([a-záéíóúñ]+)\s+de\s+(20\d{2})\b/i);
   if (!match) return null;
@@ -28,6 +33,14 @@ function isoDateFromProgrammingText(text) {
   const day = Number(match[1]);
   const year = Number(match[3]);
   if (!Number.isInteger(day) || day < 1 || day > 31) return null;
+
+  const calendarDate = new Date(Date.UTC(year, month - 1, day));
+  if (
+    calendarDate.getUTCFullYear() !== year
+    || calendarDate.getUTCMonth() !== month - 1
+    || calendarDate.getUTCDate() !== day
+  ) return null;
+
   return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
@@ -122,6 +135,19 @@ export function extractTopDivisionProgrammingCandidates({ text, sourceUrl, clubC
     const prefix = rest.match(/^(\d{2}:\d{2})\s+([MF])\s+(.+)$/);
     if (!prefix) {
       errors.push({ stage: 'programming_parse', error: 'malformed_top_division_row', raw_line: line });
+      continue;
+    }
+
+    const expectedBranch = EXPECTED_BRANCH_BY_DIVISION[division];
+    if (prefix[2] !== expectedBranch) {
+      errors.push({
+        stage: 'programming_parse',
+        error: 'division_branch_mismatch',
+        division,
+        expected_branch: expectedBranch,
+        actual_branch: prefix[2],
+        raw_line: line,
+      });
       continue;
     }
 
