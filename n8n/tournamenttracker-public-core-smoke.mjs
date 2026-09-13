@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import {
   FEMEBAL_TOURNAMENTTRACKER_URL,
   buildTournamentTrackerPublicProbePlan,
+  buildTournamentTrackerStaticAssetProbePlan,
   canonicalizeFemebalTournamentTrackerUrl,
+  canonicalizeTournamentTrackerStaticAssetUrl,
   classifyTournamentTrackerPublicResponse,
+  extractTournamentTrackerStaticAssetUrls,
   summarizeTournamentTrackerPublicDiscovery,
 } from './tournamenttracker-public-core.mjs';
 
@@ -26,6 +29,58 @@ for (const unsafe of [
   'https://www.femebal.com/otra-ruta/?noAdv=0',
 ]) {
   assert.throws(() => canonicalizeFemebalTournamentTrackerUrl(unsafe));
+}
+
+assert.equal(
+  canonicalizeTournamentTrackerStaticAssetUrl('./static/js/main.abc123.js'),
+  'https://www.femebal.com/tournament-tracker/static/js/main.abc123.js',
+);
+assert.equal(
+  canonicalizeTournamentTrackerStaticAssetUrl('https://femebal.com/tournament-tracker/static/js/chunk.mjs'),
+  'https://www.femebal.com/tournament-tracker/static/js/chunk.mjs',
+);
+for (const unsafeAsset of [
+  'http://www.femebal.com/tournament-tracker/static/js/main.js',
+  'https://evil.example/tournament-tracker/static/js/main.js',
+  'https://www.femebal.com/static/js/main.js',
+  'https://www.femebal.com/tournament-tracker/static/js/main.js?token=x',
+  'https://www.femebal.com/tournament-tracker/static/js/main.js#x',
+  'https://www.femebal.com/tournament-tracker/static/css/main.css',
+]) {
+  assert.throws(() => canonicalizeTournamentTrackerStaticAssetUrl(unsafeAsset));
+}
+
+const shellWithAssets = `
+<!doctype html><html><head>
+<link rel="preload" href="/tournament-tracker/static/js/runtime.1.js" as="script">
+<link href="./static/js/vendor.2.mjs" rel="modulepreload">
+</head><body><div id="root"></div>
+<script src="./static/js/main.3.js"></script>
+<script src="https://evil.example/tournament-tracker/static/js/evil.js"></script>
+<script src="/static/js/outside.js"></script>
+<script src="./static/js/main.3.js"></script>
+</body></html>`;
+const extractedAssets = extractTournamentTrackerStaticAssetUrls(shellWithAssets);
+assert.deepEqual(extractedAssets.assets, [
+  'https://www.femebal.com/tournament-tracker/static/js/main.3.js',
+  'https://www.femebal.com/tournament-tracker/static/js/runtime.1.js',
+  'https://www.femebal.com/tournament-tracker/static/js/vendor.2.mjs',
+]);
+assert.equal(extractedAssets.rejected.length, 2);
+
+const staticPlan = buildTournamentTrackerStaticAssetProbePlan(shellWithAssets);
+assert.equal(staticPlan.safe, true);
+assert.equal(staticPlan.dry_run, true);
+assert.equal(staticPlan.write_enabled, false);
+assert.equal(staticPlan.auth_used, false);
+assert.equal(staticPlan.probes.length, 3);
+assert.equal(staticPlan.constraints.executableEvaluationAllowed, false);
+for (const probe of staticPlan.probes) {
+  assert.equal(probe.method, 'GET');
+  assert.equal(probe.auth, false);
+  assert.equal(probe.writes, false);
+  assert.equal('Authorization' in probe.headers, false);
+  assert.equal('Cookie' in probe.headers, false);
 }
 
 const plan = buildTournamentTrackerPublicProbePlan();
