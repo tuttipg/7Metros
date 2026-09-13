@@ -3,6 +3,7 @@ from urllib.request import Request
 from tools.femebal_public_discovery import discover_pages, discover_pdfs, build_manifest, Source, _assert_allowed, _is_official_upload_pdf, SafeRedirectHandler
 
 CONTROL_PLANILLA='https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf'
+CONTROL_PLANILLA_EXPLICIT_443='https://djfhz848yeeat.cloudfront.net:443/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf'
 
 INDEX='''<html><body>
 <a href="https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/">Programación Fecha 1 – Torneo Metropolitano Apertura 2026</a>
@@ -39,6 +40,8 @@ class T(unittest.TestCase):
         self.assertFalse(_is_official_upload_pdf('https://other.cloudfront.net/pdf_planillas/file.pdf'))
         self.assertFalse(_is_official_upload_pdf(CONTROL_PLANILLA+'?download=1'))
         self.assertFalse(_is_official_upload_pdf(CONTROL_PLANILLA+'#page=1'))
+        self.assertFalse(_is_official_upload_pdf('https://djfhz848yeeat.cloudfront.net/pdf_planillas/%2e%2e/file.pdf'))
+        self.assertFalse(_is_official_upload_pdf('https://djfhz848yeeat.cloudfront.net/pdf_planillas/../file.pdf'))
     def test_manifest_carries_control_planilla_without_enabling_writes(self):
         page=[x for x in discover_pages(INDEX) if x.source_type=='fecha_normal'][0]
         manifest=build_manifest(INDEX,{page.page_url:PAGE})
@@ -59,6 +62,14 @@ class T(unittest.TestCase):
         manifest=build_manifest(INDEX,{page.page_url:duplicate})
         control=[row for row in manifest['pdfs'] if row['pdf_url']==CONTROL_PLANILLA]
         self.assertEqual(len(control),1)
+        self.assertTrue(manifest['complete']); self.assertEqual(manifest['fetch_errors'],[])
+    def test_manifest_canonicalizes_default_https_port_before_dedupe(self):
+        page=[x for x in discover_pages(INDEX) if x.source_type=='fecha_normal'][0]
+        duplicate=PAGE.replace('</body>',f'<a href="{CONTROL_PLANILLA_EXPLICIT_443}">Mismo PDF con :443</a></body>')
+        manifest=build_manifest(INDEX,{page.page_url:duplicate})
+        control=[row for row in manifest['pdfs'] if row['pdf_url']==CONTROL_PLANILLA]
+        self.assertEqual(len(control),1)
+        self.assertFalse(any(':443/' in row['pdf_url'] for row in manifest['pdfs']))
         self.assertTrue(manifest['complete']); self.assertEqual(manifest['fetch_errors'],[])
     def test_manifest_fails_closed_on_contradictory_pdf_provenance(self):
         normal=[x for x in discover_pages(INDEX) if x.source_type=='fecha_normal'][0]
