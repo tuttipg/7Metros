@@ -50,6 +50,7 @@ assert.equal(control.team_resolution.trailing_officials, '1-Femebal, 1-Femebal')
 const lhd = result.candidates.find((item) => item.division === 'LHD Hipotecario Seguros');
 assert.ok(lhd, 'Debe detectar LHD sin confundir otras divisiones');
 assert.equal(lhd.time, '18:30');
+assert.equal(lhd.branch, 'F');
 assert.equal(lhd.team_resolution.status, 'resolved');
 assert.equal(result.candidates.some((item) => item.division === 'Liga de Honor Plata'), false);
 
@@ -86,6 +87,47 @@ assert.equal(missingDate.match_date, null);
 assert.equal(missingDate.candidates[0].date, null);
 assert.equal(missingDate.candidates[0].team_resolution.status, 'resolved');
 assert.equal(missingDate.errors[0].error, 'missing_or_invalid_programming_date');
+
+const impossibleDate = extractTopDivisionProgrammingCandidates({
+  text: '31 de febrero de 2026\nMayores LHC Hipotecario Seguros 20:15 M Argentinos Juniors Ferro Carril Oeste',
+  sourceUrl: SOURCE,
+  clubCatalog: CLUBS,
+});
+assert.equal(impossibleDate.complete, false);
+assert.equal(impossibleDate.match_date, null);
+assert.equal(impossibleDate.errors[0].error, 'missing_or_invalid_programming_date');
+
+const leapDate = extractTopDivisionProgrammingCandidates({
+  text: '29 de febrero de 2028\nMayores LHC Hipotecario Seguros 20:15 M Argentinos Juniors Ferro Carril Oeste',
+  sourceUrl: SOURCE,
+  clubCatalog: CLUBS,
+});
+assert.equal(leapDate.complete, true);
+assert.equal(leapDate.match_date, '2028-02-29');
+assert.equal(leapDate.candidates.length, 1);
+
+const branchMismatch = extractTopDivisionProgrammingCandidates({
+  text: '21 de marzo de 2026\nMayores LHC Hipotecario Seguros 20:15 F Argentinos Juniors Ferro Carril Oeste',
+  sourceUrl: SOURCE,
+  clubCatalog: CLUBS,
+});
+assert.equal(branchMismatch.complete, false);
+assert.equal(branchMismatch.candidates.length, 0);
+assert.equal(branchMismatch.errors.length, 1);
+assert.equal(branchMismatch.errors[0].error, 'division_branch_mismatch');
+assert.equal(branchMismatch.errors[0].expected_branch, 'M');
+assert.equal(branchMismatch.errors[0].actual_branch, 'F');
+
+const lhdBranchMismatch = extractTopDivisionProgrammingCandidates({
+  text: '21 de marzo de 2026\nMayores LHD Hipotecario Seguros 18:30 M Argentinos Juniors Ferro Carril Oeste',
+  sourceUrl: SOURCE,
+  clubCatalog: CLUBS,
+});
+assert.equal(lhdBranchMismatch.complete, false);
+assert.equal(lhdBranchMismatch.candidates.length, 0);
+assert.equal(lhdBranchMismatch.errors[0].error, 'division_branch_mismatch');
+assert.equal(lhdBranchMismatch.errors[0].expected_branch, 'F');
+assert.equal(lhdBranchMismatch.errors[0].actual_branch, 'M');
 
 assert.throws(
   () => extractTopDivisionProgrammingCandidates({ text: CONTROL_TEXT, sourceUrl: 'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf' }),
