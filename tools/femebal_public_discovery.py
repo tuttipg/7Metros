@@ -38,6 +38,16 @@ def _assert_allowed(url:str, *, allow_planilla:bool=False)->None:
     except ValueError as e: raise ValueError(f"Puerto inválido: {url}") from e
     if port not in (None,443): raise ValueError(f"Puerto fuera de allowlist: {url}")
 
+def _canonical_official_page_url(url:str)->str:
+    _assert_allowed(url)
+    p=urlparse(url)
+    # Match n8n/official-url-policy.mjs for non-PDF URLs: fragments are rejected,
+    # explicit :443 is collapsed, the host is normalized, and query strings are preserved.
+    if p.fragment: raise ValueError(f"URL FEMEBAL con fragmento rechazada: {url}")
+    path=p.path or '/'
+    query=f"?{p.query}" if p.query else ''
+    return f"https://{p.hostname}{path}{query}"
+
 def _is_official_upload_pdf(url:str)->bool:
     p=urlparse(url)
     if p.scheme!="https" or p.query or p.fragment: return False
@@ -58,12 +68,16 @@ def _canonical_official_pdf_url(url:str)->str:
 
 class SafeRedirectHandler(HTTPRedirectHandler):
     def redirect_request(self,req,fp,code,msg,headers,newurl):
-        absolute=urljoin(req.full_url,newurl); _assert_allowed(absolute); return super().redirect_request(req,fp,code,msg,headers,absolute)
+        absolute=urljoin(req.full_url,newurl)
+        canonical=_canonical_official_page_url(absolute)
+        return super().redirect_request(req,fp,code,msg,headers,canonical)
 
 def get_text(url:str,timeout=20)->str:
-    _assert_allowed(url); req=Request(url,headers={"User-Agent":UA,"Accept":"text/html,application/xhtml+xml,*/*"},method="GET")
+    canonical=_canonical_official_page_url(url)
+    req=Request(canonical,headers={"User-Agent":UA,"Accept":"text/html,application/xhtml+xml,*/*"},method="GET")
     with build_opener(SafeRedirectHandler()).open(req,timeout=timeout) as r:
-        _assert_allowed(r.geturl()); return r.read().decode('utf-8',errors='replace')
+        _canonical_official_page_url(r.geturl())
+        return r.read().decode('utf-8',errors='replace')
 
 def links_from_html(html_text:str): p=LinkParser(); p.feed(html_text); return p.links
 
@@ -79,8 +93,8 @@ def classify_page(url:str,title:str)->Source|None:
 def discover_pages(index_html:str,base=PROGRAMACIONES_URL):
     out={}
     for href,text in links_from_html(index_html):
-        url=urljoin(base,href)
-        try: _assert_allowed(url)
+        raw_url=urljoin(base,href)
+        try: url=_canonical_official_page_url(raw_url)
         except ValueError: continue
         src=classify_page(url,text)
         if src: out[url]=src
