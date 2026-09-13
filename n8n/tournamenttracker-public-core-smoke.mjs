@@ -59,6 +59,9 @@ const shellWithAssets = `
 <!doctype html><html><head>
 <link rel="preload" href="/tournament-tracker/static/js/runtime.1.js" as="script">
 <link href="./static/js/vendor.2.mjs" rel="modulepreload">
+<link rel="preload stylesheet" href="./static/js/not-script-preload.js" as="style">
+<link rel="preload" href="./static/js/not-script-missing-as.js">
+<link rel="preload" href="./static/js/not-script-image.js" as="image">
 </head><body><div id="root"></div>
 <script src="./static/js/main.3.js"></script>
 <script src="https://evil.example/tournament-tracker/static/js/evil.js"></script>
@@ -72,6 +75,16 @@ assert.deepEqual(extractedAssets.assets, [
   'https://www.femebal.com/tournament-tracker/static/js/vendor.2.mjs',
 ]);
 assert.equal(extractedAssets.rejected.length, 2);
+assert.equal(extractedAssets.assets.some((url) => url.includes('not-script')), false);
+
+const scriptPreloadAttributeOrder = extractTournamentTrackerStaticAssetUrls(`
+<link as='script' href='./static/js/ordered.js' rel='preload'>
+<link href='./static/js/module.js' crossorigin='anonymous' rel='modulepreload'>
+`);
+assert.deepEqual(scriptPreloadAttributeOrder.assets, [
+  'https://www.femebal.com/tournament-tracker/static/js/module.js',
+  'https://www.femebal.com/tournament-tracker/static/js/ordered.js',
+]);
 
 const staticPlan = buildTournamentTrackerStaticAssetProbePlan(shellWithAssets);
 assert.equal(staticPlan.safe, true);
