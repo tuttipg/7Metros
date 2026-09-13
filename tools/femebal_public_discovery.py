@@ -86,12 +86,53 @@ def discover_pdfs(page_html:str,source:Source):
         out[url]=PdfSource(source.page_url,source.title,url,text,source.source_type,source.phase,source.round_number)
     return sorted(out.values(),key=lambda x:x.pdf_url)
 
+def _pdf_source_identity(source:PdfSource):
+    return (source.page_url,source.source_type,source.phase,source.round_number)
+
+def _dedupe_manifest_pdfs(pdfs:list[PdfSource]):
+    by_url={}
+    conflicted=set()
+    errors=[]
+    for source in pdfs:
+        url=source.pdf_url
+        if url in conflicted:
+            continue
+        previous=by_url.get(url)
+        if previous is None:
+            by_url[url]=source
+            continue
+        if _pdf_source_identity(previous)==_pdf_source_identity(source):
+            continue
+        conflicted.add(url)
+        del by_url[url]
+        errors.append({
+            "stage":"metadata_conflict",
+            "url":url,
+            "error":"contradictory_pdf_provenance",
+            "sources":[
+                {
+                    "page_url":previous.page_url,
+                    "source_type":previous.source_type,
+                    "phase":previous.phase,
+                    "round_number":previous.round_number,
+                },
+                {
+                    "page_url":source.page_url,
+                    "source_type":source.source_type,
+                    "phase":source.phase,
+                    "round_number":source.round_number,
+                },
+            ],
+        })
+    return sorted(by_url.values(),key=lambda x:x.pdf_url),errors
+
 def build_manifest(index_html:str,page_html_by_url:dict[str,str],fetch_errors:list[dict]|None=None):
-    pages=discover_pages(index_html); pdfs=[]
+    pages=discover_pages(index_html); discovered=[]
     for page in pages:
-        if page.page_url in page_html_by_url: pdfs.extend(discover_pdfs(page_html_by_url[page.page_url],page))
-    errors=list(fetch_errors or [])
-    return {"schema_version":2,"safe":True,"write_enabled":False,"auth_used":False,"complete":len(errors)==0,"pages":[asdict(x) for x in pages],"pdfs":[asdict(x) for x in pdfs],"fetch_errors":errors}
+        if page.page_url in page_html_by_url: discovered.extend(discover_pdfs(page_html_by_url[page.page_url],page))
+    pdfs,metadata_errors=_dedupe_manifest_pdfs(discovered)
+    errors=list(fetch_errors or [])+metadata_errors
+    return {"schema_version":MANIFEST_SCHEMA_VERSION,"safe":True,"write_enabled":False,"auth_used":False,"complete":len(errors)==0,"pages":[asdict(x) for x in pages],"pdfs":[asdict(x) for x in pdfs],"fetch_errors":errors}
 
 def main():
     ap=argparse.ArgumentParser(); ap.add_argument('--index-html'); ap.add_argument('--pages-dir'); ap.add_argument('--output',required=True); args=ap.parse_args()
