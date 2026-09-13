@@ -71,8 +71,10 @@ export function resolveProgrammingTeams(rawMatchupAndOfficials, clubCatalog) {
     return { status: 'unresolved', reason: 'catalog_unavailable_or_empty' };
   }
 
-  const matches = [];
-  const seen = new Set();
+  // Multiple aliases for the same club pair are not ambiguity. Keep the most
+  // specific (longest) alias combination for each pair, then detect ambiguity
+  // only when distinct club IDs can explain the same raw row exactly.
+  const matchesByPair = new Map();
   for (const local of aliases) {
     const afterLocal = consumeAlias(raw, local.alias);
     if (afterLocal == null) continue;
@@ -82,10 +84,12 @@ export function resolveProgrammingTeams(rawMatchupAndOfficials, clubCatalog) {
       const trailing = consumeAlias(afterLocal, visitor.alias);
       if (trailing == null) continue;
 
-      const key = `${String(local.id)}\u0000${String(visitor.id)}\u0000${trailing}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      matches.push({
+      const pairKey = `${String(local.id)}\u0000${String(visitor.id)}`;
+      const score = local.alias.length + visitor.alias.length;
+      const previous = matchesByPair.get(pairKey);
+      if (previous && previous.score >= score) continue;
+      matchesByPair.set(pairKey, {
+        score,
         local: { id: local.id, name: local.name, matched_alias: local.alias },
         visitor: { id: visitor.id, name: visitor.name, matched_alias: visitor.alias },
         trailing_officials: trailing || null,
@@ -93,6 +97,7 @@ export function resolveProgrammingTeams(rawMatchupAndOfficials, clubCatalog) {
     }
   }
 
+  const matches = [...matchesByPair.values()].map(({ score: _score, ...match }) => match);
   if (matches.length === 1) return { status: 'resolved', ...matches[0] };
   if (matches.length === 0) return { status: 'unresolved', reason: 'no_exact_catalog_match' };
   return { status: 'ambiguous', reason: 'multiple_exact_catalog_matches', match_count: matches.length };
