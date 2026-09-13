@@ -56,21 +56,50 @@ export function canonicalizeTournamentTrackerStaticAssetUrl(value, baseUrl = FEM
   return url.toString();
 }
 
-export function extractTournamentTrackerStaticAssetUrls(html, baseUrl = FEMEBAL_TOURNAMENTTRACKER_URL) {
-  const text = String(html ?? '');
-  const rawCandidates = [];
-  const patterns = [
-    /<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi,
-    /<link\b[^>]*\brel\s*=\s*["'](?:modulepreload|preload)["'][^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>/gi,
-    /<link\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*\brel\s*=\s*["'](?:modulepreload|preload)["'][^>]*>/gi,
-  ];
+function parseHtmlTagAttributes(tag) {
+  const attrs = new Map();
+  const attrPattern = /\b([a-zA-Z_:][\w:.-]*)\s*=\s*(?:["']([^"']*)["']|([^\s>]+))/g;
+  for (const match of String(tag ?? '').matchAll(attrPattern)) {
+    const key = match[1].toLowerCase();
+    const value = match[2] ?? match[3] ?? '';
+    if (!attrs.has(key)) attrs.set(key, value);
+  }
+  return attrs;
+}
 
-  for (const pattern of patterns) {
-    for (const match of text.matchAll(pattern)) rawCandidates.push(match[1]);
+function collectTournamentTrackerAssetCandidates(html) {
+  const text = String(html ?? '');
+  const candidates = [];
+
+  for (const match of text.matchAll(/<script\b[^>]*>/gi)) {
+    const attrs = parseHtmlTagAttributes(match[0]);
+    const src = attrs.get('src');
+    if (src) candidates.push(src);
   }
 
+  for (const match of text.matchAll(/<link\b[^>]*>/gi)) {
+    const attrs = parseHtmlTagAttributes(match[0]);
+    const href = attrs.get('href');
+    if (!href) continue;
+
+    const relTokens = String(attrs.get('rel') ?? '')
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
+    const asValue = String(attrs.get('as') ?? '').toLowerCase();
+    const isModulePreload = relTokens.includes('modulepreload');
+    const isScriptPreload = relTokens.includes('preload') && asValue === 'script';
+    if (isModulePreload || isScriptPreload) candidates.push(href);
+  }
+
+  return candidates;
+}
+
+export function extractTournamentTrackerStaticAssetUrls(html, baseUrl = FEMEBAL_TOURNAMENTTRACKER_URL) {
+  const rawCandidates = collectTournamentTrackerAssetCandidates(html);
   const accepted = [];
   const rejected = [];
+
   for (const candidate of rawCandidates) {
     try {
       accepted.push(canonicalizeTournamentTrackerStaticAssetUrl(candidate, baseUrl));
