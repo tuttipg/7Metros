@@ -1,5 +1,5 @@
 import { validateDiscoveryManifest } from './importer-core.mjs';
-import { canonicalizeOfficialFemebalUrl } from './official-url-policy.mjs';
+import { canonicalizeOfficialFemebalUrl, OFFICIAL_FEMEBAL_URL_POLICY } from './official-url-policy.mjs';
 
 function sourceMetadata(row) {
   if (!row || typeof row !== 'object' || Array.isArray(row)) {
@@ -39,12 +39,23 @@ function sourceMetadata(row) {
   };
 }
 
+function isOfficialMatchSheetPdf(pdfUrl) {
+  const url = new URL(pdfUrl);
+  return url.hostname === OFFICIAL_FEMEBAL_URL_POLICY.planilla_host && url.pathname.startsWith('/pdf_planillas/');
+}
+
 export function buildDiscoveryPdfWorkItems(manifest) {
   validateDiscoveryManifest(manifest);
 
   const byUrl = new Map();
   for (const row of manifest.pdfs) {
     const source = sourceMetadata(row);
+
+    // Programaciones publicadas bajo wp-content/uploads son evidencia de fixture,
+    // fecha y hora, pero NO una planilla individual de partido. El bridge hacia
+    // el parser de planillas solo puede emitir PDFs del árbol oficial /pdf_planillas/.
+    if (!isOfficialMatchSheetPdf(source.pdf_url)) continue;
+
     const previous = byUrl.get(source.pdf_url);
 
     if (previous) {
