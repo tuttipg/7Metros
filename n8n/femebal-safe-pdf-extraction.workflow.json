@@ -1,0 +1,90 @@
+{
+  "name": "FEMEBAL SAFE PDF extraction DRY RUN",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "id": "safe-pdf-input",
+      "name": "SAFE PDF Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [-520, 0],
+      "parameters": {}
+    },
+    {
+      "id": "preserve-safe-envelope",
+      "name": "Preserve SAFE Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-280, -120],
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (items.length !== 1) throw new Error('SAFE PDF Input requiere exactamente 1 item por invocación');\nconst item = items[0];\nconst j = item.json ?? {};\nif (j.dry_run !== true || j.write_enabled !== false || j.auth_used !== false) throw new Error('Input no es SAFE/DRY RUN');\nif (!/^[0-9a-f]{64}$/.test(String(j.correlation_id ?? '').toLowerCase())) throw new Error('correlation_id SHA-256 inválido');\nreturn [{ json: { safe_envelope: j, correlation_id: String(j.correlation_id).toLowerCase() } }];"
+      }
+    },
+    {
+      "id": "extract-pdf",
+      "name": "Extract PDF",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [-280, 120],
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "data",
+        "options": {}
+      }
+    },
+    {
+      "id": "rejoin-envelope-extraction",
+      "name": "Rejoin Envelope + Extraction",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [0, 0],
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      }
+    },
+    {
+      "id": "validate-safe-correlation",
+      "name": "Validate SAFE Correlation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0],
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (items.length !== 1) throw new Error('Rejoin SAFE requiere exactamente 1 item por invocación');\nconst j = items[0].json ?? {};\nconst e = j.safe_envelope;\nif (!e || e.dry_run !== true || e.write_enabled !== false || e.auth_used !== false) throw new Error('Envelope SAFE perdido tras extracción');\nconst cid = String(j.correlation_id ?? '').toLowerCase();\nif (!/^[0-9a-f]{64}$/.test(cid) || String(e.correlation_id ?? '').toLowerCase() !== cid) throw new Error('Correlación SHA-256 perdida');\nconst extractedText = typeof j.text === 'string' ? j.text : (typeof j.data === 'string' ? j.data : '');\nif (!extractedText.trim()) throw new Error('Extract From File no produjo texto');\nreturn [{ json: { correlation_id: cid, dry_run: true, write_enabled: false, auth_used: false, extraction: { text: extractedText }, provenance: e.provenance, work_item: e.work_item } }];"
+      }
+    }
+  ],
+  "connections": {
+    "SAFE PDF Input": {
+      "main": [[
+        { "node": "Preserve SAFE Envelope", "type": "main", "index": 0 },
+        { "node": "Extract PDF", "type": "main", "index": 0 }
+      ]]
+    },
+    "Preserve SAFE Envelope": {
+      "main": [[
+        { "node": "Rejoin Envelope + Extraction", "type": "main", "index": 0 }
+      ]]
+    },
+    "Extract PDF": {
+      "main": [[
+        { "node": "Rejoin Envelope + Extraction", "type": "main", "index": 1 }
+      ]]
+    },
+    "Rejoin Envelope + Extraction": {
+      "main": [[
+        { "node": "Validate SAFE Correlation", "type": "main", "index": 0 }
+      ]]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "purpose": "Static SAFE/DRY RUN blueprint. No credentials, HTTP fetch, Supabase or persistence nodes.",
+    "input_contract": "Exactly one PDF item per invocation: binary.data plus SAFE envelope JSON built by pdf-extraction-wiring.mjs. Multi-item batches fail closed before positional rejoin.",
+    "validated_against": "Argentinos Juniors 20-27 Ferro, 2026-03-21 (contract regression in pdf-extraction-wiring-smoke.mjs)"
+  }
+}

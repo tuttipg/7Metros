@@ -61,13 +61,24 @@ jobs:
           node --check mobile-menu-a11y-smoke.mjs
           node --check n8n/importer-core.mjs
           node --check n8n/importer-core-smoke.mjs
+          node --check n8n/discovery-manifest-bridge.mjs
+          node --check n8n/discovery-manifest-bridge-smoke.mjs
           node --check n8n/planilla-core.mjs
           node --check n8n/planilla-core-smoke.mjs
+          node --check n8n/planilla-dry-run-core.mjs
+          node --check n8n/planilla-dry-run-core-smoke.mjs
+          node --check n8n/official-pdf-fetch-core.mjs
+          node --check n8n/official-pdf-fetch-core-smoke.mjs
+          node --check n8n/pdf-extract-contract.mjs
+          node --check n8n/pdf-extract-contract-smoke.mjs
+          node --check n8n/pdf-extraction-wiring.mjs
+          node --check n8n/pdf-extraction-wiring-smoke.mjs
+          node --check n8n/femebal-safe-workflow-smoke.mjs
           node --check n8n/community-api-core.mjs
           node --check n8n/community-api-core-smoke.mjs
 
       - name: Check Python syntax
-        run: python -m py_compile validate_site.py validate_backend_contract.py
+        run: python -m py_compile validate_site.py validate_backend_contract.py tools/femebal_public_discovery.py tests/test_femebal_public_discovery.py
 
       - name: Store smoke test
         run: node store-smoke.mjs
@@ -120,11 +131,32 @@ jobs:
       - name: FEMEBAL importer core smoke test
         run: node n8n/importer-core-smoke.mjs
 
+      - name: FEMEBAL discovery manifest bridge smoke test
+        run: node n8n/discovery-manifest-bridge-smoke.mjs
+
       - name: FEMEBAL planilla parser smoke test
         run: node n8n/planilla-core-smoke.mjs
 
+      - name: FEMEBAL planilla DRY RUN smoke test
+        run: node n8n/planilla-dry-run-core-smoke.mjs
+
+      - name: FEMEBAL official PDF fetch smoke test
+        run: node n8n/official-pdf-fetch-core-smoke.mjs
+
+      - name: FEMEBAL n8n PDF extraction contract smoke test
+        run: node n8n/pdf-extract-contract-smoke.mjs
+
+      - name: FEMEBAL n8n PDF extraction wiring smoke test
+        run: node n8n/pdf-extraction-wiring-smoke.mjs
+
+      - name: FEMEBAL SAFE n8n workflow topology smoke test
+        run: node n8n/femebal-safe-workflow-smoke.mjs
+
       - name: FEMEBAL Community discovery smoke test
         run: node n8n/community-api-core-smoke.mjs
+
+      - name: FEMEBAL public discovery unit tests
+        run: python -m unittest -v tests.test_femebal_public_discovery
 
       - name: Validate static site
         run: python validate_site.py
