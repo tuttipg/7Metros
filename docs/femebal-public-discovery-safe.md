@@ -3,12 +3,16 @@
 Descubridor GET-only para programaciones públicas oficiales de FEMEBAL. No usa LarrySport, login, cookies, tokens ni Supabase.
 
 ## Política
-- allowlist estricta: `https://femebal.com` / `https://www.femebal.com`;
+- páginas HTML y redirects limitados estrictamente a `https://femebal.com` / `https://www.femebal.com`;
+- adjuntos PDF permitidos únicamente en `femebal.com/wp-content/uploads/` o `https://djfhz848yeeat.cloudfront.net/pdf_planillas/`;
 - solo GET;
 - detecta páginas del Torneo Metropolitano y reprogramaciones;
-- descubre únicamente adjuntos PDF publicados por FEMEBAL;
+- descubre únicamente adjuntos PDF publicados por FEMEBAL dentro de esos árboles explícitos;
+- rechaza PDFs con query string, fragmentos, userinfo, puertos alternativos, otros hosts CloudFront u otros paths del mismo CloudFront;
 - produce manifiesto con `write_enabled=false` y `auth_used=false`;
 - no interpreta un PDF como resultado final: una programación prueba fixture/fecha/hora, no marcador.
+
+La ampliación al host CloudFront aplica **solo a enlaces PDF**. No amplía la superficie de navegación: `get_text()` y `SafeRedirectHandler` siguen aceptando exclusivamente hosts web FEMEBAL. Por lo tanto el discovery puede recoger una planilla digital oficial enlazada desde una página pública FEMEBAL sin convertir CloudFront en una fuente navegable genérica.
 
 ## Contrato con el importador
 El núcleo `n8n/importer-core.mjs` valida el manifiesto antes de que una etapa posterior pueda consumirlo. El gate falla cerrado salvo que se cumplan simultáneamente:
@@ -69,14 +73,16 @@ El blueprint no contiene nodos HTTP, Supabase, bases de datos, webhooks, persist
 
 `n8n/femebal-safe-workflow-smoke.mjs` valida estáticamente en CI que el workflow permanezca inactivo, que solo use tipos de nodo allowlisted, que no aparezcan marcadores de credenciales/Authorization/cookies/tokens, que `Extract From File` siga configurado para PDF sobre `binary.data`, que la bifurcación y el rejoin no desaparezcan y que los Code nodes conserven las comprobaciones `dry_run=true`, `write_enabled=false`, `auth_used=false` y SHA-256.
 
-`n8n/planilla-dry-run-core.mjs` recibe el work item y el texto extraído. Antes de parsear vuelve a validar URL, host, HTTPS, procedencia `/wp-content/uploads/`, ausencia de query/fragment/userinfo, método GET y flags SAFE. Luego usa `planilla-core.mjs` para extraer partido y jugadores, manteniendo la regla de que la suma de goles de jugadores debe cerrar exactamente con el marcador.
+`n8n/planilla-dry-run-core.mjs` recibe el work item y el texto extraído. Antes de parsear vuelve a validar URL, host, HTTPS, procedencia dentro de uno de los dos árboles PDF oficiales permitidos, ausencia de query/fragment/userinfo, método GET y flags SAFE. Luego usa `planilla-core.mjs` para extraer partido y jugadores, manteniendo la regla de que la suma de goles de jugadores debe cerrar exactamente con el marcador.
 
 Opcionalmente acepta una identidad esperada (fecha, local, visitante y marcador) y falla cerrado si la planilla no corresponde al partido esperado. La salida conserva `dry_run=true`, `write_enabled=false` y `auth_used=false`.
 
 ## Caso de regresión oficial
 La página oficial de Fecha 1 del Apertura 2026 enlaza `Sabado-21-3.pdf`. En la página 1 del PDF figura `Mayores / LHC Hipotecario Seguros / 20:15 / M / Argentinos Juniors / Ferro Carril Oeste`. Esto valida el descubrimiento del fixture.
 
-El parser de planilla tiene además una regresión separada para la planilla digital oficial del partido Argentinos Juniors 20–27 Ferro del 2026-03-21: 16 jugadores por equipo, 47 goles totales y cierre exacto 20–27. La regresión del contrato PDF usa el mismo partido para verificar el tramo `Extract From File → contrato SAFE → parser` y comprueba que el SHA-256 del PDF se propague hasta el resultado parseado. La regresión del wiring agrega la comprobación de que la correlación SHA-256 sobreviva al rejoin y rechaza bytes, metadata, URL o work items cruzados. Esas regresiones se ejecutan en CI, pero la programación y la planilla digital se mantienen conceptualmente separadas como fuentes.
+La planilla digital oficial usada como control es `https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf`, correspondiente a Argentinos Juniors 20–27 Ferro del 2026-03-21. El discovery tiene una regresión que demuestra que ese enlace puede entrar al manifiesto desde una página FEMEBAL sin ampliar la navegación a CloudFront y manteniendo `write_enabled=false` / `auth_used=false`.
+
+El parser de planilla tiene además una regresión separada para ese partido: 16 jugadores por equipo, 47 goles totales y cierre exacto 20–27. La regresión del contrato PDF usa el mismo partido para verificar el tramo `Extract From File → contrato SAFE → parser` y comprueba que el SHA-256 del PDF se propague hasta el resultado parseado. La regresión del wiring agrega la comprobación de que la correlación SHA-256 sobreviva al rejoin y rechaza bytes, metadata, URL o work items cruzados. Esas regresiones se ejecutan en CI, pero la programación y la planilla digital se mantienen conceptualmente separadas como fuentes.
 
 ## Ejecución
 
