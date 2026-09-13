@@ -25,23 +25,34 @@ const EXPECTED_BRANCH_BY_DIVISION = Object.freeze({
   'LHD Hipotecario Seguros': 'F',
 });
 
-function isoDateFromProgrammingText(text) {
-  const match = String(text ?? '').match(/\b(\d{1,2})\s+de\s+([a-záéíóúñ]+)\s+de\s+(20\d{2})\b/i);
-  if (!match) return null;
-  const month = MONTHS[match[2].toLowerCase()];
-  if (!month) return null;
-  const day = Number(match[1]);
-  const year = Number(match[3]);
-  if (!Number.isInteger(day) || day < 1 || day > 31) return null;
+function analyzeProgrammingDates(text) {
+  const pattern = /\b(\d{1,2})\s+de\s+([a-záéíóúñ]+)\s+de\s+(20\d{2})\b/gi;
+  const dates = new Set();
+  let invalidDateLiteral = false;
 
-  const calendarDate = new Date(Date.UTC(year, month - 1, day));
-  if (
-    calendarDate.getUTCFullYear() !== year
-    || calendarDate.getUTCMonth() !== month - 1
-    || calendarDate.getUTCDate() !== day
-  ) return null;
+  for (const match of String(text ?? '').matchAll(pattern)) {
+    const month = MONTHS[match[2].toLowerCase()];
+    const day = Number(match[1]);
+    const year = Number(match[3]);
+    if (!month || !Number.isInteger(day) || day < 1 || day > 31) {
+      invalidDateLiteral = true;
+      continue;
+    }
 
-  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const calendarDate = new Date(Date.UTC(year, month - 1, day));
+    if (
+      calendarDate.getUTCFullYear() !== year
+      || calendarDate.getUTCMonth() !== month - 1
+      || calendarDate.getUTCDate() !== day
+    ) {
+      invalidDateLiteral = true;
+      continue;
+    }
+
+    dates.add(`${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+  }
+
+  return { dates: [...dates], invalidDateLiteral };
 }
 
 function normalizeLine(line) {
@@ -124,15 +135,26 @@ export function resolveProgrammingTeams(rawMatchupAndOfficials, clubCatalog) {
 export function extractTopDivisionProgrammingCandidates({ text, sourceUrl, clubCatalog = [] }) {
   const canonicalSourceUrl = assertProgrammingPdfUrl(sourceUrl);
   const rawText = String(text ?? '');
-  const matchDate = isoDateFromProgrammingText(rawText);
+  const dateAnalysis = analyzeProgrammingDates(rawText);
+  const matchDate = dateAnalysis.dates.length === 1 && !dateAnalysis.invalidDateLiteral
+    ? dateAnalysis.dates[0]
+    : null;
   const errors = [];
-  if (!matchDate) errors.push({ stage: 'programming_parse', error: 'missing_or_invalid_programming_date' });
+  if (dateAnalysis.invalidDateLiteral || dateAnalysis.dates.length === 0) {
+    errors.push({ stage: 'programming_parse', error: 'missing_or_invalid_programming_date' });
+  } else if (dateAnalysis.dates.length > 1) {
+    errors.push({
+      stage: 'programming_parse',
+      error: 'ambiguous_programming_dates',
+      dates: dateAnalysis.dates,
+    });
+  }
 
   const candidates = [];
 
-  // A match candidate without a valid calendar date is not a stable identity.
-  // Fail closed instead of emitting date:null rows that downstream stages could
-  // accidentally correlate with an unrelated planilla.
+  // A match candidate without exactly one valid calendar date is not a stable identity.
+  // Fail closed instead of assigning the first date found in a multi-date/reprogramming
+  // document to every row, which could correlate a match with the wrong planilla.
   if (!matchDate) {
     return {
       safe: true,
