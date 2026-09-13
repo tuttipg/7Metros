@@ -48,6 +48,14 @@ function normalizeLine(line) {
   return String(line ?? '').replace(/\s+/g, ' ').trim();
 }
 
+function isValidProgrammingTime(value) {
+  const match = String(value ?? '').match(/^(\d{2}):(\d{2})$/);
+  if (!match) return false;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59;
+}
+
 function assertProgrammingPdfUrl(sourceUrl) {
   const canonical = canonicalizeOfficialFemebalUrl(sourceUrl, { pdf: true });
   const url = new URL(canonical);
@@ -135,6 +143,16 @@ export function extractTopDivisionProgrammingCandidates({ text, sourceUrl, clubC
     const prefix = rest.match(/^(\d{2}:\d{2})\s+([MF])\s+(.+)$/);
     if (!prefix) {
       errors.push({ stage: 'programming_parse', error: 'malformed_top_division_row', raw_line: line });
+      continue;
+    }
+
+    if (!isValidProgrammingTime(prefix[1])) {
+      errors.push({
+        stage: 'programming_parse',
+        error: 'invalid_programming_time',
+        time: prefix[1],
+        raw_line: line,
+      });
       continue;
     }
 
