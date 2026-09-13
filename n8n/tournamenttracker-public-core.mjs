@@ -2,6 +2,11 @@ export const FEMEBAL_TOURNAMENTTRACKER_URL = 'https://www.femebal.com/tournament
 
 const ALLOWED_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
 const STATIC_ASSET_EXTENSIONS = new Set(['.js', '.mjs']);
+const STATIC_JAVASCRIPT_CONTENT_TYPES = new Set([
+  'application/javascript',
+  'text/javascript',
+]);
+export const TOURNAMENTTRACKER_MAX_STATIC_ASSET_BYTES = 5 * 1024 * 1024;
 
 export function canonicalizeFemebalTournamentTrackerUrl(value) {
   const url = new URL(String(value ?? ''));
@@ -154,6 +159,114 @@ export function buildTournamentTrackerStaticAssetProbePlan(html, baseUrl = FEMEB
       executableEvaluationAllowed: false,
       javascriptStaticTextOnly: true,
     },
+  };
+}
+
+export function classifyTournamentTrackerStaticAssetResponse({
+  statusCode,
+  body,
+  contentType,
+  finalUrl,
+  maxBytes = TOURNAMENTTRACKER_MAX_STATIC_ASSET_BYTES,
+}) {
+  const status = Number.isFinite(Number(statusCode)) ? Number(statusCode) : null;
+  const text = String(body ?? '');
+  const bodyBytes = new TextEncoder().encode(text).byteLength;
+  const byteLimit = Number.isSafeInteger(maxBytes) && maxBytes > 0
+    ? maxBytes
+    : TOURNAMENTTRACKER_MAX_STATIC_ASSET_BYTES;
+
+  let canonicalFinalUrl = null;
+  try {
+    canonicalFinalUrl = canonicalizeTournamentTrackerStaticAssetUrl(finalUrl);
+  } catch {
+    return {
+      state: 'unsafe_redirect_or_url',
+      statusCode: status,
+      analyzableStaticJavascript: false,
+      canonicalFinalUrl: null,
+      bodyBytes,
+      maxBytes: byteLimit,
+    };
+  }
+
+  if (status === 401 || status === 403) {
+    return {
+      state: 'auth_required',
+      statusCode: status,
+      analyzableStaticJavascript: false,
+      canonicalFinalUrl,
+      bodyBytes,
+      maxBytes: byteLimit,
+    };
+  }
+  if (status === 404) {
+    return {
+      state: 'not_found',
+      statusCode: status,
+      analyzableStaticJavascript: false,
+      canonicalFinalUrl,
+      bodyBytes,
+      maxBytes: byteLimit,
+    };
+  }
+  if (status == null || status < 200 || status >= 300) {
+    return {
+      state: 'transport_or_server_error',
+      statusCode: status,
+      analyzableStaticJavascript: false,
+      canonicalFinalUrl,
+      bodyBytes,
+      maxBytes: byteLimit,
+    };
+  }
+  if (bodyBytes === 0) {
+    return {
+      state: 'empty_body',
+      statusCode: status,
+      analyzableStaticJavascript: false,
+      canonicalFinalUrl,
+      bodyBytes,
+      maxBytes: byteLimit,
+    };
+  }
+  if (bodyBytes > byteLimit) {
+    return {
+      state: 'body_too_large',
+      statusCode: status,
+      analyzableStaticJavascript: false,
+      canonicalFinalUrl,
+      bodyBytes,
+      maxBytes: byteLimit,
+    };
+  }
+
+  const normalizedContentType = String(contentType ?? '')
+    .split(';', 1)[0]
+    .trim()
+    .toLowerCase();
+  if (!STATIC_JAVASCRIPT_CONTENT_TYPES.has(normalizedContentType)) {
+    return {
+      state: 'unexpected_content_type',
+      statusCode: status,
+      analyzableStaticJavascript: false,
+      canonicalFinalUrl,
+      contentType: normalizedContentType || null,
+      bodyBytes,
+      maxBytes: byteLimit,
+    };
+  }
+
+  return {
+    state: 'public_static_javascript',
+    statusCode: status,
+    analyzableStaticJavascript: true,
+    canonicalFinalUrl,
+    contentType: normalizedContentType,
+    bodyBytes,
+    maxBytes: byteLimit,
+    executionAllowed: false,
+    analysisMode: 'static_text_only',
   };
 }
 
