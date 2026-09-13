@@ -3,6 +3,7 @@ import { buildDiscoveryPdfWorkItems } from './discovery-manifest-bridge.mjs';
 
 const CONTROL_PDF='https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf';
 const CONTROL_PDF_EXPLICIT_443='https://djfhz848yeeat.cloudfront.net:443/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf';
+const CONTROL_SCHEDULE_PDF='https://femebal.com/wp-content/uploads/2026/03/Sabado-21-3.pdf';
 
 function manifest(pdfs, overrides = {}) {
   return {
@@ -56,6 +57,22 @@ function pdf(overrides = {}) {
   assert.equal(items[0].source.pdf_url, CONTROL_PDF);
 }
 
+{
+  // La programación oficial del 21/03/2026 prueba fixture/fecha/hora, no es una
+  // planilla individual. Debe permanecer fuera del handoff al parser de planillas.
+  const items = buildDiscoveryPdfWorkItems(manifest([
+    pdf({ pdf_url: CONTROL_SCHEDULE_PDF }),
+    pdf(),
+  ]));
+  assert.equal(items.length, 1);
+  assert.equal(items[0].url, CONTROL_PDF);
+}
+
+{
+  const items = buildDiscoveryPdfWorkItems(manifest([pdf({ pdf_url: CONTROL_SCHEDULE_PDF })]));
+  assert.deepEqual(items, []);
+}
+
 assert.throws(
   () => buildDiscoveryPdfWorkItems(manifest([pdf(), pdf({ source_type: 'reprogramacion', phase: null, round_number: null })])),
   /metadatos contradictorios/
@@ -83,4 +100,4 @@ assert.throws(() => buildDiscoveryPdfWorkItems(manifest([pdf()], { complete: fal
 assert.throws(() => buildDiscoveryPdfWorkItems(manifest([pdf()], { write_enabled: true })), /read-only/);
 assert.throws(() => buildDiscoveryPdfWorkItems(manifest([pdf()], { auth_used: true })), /autenticación/);
 
-console.log('✓ discovery-manifest bridge: canonicalización + host oficial de planillas + work items SAFE/fail-closed OK');
+console.log('✓ discovery-manifest bridge: planillas individuales separadas de PDFs de programación + canonicalización + SAFE/fail-closed OK');
