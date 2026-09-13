@@ -1,17 +1,5 @@
 import { parseOfficialFemebalSheet } from './planilla-core.mjs';
-
-const FEMEBAL_WEB_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
-const FEMEBAL_PLANILLA_HOST = 'djfhz848yeeat.cloudfront.net';
-
-function isAllowedOfficialPdfUrl(url) {
-  if (FEMEBAL_WEB_HOSTS.has(url.hostname)) {
-    return url.pathname.startsWith('/wp-content/uploads/') && url.pathname.toLowerCase().endsWith('.pdf');
-  }
-  if (url.hostname === FEMEBAL_PLANILLA_HOST) {
-    return url.pathname.startsWith('/pdf_planillas/') && url.pathname.toLowerCase().endsWith('.pdf');
-  }
-  return false;
-}
+import { canonicalizeOfficialFemebalUrl } from './official-url-policy.mjs';
 
 export function validatePdfWorkItem(item) {
   if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('Work item PDF inválido');
@@ -21,16 +9,11 @@ export function validatePdfWorkItem(item) {
   if (item.auth_used !== false) throw new Error('El work item no puede usar autenticación');
   if (item.write_enabled !== false) throw new Error('El work item no puede habilitar escritura');
 
-  let url;
-  try { url = new URL(String(item.url ?? '')); } catch { throw new Error('URL de planilla inválida'); }
-  if (url.protocol !== 'https:') throw new Error('La planilla debe usar HTTPS');
-  if (!FEMEBAL_WEB_HOSTS.has(url.hostname) && url.hostname !== FEMEBAL_PLANILLA_HOST) throw new Error(`Host de planilla fuera de allowlist: ${url.hostname}`);
-  if (url.username || url.password) throw new Error('URL de planilla con userinfo rechazada');
-  if (url.port && url.port !== '443') throw new Error(`Puerto de planilla fuera de allowlist: ${url.port}`);
-  if (url.search || url.hash) throw new Error('URL de planilla con query/fragmento rechazada');
-  if (!isAllowedOfficialPdfUrl(url)) throw new Error('La planilla debe provenir de un árbol oficial FEMEBAL permitido');
-  if (!item.source || item.source.pdf_url !== item.url) throw new Error('La fuente del work item no coincide con su URL');
-  return url.toString();
+  const sourceUrl = canonicalizeOfficialFemebalUrl(item.url, { pdf: true });
+  if (!item.source || typeof item.source !== 'object' || Array.isArray(item.source)) throw new Error('Fuente del work item inválida');
+  const sourcePdfUrl = canonicalizeOfficialFemebalUrl(item.source.pdf_url, { pdf: true });
+  if (sourcePdfUrl !== sourceUrl) throw new Error('La fuente del work item no coincide con su URL');
+  return sourceUrl;
 }
 
 function normalizeIdentity(value) {
@@ -56,7 +39,7 @@ export function parsePlanillaDryRun({ workItem, extractedText, expected = null }
     write_enabled: false,
     auth_used: false,
     source_url: sourceUrl,
-    source: workItem.source,
+    source: { ...workItem.source, pdf_url: sourceUrl },
     parsed,
     validation: { player_goal_totals_match_score: true, expected_match_checked: Boolean(expected) },
   };
