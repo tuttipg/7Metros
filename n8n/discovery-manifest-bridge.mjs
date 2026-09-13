@@ -1,6 +1,7 @@
 import { validateDiscoveryManifest } from './importer-core.mjs';
 
-const ALLOWED_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
+const FEMEBAL_WEB_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
+const FEMEBAL_PLANILLA_HOST = 'djfhz848yeeat.cloudfront.net';
 
 function parseOfficialHttpsUrl(value, { pdf = false } = {}) {
   let url;
@@ -11,18 +12,17 @@ function parseOfficialHttpsUrl(value, { pdf = false } = {}) {
   }
 
   if (url.protocol !== 'https:') throw new Error('URL FEMEBAL debe usar HTTPS');
-  if (!ALLOWED_HOSTS.has(url.hostname)) throw new Error(`Host FEMEBAL fuera de allowlist: ${url.hostname}`);
+  const hostAllowed = FEMEBAL_WEB_HOSTS.has(url.hostname) || (pdf && url.hostname === FEMEBAL_PLANILLA_HOST);
+  if (!hostAllowed) throw new Error(`Host FEMEBAL fuera de allowlist: ${url.hostname}`);
   if (url.username || url.password) throw new Error('URL FEMEBAL con userinfo rechazada');
   if (url.port && url.port !== '443') throw new Error(`Puerto FEMEBAL fuera de allowlist: ${url.port}`);
   if (url.hash) throw new Error('URL FEMEBAL con fragmento rechazada');
 
   if (pdf) {
-    if (!url.pathname.startsWith('/wp-content/uploads/')) {
-      throw new Error('PDF fuera del árbol oficial de uploads');
-    }
-    if (!url.pathname.toLowerCase().endsWith('.pdf')) {
-      throw new Error('Adjunto FEMEBAL no es PDF');
-    }
+    const wordpressPdf = FEMEBAL_WEB_HOSTS.has(url.hostname) && url.pathname.startsWith('/wp-content/uploads/');
+    const planillaPdf = url.hostname === FEMEBAL_PLANILLA_HOST && url.pathname.startsWith('/pdf_planillas/');
+    if (!wordpressPdf && !planillaPdf) throw new Error('PDF fuera de los árboles oficiales permitidos');
+    if (!url.pathname.toLowerCase().endsWith('.pdf')) throw new Error('Adjunto FEMEBAL no es PDF');
     if (url.search) throw new Error('PDF FEMEBAL con query string rechazada');
   }
 
