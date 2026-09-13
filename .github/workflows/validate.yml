@@ -79,6 +79,8 @@ jobs:
           node --check n8n/community-api-core-smoke.mjs
           node --check n8n/programming-candidate-core.mjs
           node --check n8n/programming-candidate-core-smoke.mjs
+          node --check n8n/tournamenttracker-public-core.mjs
+          node --check n8n/tournamenttracker-public-core-smoke.mjs
 
       - name: Check Python syntax
         run: python -m py_compile validate_site.py validate_backend_contract.py tools/femebal_public_discovery.py tests/test_femebal_public_discovery.py
@@ -160,6 +162,9 @@ jobs:
 
       - name: FEMEBAL programming candidate smoke test
         run: node n8n/programming-candidate-core-smoke.mjs
+
+      - name: FEMEBAL TournamentTracker public SAFE smoke test
+        run: node n8n/tournamenttracker-public-core-smoke.mjs
 
       - name: FEMEBAL public discovery unit tests
         run: python -m unittest -v tests.test_femebal_public_discovery
