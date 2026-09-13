@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import {
   FEMEBAL_TOURNAMENTTRACKER_URL,
+  TOURNAMENTTRACKER_MAX_STATIC_ASSET_BYTES,
   buildTournamentTrackerPublicProbePlan,
   buildTournamentTrackerStaticAssetProbePlan,
   canonicalizeFemebalTournamentTrackerUrl,
   canonicalizeTournamentTrackerStaticAssetUrl,
   classifyTournamentTrackerPublicResponse,
+  classifyTournamentTrackerStaticAssetResponse,
   extractTournamentTrackerStaticAssetUrls,
   summarizeTournamentTrackerPublicDiscovery,
 } from './tournamenttracker-public-core.mjs';
@@ -113,6 +115,89 @@ for (const probe of staticPlan.probes) {
   assert.equal('Authorization' in probe.headers, false);
   assert.equal('Cookie' in probe.headers, false);
 }
+
+const safeAssetUrl = 'https://www.femebal.com/tournament-tracker/static/js/main.3.js';
+const analyzableAsset = classifyTournamentTrackerStaticAssetResponse({
+  statusCode: 200,
+  body: 'const api = "/public/example";',
+  contentType: 'application/javascript; charset=utf-8',
+  finalUrl: safeAssetUrl,
+});
+assert.equal(analyzableAsset.state, 'public_static_javascript');
+assert.equal(analyzableAsset.analyzableStaticJavascript, true);
+assert.equal(analyzableAsset.executionAllowed, false);
+assert.equal(analyzableAsset.analysisMode, 'static_text_only');
+assert.equal(analyzableAsset.contentType, 'application/javascript');
+assert.ok(analyzableAsset.bodyBytes > 0);
+assert.equal(analyzableAsset.maxBytes, TOURNAMENTTRACKER_MAX_STATIC_ASSET_BYTES);
+
+const textJavascriptAsset = classifyTournamentTrackerStaticAssetResponse({
+  statusCode: 200,
+  body: 'export default 1;',
+  contentType: 'text/javascript',
+  finalUrl: safeAssetUrl,
+});
+assert.equal(textJavascriptAsset.analyzableStaticJavascript, true);
+
+for (const [expectedState, response] of [
+  ['unsafe_redirect_or_url', {
+    statusCode: 200,
+    body: 'alert(1)',
+    contentType: 'application/javascript',
+    finalUrl: 'https://evil.example/tournament-tracker/static/js/main.js',
+  }],
+  ['auth_required', {
+    statusCode: 403,
+    body: 'Forbidden',
+    contentType: 'text/plain',
+    finalUrl: safeAssetUrl,
+  }],
+  ['not_found', {
+    statusCode: 404,
+    body: 'Not found',
+    contentType: 'text/plain',
+    finalUrl: safeAssetUrl,
+  }],
+  ['transport_or_server_error', {
+    statusCode: 500,
+    body: 'Error',
+    contentType: 'text/plain',
+    finalUrl: safeAssetUrl,
+  }],
+  ['empty_body', {
+    statusCode: 200,
+    body: '',
+    contentType: 'application/javascript',
+    finalUrl: safeAssetUrl,
+  }],
+  ['unexpected_content_type', {
+    statusCode: 200,
+    body: '<html>not js</html>',
+    contentType: 'text/html; charset=utf-8',
+    finalUrl: safeAssetUrl,
+  }],
+  ['body_too_large', {
+    statusCode: 200,
+    body: '12345',
+    contentType: 'application/javascript',
+    finalUrl: safeAssetUrl,
+    maxBytes: 4,
+  }],
+]) {
+  const classified = classifyTournamentTrackerStaticAssetResponse(response);
+  assert.equal(classified.state, expectedState);
+  assert.equal(classified.analyzableStaticJavascript, false);
+}
+
+const multibyteLimit = classifyTournamentTrackerStaticAssetResponse({
+  statusCode: 200,
+  body: 'áá',
+  contentType: 'application/javascript',
+  finalUrl: safeAssetUrl,
+  maxBytes: 3,
+});
+assert.equal(multibyteLimit.state, 'body_too_large');
+assert.equal(multibyteLimit.bodyBytes, 4);
 
 const plan = buildTournamentTrackerPublicProbePlan();
 assert.equal(plan.length, 1);
