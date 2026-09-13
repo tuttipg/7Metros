@@ -84,8 +84,7 @@ const missingDate = extractTopDivisionProgrammingCandidates({
 });
 assert.equal(missingDate.complete, false);
 assert.equal(missingDate.match_date, null);
-assert.equal(missingDate.candidates[0].date, null);
-assert.equal(missingDate.candidates[0].team_resolution.status, 'resolved');
+assert.equal(missingDate.candidates.length, 0, 'Una programación sin fecha válida no debe emitir candidatos');
 assert.equal(missingDate.errors[0].error, 'missing_or_invalid_programming_date');
 
 const impossibleDate = extractTopDivisionProgrammingCandidates({
@@ -95,6 +94,7 @@ const impossibleDate = extractTopDivisionProgrammingCandidates({
 });
 assert.equal(impossibleDate.complete, false);
 assert.equal(impossibleDate.match_date, null);
+assert.equal(impossibleDate.candidates.length, 0, 'Una fecha imposible debe bloquear candidatos fail-closed');
 assert.equal(impossibleDate.errors[0].error, 'missing_or_invalid_programming_date');
 
 const leapDate = extractTopDivisionProgrammingCandidates({
