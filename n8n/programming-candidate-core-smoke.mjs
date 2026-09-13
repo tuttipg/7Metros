@@ -106,6 +106,36 @@ assert.equal(leapDate.complete, true);
 assert.equal(leapDate.match_date, '2028-02-29');
 assert.equal(leapDate.candidates.length, 1);
 
+const invalidTime = extractTopDivisionProgrammingCandidates({
+  text: '21 de marzo de 2026\nMayores LHC Hipotecario Seguros 24:00 M Argentinos Juniors Ferro Carril Oeste',
+  sourceUrl: SOURCE,
+  clubCatalog: CLUBS,
+});
+assert.equal(invalidTime.complete, false);
+assert.equal(invalidTime.candidates.length, 0);
+assert.equal(invalidTime.errors.length, 1);
+assert.equal(invalidTime.errors[0].error, 'invalid_programming_time');
+assert.equal(invalidTime.errors[0].time, '24:00');
+
+const invalidMinute = extractTopDivisionProgrammingCandidates({
+  text: '21 de marzo de 2026\nMayores LHD Hipotecario Seguros 18:60 F Argentinos Juniors Ferro Carril Oeste',
+  sourceUrl: SOURCE,
+  clubCatalog: CLUBS,
+});
+assert.equal(invalidMinute.complete, false);
+assert.equal(invalidMinute.candidates.length, 0);
+assert.equal(invalidMinute.errors[0].error, 'invalid_programming_time');
+assert.equal(invalidMinute.errors[0].time, '18:60');
+
+const validLateTime = extractTopDivisionProgrammingCandidates({
+  text: '21 de marzo de 2026\nMayores LHC Hipotecario Seguros 23:59 M Argentinos Juniors Ferro Carril Oeste',
+  sourceUrl: SOURCE,
+  clubCatalog: CLUBS,
+});
+assert.equal(validLateTime.complete, true);
+assert.equal(validLateTime.candidates.length, 1);
+assert.equal(validLateTime.candidates[0].time, '23:59');
+
 const branchMismatch = extractTopDivisionProgrammingCandidates({
   text: '21 de marzo de 2026\nMayores LHC Hipotecario Seguros 20:15 F Argentinos Juniors Ferro Carril Oeste',
   sourceUrl: SOURCE,
