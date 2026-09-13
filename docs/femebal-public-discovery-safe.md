@@ -79,10 +79,22 @@ El blueprint no contiene nodos HTTP, Supabase, bases de datos, webhooks, persist
 
 Opcionalmente acepta una identidad esperada (fecha, local, visitante y marcador) y falla cerrado si la planilla no corresponde al partido esperado. La salida conserva `dry_run=true`, `write_enabled=false` y `auth_used=false`.
 
+## Candidatos de partido desde programación
+
+`n8n/programming-candidate-core.mjs` consume **texto ya extraído** de un PDF oficial de programación bajo `femebal.com/wp-content/uploads/`. No descarga ni navega por sí mismo y rechaza planillas individuales de CloudFront como fuente de esta etapa.
+
+La primera versión extrae únicamente filas de las máximas categorías `LHC Hipotecario Seguros` y `LHD Hipotecario Seguros`. Conserva fecha, hora, rama, división, URL oficial y la cola textual original del cruce (`raw_matchup_and_officials`) como evidencia. Deliberadamente **no separa todavía local/visitante ni árbitros por heurísticas de espacios**, porque los nombres de clubes tienen longitud variable y hacerlo sin un catálogo/contrato de resolución produciría datos inventados o ambiguos.
+
+La salida permanece `safe=true`, `dry_run=true`, `write_enabled=false` y `auth_used=false`. Si falta una fecha válida o aparece una fila de LHC/LHD malformada, `complete=false` y se conserva el error; no se promueve el candidato como dato listo para persistir.
+
+Esta etapa cubre el tramo programación → candidatos de partido sin confundir fixture con resultado. La resolución de clubes y la unión posterior con una URL `/pdf_planillas/` quedan como pasos separados y todavía no habilitados para escritura.
+
 ## Caso de regresión oficial
 La página oficial de Fecha 1 del Apertura 2026 enlaza `Sabado-21-3.pdf`. En la página 1 del PDF figura `Mayores / LHC Hipotecario Seguros / 20:15 / M / Argentinos Juniors / Ferro Carril Oeste`. Esto valida el descubrimiento del fixture.
 
 Ese PDF de programación es `https://femebal.com/wp-content/uploads/2026/03/Sabado-21-3.pdf` y contiene múltiples partidos de la jornada; por diseño el bridge no lo envía al parser de planillas.
+
+La nueva regresión de candidatos usa exactamente esas filas oficiales de LHD 18:30 y LHC 20:15. Debe detectar ambas y conservar el cruce `Argentinos Juniors Ferro Carril Oeste` como evidencia cruda, sin asumir separadores inexistentes ni fabricar IDs de clubes.
 
 La planilla digital oficial usada como control es `https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf`, correspondiente a Argentinos Juniors 20–27 Ferro del 2026-03-21. El discovery tiene una regresión que demuestra que ese enlace puede entrar al manifiesto desde una página FEMEBAL sin ampliar la navegación a CloudFront y manteniendo `write_enabled=false` / `auth_used=false`.
 
