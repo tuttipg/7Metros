@@ -7,7 +7,8 @@ from pathlib import Path
 from urllib.parse import urljoin, urlparse
 from urllib.request import Request, HTTPRedirectHandler, build_opener
 
-ALLOWED_HOSTS={"femebal.com","www.femebal.com"}
+FEMEBAL_WEB_HOSTS={"femebal.com","www.femebal.com"}
+FEMEBAL_PLANILLA_HOST="djfhz848yeeat.cloudfront.net"
 PROGRAMACIONES_URL="https://femebal.com/programaciones/"
 UA="7Metros-public-discovery/1.0 (+read-only; official-public-pages-only)"
 MANIFEST_SCHEMA_VERSION=2
@@ -27,16 +28,23 @@ class Source: page_url:str; title:str; source_type:str; phase:str|None; round_nu
 @dataclass(frozen=True)
 class PdfSource: page_url:str; page_title:str; pdf_url:str; anchor_text:str; source_type:str; phase:str|None; round_number:int|None
 
-def _assert_allowed(url:str)->None:
+def _assert_allowed(url:str, *, allow_planilla:bool=False)->None:
     p=urlparse(url)
-    if p.scheme!="https" or p.hostname not in ALLOWED_HOSTS: raise ValueError(f"URL fuera de allowlist: {url}")
+    allowed_hosts=set(FEMEBAL_WEB_HOSTS)
+    if allow_planilla: allowed_hosts.add(FEMEBAL_PLANILLA_HOST)
+    if p.scheme!="https" or p.hostname not in allowed_hosts: raise ValueError(f"URL fuera de allowlist: {url}")
     if p.username is not None or p.password is not None: raise ValueError(f"URL con userinfo rechazada: {url}")
     try: port=p.port
     except ValueError as e: raise ValueError(f"Puerto inválido: {url}") from e
     if port not in (None,443): raise ValueError(f"Puerto fuera de allowlist: {url}")
 
 def _is_official_upload_pdf(url:str)->bool:
-    p=urlparse(url); return p.path.lower().startswith('/wp-content/uploads/') and p.path.lower().endswith('.pdf')
+    p=urlparse(url)
+    if p.scheme!="https" or p.query or p.fragment: return False
+    path=p.path.lower()
+    wordpress_pdf=p.hostname in FEMEBAL_WEB_HOSTS and path.startswith('/wp-content/uploads/')
+    planilla_pdf=p.hostname==FEMEBAL_PLANILLA_HOST and path.startswith('/pdf_planillas/')
+    return (wordpress_pdf or planilla_pdf) and path.endswith('.pdf')
 
 class SafeRedirectHandler(HTTPRedirectHandler):
     def redirect_request(self,req,fp,code,msg,headers,newurl):
@@ -73,7 +81,7 @@ def discover_pdfs(page_html:str,source:Source):
     for href,text in links_from_html(page_html):
         url=urljoin(source.page_url,href)
         if not _is_official_upload_pdf(url): continue
-        try: _assert_allowed(url)
+        try: _assert_allowed(url,allow_planilla=True)
         except ValueError: continue
         out[url]=PdfSource(source.page_url,source.title,url,text,source.source_type,source.phase,source.round_number)
     return sorted(out.values(),key=lambda x:x.pdf_url)
