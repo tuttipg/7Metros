@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { buildDiscoveryPdfWorkItems } from './discovery-manifest-bridge.mjs';
 
 const CONTROL_PDF='https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf';
+const CONTROL_PDF_EXPLICIT_443='https://djfhz848yeeat.cloudfront.net:443/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf';
 
 function manifest(pdfs, overrides = {}) {
   return {
@@ -48,6 +49,13 @@ function pdf(overrides = {}) {
   assert.equal(items.length, 1);
 }
 
+{
+  const items = buildDiscoveryPdfWorkItems(manifest([pdf(), pdf({ pdf_url: CONTROL_PDF_EXPLICIT_443 })]));
+  assert.equal(items.length, 1);
+  assert.equal(items[0].url, CONTROL_PDF);
+  assert.equal(items[0].source.pdf_url, CONTROL_PDF);
+}
+
 assert.throws(
   () => buildDiscoveryPdfWorkItems(manifest([pdf(), pdf({ source_type: 'reprogramacion', phase: null, round_number: null })])),
   /metadatos contradictorios/
@@ -61,6 +69,8 @@ for (const badUrl of [
   'https://djfhz848yeeat.cloudfront.net:444/pdf_planillas/5/c/e/x.pdf',
   'https://djfhz848yeeat.cloudfront.net/documentos/x.pdf',
   'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/x.pdf?token=abc',
+  'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/%2e%2e/x.pdf',
+  'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/../x.pdf',
 ]) {
   assert.throws(() => buildDiscoveryPdfWorkItems(manifest([pdf({ pdf_url: badUrl })])));
 }
@@ -73,4 +83,4 @@ assert.throws(() => buildDiscoveryPdfWorkItems(manifest([pdf()], { complete: fal
 assert.throws(() => buildDiscoveryPdfWorkItems(manifest([pdf()], { write_enabled: true })), /read-only/);
 assert.throws(() => buildDiscoveryPdfWorkItems(manifest([pdf()], { auth_used: true })), /autenticación/);
 
-console.log('✓ discovery-manifest bridge: host oficial de planillas + work items SAFE/fail-closed OK');
+console.log('✓ discovery-manifest bridge: canonicalización + host oficial de planillas + work items SAFE/fail-closed OK');
