@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { parsePlanillaDryRun } from './planilla-dry-run-core.mjs';
 
-const sourceUrl='https://femebal.com/wp-content/uploads/2026/03/control.pdf';
+const sourceUrl='https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf';
 const workItem={kind:'femebal_official_pdf',method:'GET',url:sourceUrl,allow_redirects:false,auth_used:false,write_enabled:false,source:{page_url:'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',page_title:'Programación Fecha 1',pdf_url:sourceUrl,anchor_text:'Sábado 21/3',source_type:'fecha_normal',phase:'apertura',round_number:1}};
 const players=`Nº Local G TAm 2 TR TAz
 1 Perznianko, Alan Nahuel - - - - -
@@ -52,7 +52,16 @@ Ferro Carril Oeste 27
 ${players}`;
 const result=parsePlanillaDryRun({workItem,extractedText,expected:{fecha:'2026-03-21',local:'Argentinos Juniors',visitante:'Ferro Carril Oeste',goles_local:20,goles_visitante:27}});
 assert.equal(result.dry_run,true); assert.equal(result.write_enabled,false); assert.equal(result.auth_used,false);
+assert.equal(result.source_url,sourceUrl);
 assert.equal(result.parsed.resumen.jugadores,32); assert.equal(result.parsed.resumen.goles,47);
 assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,method:'POST'},extractedText}),/GET/);
 assert.throws(()=>parsePlanillaDryRun({workItem,extractedText,expected:{goles_visitante:26}}),/Marcador visitante inesperado/);
-console.log('✓ planilla-dry-run: contrato SAFE y partido control validados');
+for (const badUrl of [
+  'https://evil.example/pdf_planillas/5/c/e/x.pdf',
+  'https://another.cloudfront.net/pdf_planillas/5/c/e/x.pdf',
+  'https://djfhz848yeeat.cloudfront.net/other/x.pdf',
+  'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/x.pdf?token=abc',
+]) {
+  assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,url:badUrl,source:{...workItem.source,pdf_url:badUrl}},extractedText}),/allowlist|árbol oficial|query\/fragmento/);
+}
+console.log('✓ planilla-dry-run: contrato SAFE y partido control con URL oficial real validados');
