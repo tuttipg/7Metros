@@ -1,6 +1,17 @@
 import { parseOfficialFemebalSheet } from './planilla-core.mjs';
 
-const ALLOWED_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
+const FEMEBAL_WEB_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
+const FEMEBAL_PLANILLA_HOST = 'djfhz848yeeat.cloudfront.net';
+
+function isAllowedOfficialPdfUrl(url) {
+  if (FEMEBAL_WEB_HOSTS.has(url.hostname)) {
+    return url.pathname.startsWith('/wp-content/uploads/') && url.pathname.toLowerCase().endsWith('.pdf');
+  }
+  if (url.hostname === FEMEBAL_PLANILLA_HOST) {
+    return url.pathname.startsWith('/pdf_planillas/') && url.pathname.toLowerCase().endsWith('.pdf');
+  }
+  return false;
+}
 
 export function validatePdfWorkItem(item) {
   if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('Work item PDF inválido');
@@ -13,11 +24,11 @@ export function validatePdfWorkItem(item) {
   let url;
   try { url = new URL(String(item.url ?? '')); } catch { throw new Error('URL de planilla inválida'); }
   if (url.protocol !== 'https:') throw new Error('La planilla debe usar HTTPS');
-  if (!ALLOWED_HOSTS.has(url.hostname)) throw new Error(`Host de planilla fuera de allowlist: ${url.hostname}`);
+  if (!FEMEBAL_WEB_HOSTS.has(url.hostname) && url.hostname !== FEMEBAL_PLANILLA_HOST) throw new Error(`Host de planilla fuera de allowlist: ${url.hostname}`);
   if (url.username || url.password) throw new Error('URL de planilla con userinfo rechazada');
   if (url.port && url.port !== '443') throw new Error(`Puerto de planilla fuera de allowlist: ${url.port}`);
   if (url.search || url.hash) throw new Error('URL de planilla con query/fragmento rechazada');
-  if (!url.pathname.startsWith('/wp-content/uploads/') || !url.pathname.toLowerCase().endsWith('.pdf')) throw new Error('La planilla debe provenir del árbol oficial de uploads FEMEBAL');
+  if (!isAllowedOfficialPdfUrl(url)) throw new Error('La planilla debe provenir de un árbol oficial FEMEBAL permitido');
   if (!item.source || item.source.pdf_url !== item.url) throw new Error('La fuente del work item no coincide con su URL');
   return url.toString();
 }
