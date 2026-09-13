@@ -1,6 +1,6 @@
 import unittest
 from urllib.request import Request
-from tools.femebal_public_discovery import discover_pages, discover_pdfs, build_manifest, Source, _assert_allowed, _is_official_upload_pdf, SafeRedirectHandler
+from tools.femebal_public_discovery import discover_pages, discover_pdfs, build_manifest, Source, _assert_allowed, _canonical_official_page_url, _is_official_upload_pdf, SafeRedirectHandler
 
 CONTROL_PLANILLA='https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf'
 CONTROL_PLANILLA_EXPLICIT_443='https://djfhz848yeeat.cloudfront.net:443/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf'
@@ -29,6 +29,23 @@ class T(unittest.TestCase):
         normal=[x for x in rows if x.source_type=='fecha_normal'][0]
         self.assertEqual((normal.phase,normal.round_number),('apertura',1))
         self.assertEqual(len([x for x in rows if x.source_type=='reprogramacion']),1)
+    def test_page_url_canonicalization_matches_node_semantics(self):
+        self.assertEqual(
+            _canonical_official_page_url('https://FEMEBAL.com:443/programaciones/?fase=apertura'),
+            'https://femebal.com/programaciones/?fase=apertura',
+        )
+        self.assertEqual(_canonical_official_page_url('https://femebal.com'), 'https://femebal.com/')
+        with self.assertRaises(ValueError):
+            _canonical_official_page_url('https://femebal.com/programaciones/#fecha-1')
+
+        duplicate_index='''<html><body>
+<a href="https://femebal.com:443/programacion-fecha-1-torneo-metropolitano-apertura-2026/">Programación Fecha 1 – Torneo Metropolitano Apertura 2026</a>
+<a href="https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/">Programación Fecha 1 – Torneo Metropolitano Apertura 2026</a>
+<a href="https://femebal.com/programacion-fecha-2-torneo-metropolitano-apertura-2026/#fixture">Programación Fecha 2 – Torneo Metropolitano Apertura 2026</a>
+</body></html>'''
+        rows=discover_pages(duplicate_index)
+        self.assertEqual(len(rows),1)
+        self.assertEqual(rows[0].page_url,'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/')
     def test_pdf_discovery_allowlist_and_provenance(self):
         s=Source('https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/','Programación Fecha 1 – Torneo Metropolitano Apertura 2026','fecha_normal','apertura',1)
         rows=discover_pdfs(PAGE,s); self.assertEqual(len(rows),3)
@@ -95,9 +112,9 @@ class T(unittest.TestCase):
                 with self.assertRaises(ValueError): _assert_allowed(url)
         _assert_allowed('https://femebal.com/x'); _assert_allowed('https://www.femebal.com:443/x')
         _assert_allowed(CONTROL_PLANILLA,allow_planilla=True)
-    def test_redirect_handler_blocks_external_and_planilla_destination(self):
+    def test_redirect_handler_blocks_external_planilla_and_fragment_destinations(self):
         h=SafeRedirectHandler(); req=Request('https://femebal.com/programaciones/')
-        for target in ['https://evil.example/collect',CONTROL_PLANILLA]:
+        for target in ['https://evil.example/collect',CONTROL_PLANILLA,'https://femebal.com/programaciones/#fecha-1']:
             with self.subTest(target=target):
                 with self.assertRaises(ValueError): h.redirect_request(req,None,302,'Found',{},target)
 
