@@ -12,6 +12,9 @@
 --    - goles > lanzamientos cuando ambos no son null;
 --    - valores negativos de goles/lanzamientos.
 -- 3) conservar SECURITY DEFINER, search_path fijo y EXECUTE sólo para service_role.
+-- 4) el reporte scoped debe ser fail-closed ante una participación cuyo partido no existe:
+--    no puede depender de p.temporada_id para decidir si cuenta un huérfano de partido,
+--    porque precisamente p es NULL en ese caso.
 
 -- Fragmentos que deberán integrarse en la próxima versión de public.integrity_report_7metros:
 
@@ -23,13 +26,18 @@
 --   and p.tipo_fuente not in ('fecha_normal','reprogramacion','planilla','manual');
 
 -- participaciones huérfanas / fuera de scope
+-- IMPORTANTE: p.id is null va fuera del filtro temporal para no ocultar corrupción
+-- cuando integrity_report_7metros se ejecuta con p_temporada_id no nulo.
 -- select count(*) into v_invalid_participation_refs
 -- from public.participaciones pa
 -- left join public.partidos p on p.id=pa.partido_id
 -- left join public.jugadores j on j.id=pa.jugador_id
 -- left join public.equipos e on e.id=pa.equipo_id
--- where (p_temporada_id is null or p.temporada_id=p_temporada_id)
---   and (p.id is null or j.id is null or e.id is null);
+-- where p.id is null
+--    or (
+--      (p_temporada_id is null or p.temporada_id=p_temporada_id)
+--      and (j.id is null or e.id is null)
+--    );
 
 -- select count(*) into v_participation_team_mismatch
 -- from public.participaciones pa
