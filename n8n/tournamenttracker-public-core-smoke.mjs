@@ -25,6 +25,8 @@ for (const unsafe of [
   'https://user:pass@www.femebal.com/tournament-tracker/?noAdv=0',
   'https://www.femebal.com/tournament-tracker/?token=secret',
   'https://www.femebal.com/tournament-tracker/?noAdv=2',
+  'https://www.femebal.com/tournament-tracker/?noAdv=0&noAdv=1',
+  'https://www.femebal.com/tournament-tracker/?noAdv=0&noAdv=0',
   'https://www.femebal.com/tournament-tracker/#x',
   'https://www.femebal.com/otra-ruta/?noAdv=0',
 ]) {
