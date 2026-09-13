@@ -32,13 +32,17 @@ export function canonicalizeFemebalTournamentTrackerUrl(value) {
 
 export function canonicalizeTournamentTrackerStaticAssetUrl(value, baseUrl = FEMEBAL_TOURNAMENTTRACKER_URL) {
   const base = canonicalizeFemebalTournamentTrackerUrl(baseUrl);
-  const url = new URL(String(value ?? ''), base);
+  const rawValue = String(value ?? '');
+  const url = new URL(rawValue, base);
 
   if (url.protocol !== 'https:') throw new Error('Asset TournamentTracker requiere HTTPS');
   if (!ALLOWED_HOSTS.has(url.hostname.toLowerCase())) throw new Error('Host de asset TournamentTracker no permitido');
   if (url.username || url.password) throw new Error('Asset TournamentTracker no admite credenciales en URL');
   if (url.hash) throw new Error('Asset TournamentTracker no admite fragments');
   if (url.search) throw new Error('Asset TournamentTracker no admite query strings');
+  if (/%[0-9a-f]{2}/i.test(url.pathname) || /%[0-9a-f]{2}/i.test(rawValue)) {
+    throw new Error('Asset TournamentTracker no admite path percent-encoded');
+  }
 
   const lowerPath = url.pathname.toLowerCase();
   const extension = [...STATIC_ASSET_EXTENSIONS].find((ext) => lowerPath.endsWith(ext));
