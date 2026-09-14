@@ -16,38 +16,42 @@ function parseContentLength(value) {
   return n;
 }
 
+function parsePdfContentType(value) {
+  const raw = String(value ?? '').trim().toLowerCase();
+  const mediaType = raw.split(';', 1)[0].trim();
+  if (mediaType !== 'application/pdf') throw new Error(`Content-Type inesperado: ${raw || 'ausente'}`);
+  return raw;
+}
+
 async function readBodyBounded(response, maxBytes) {
   const reader = response.body?.getReader?.();
-  if (reader) {
-    const chunks = [];
-    let total = 0;
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (!(value instanceof Uint8Array)) throw new Error('Chunk HTTP binario inválido');
-        total += value.byteLength;
-        if (total > maxBytes) {
-          await reader.cancel?.('PDF exceeds SAFE byte limit');
-          throw new Error(`PDF excede límite real de ${maxBytes} bytes`);
-        }
-        chunks.push(value);
-      }
-    } finally {
-      reader.releaseLock?.();
-    }
-    const bytes = new Uint8Array(total);
-    let offset = 0;
-    for (const chunk of chunks) {
-      bytes.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
-    return bytes;
+  if (!reader) {
+    throw new Error('Respuesta sin body streaming legible; SAFE requiere streaming acotado');
   }
 
-  if (typeof response.arrayBuffer !== 'function') throw new Error('Respuesta sin body legible ni arrayBuffer()');
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength > maxBytes) throw new Error(`PDF excede límite real de ${maxBytes} bytes`);
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!(value instanceof Uint8Array)) throw new Error('Chunk HTTP binario inválido');
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel?.('PDF exceeds SAFE byte limit');
+        throw new Error(`PDF excede límite real de ${maxBytes} bytes`);
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock?.();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
   return bytes;
 }
 
@@ -62,8 +66,7 @@ export async function fetchOfficialFemebalPdf(workItem, { fetchImpl = globalThis
   const status = Number(response.status);
   if (status >= 300 && status < 400) throw new Error(`Redirect FEMEBAL rechazado: HTTP ${status}`);
   if (status !== 200) throw new Error(`Descarga FEMEBAL falló: HTTP ${status}`);
-  const contentType = String(response.headers?.get?.('content-type') ?? '').toLowerCase();
-  if (!contentType.startsWith('application/pdf')) throw new Error(`Content-Type inesperado: ${contentType || 'ausente'}`);
+  const contentType = parsePdfContentType(response.headers?.get?.('content-type'));
   const declaredLength = parseContentLength(response.headers?.get?.('content-length'));
   if (declaredLength !== null && declaredLength > maxBytes) throw new Error(`PDF excede límite declarado de ${maxBytes} bytes`);
   const bytes = await readBodyBounded(response, maxBytes);
