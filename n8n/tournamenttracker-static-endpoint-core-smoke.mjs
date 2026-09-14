@@ -35,6 +35,8 @@ const body = `
   const relative = "/api/matches";
   const concatenatedAfter = "https://www.femebal.com/api/" + matchId;
   const concatenatedBefore = apiBase + "https://www.femebal.com/v1/";
+  const encodedPath = "https://www.femebal.com/%61dmin/matches";
+  const nonstandardPort = "https://www.femebal.com:8443/api/matches";
   const insecure = "http://www.femebal.com/api/matches";
 `;
 const validatedAsset = classifyBody(body);
@@ -58,6 +60,8 @@ assert.equal(extracted.constraints.templateEvaluationAllowed, false);
 assert.equal(extracted.constraints.javascriptExecutionAllowed, false);
 assert.equal(extracted.constraints.automaticProbingAllowed, false);
 assert.equal(extracted.constraints.sourceBodyIntegrityRequired, true);
+assert.equal(extracted.constraints.percentEncodedPathsAllowed, false);
+assert.equal(extracted.constraints.nonstandardHttpsPortsAllowed, false);
 
 assert.deepEqual(extracted.candidates, [
   {
@@ -75,7 +79,7 @@ assert.deepEqual(extracted.candidates, [
     requiresPolicyReview: true,
   },
 ]);
-assert.equal(extracted.rejectedCount, 7);
+assert.equal(extracted.rejectedCount, 9);
 assert.equal(extracted.candidates.some((item) => /secret|pass|token=/i.test(item.url)), false);
 assert.equal(extracted.candidates.some((item) => item.url.endsWith('/api/') || item.url.endsWith('/v1/')), false);
 
@@ -86,6 +90,8 @@ assert.equal(policy.automaticProbingAllowed, false);
 assert.equal(policy.writesAllowed, false);
 assert.equal(policy.authAllowed, false);
 assert.equal(policy.constraints.manualReviewRequiredBeforeAnyGet, true);
+assert.equal(policy.constraints.percentEncodedPathsBlocked, true);
+assert.equal(policy.constraints.nonstandardHttpsPortsBlocked, true);
 assert.deepEqual(policy.candidates, [
   {
     url: 'https://public.example.org/v1/fixtures',
@@ -114,6 +120,33 @@ forgedScope.candidates[0].hostScope = 'femebal_same_organization';
 const forgedScopePolicy = classifyTournamentTrackerCandidatePolicy(forgedScope);
 assert.equal(forgedScopePolicy.candidates[0].state, 'external_untrusted');
 assert.equal(forgedScopePolicy.candidates[0].anonymousGetReviewable, false);
+
+const forgedAmbiguous = structuredClone(extracted);
+forgedAmbiguous.candidates.push(
+  {
+    url: 'https://www.femebal.com/%61dmin/matches',
+    hostScope: 'femebal_same_organization',
+    evidence: 'explicit_https_string_literal',
+    probeAllowed: false,
+    requiresPolicyReview: true,
+  },
+  {
+    url: 'https://www.femebal.com:8443/api/matches',
+    hostScope: 'femebal_same_organization',
+    evidence: 'explicit_https_string_literal',
+    probeAllowed: false,
+    requiresPolicyReview: true,
+  },
+);
+const forgedAmbiguousPolicy = classifyTournamentTrackerCandidatePolicy(forgedAmbiguous);
+const encodedPolicyCandidate = forgedAmbiguousPolicy.candidates.at(-2);
+const portPolicyCandidate = forgedAmbiguousPolicy.candidates.at(-1);
+assert.equal(encodedPolicyCandidate.state, 'rejected_on_policy_revalidation');
+assert.equal(encodedPolicyCandidate.reason, 'percent_encoded_path_not_allowed');
+assert.equal(encodedPolicyCandidate.anonymousGetReviewable, false);
+assert.equal(portPolicyCandidate.state, 'rejected_on_policy_revalidation');
+assert.equal(portPolicyCandidate.reason, 'nonstandard_https_port');
+assert.equal(portPolicyCandidate.anonymousGetReviewable, false);
 
 const policyBody = `
   const admin = "https://www.femebal.com/admin/matches";
