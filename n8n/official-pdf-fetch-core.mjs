@@ -27,11 +27,17 @@ function parsePdfContentType(value) {
   return raw;
 }
 
-async function readBodyBounded(response, maxBytes) {
+async function readBodyBounded(response, maxBytes, signal) {
   const reader = response.body?.getReader?.();
   if (!reader) {
     throw new Error('Respuesta sin body streaming legible; SAFE requiere streaming acotado');
   }
+
+  const cancelReaderOnAbort = () => {
+    Promise.resolve(reader.cancel?.('PDF fetch aborted by SAFE timeout')).catch(() => {});
+  };
+  if (signal?.aborted) cancelReaderOnAbort();
+  else signal?.addEventListener?.('abort', cancelReaderOnAbort, { once: true });
 
   const chunks = [];
   let total = 0;
@@ -48,6 +54,7 @@ async function readBodyBounded(response, maxBytes) {
       chunks.push(value);
     }
   } finally {
+    signal?.removeEventListener?.('abort', cancelReaderOnAbort);
     reader.releaseLock?.();
   }
   const bytes = new Uint8Array(total);
@@ -90,7 +97,7 @@ export async function fetchOfficialFemebalPdf(workItem, { fetchImpl = globalThis
     const contentType = parsePdfContentType(response.headers?.get?.('content-type'));
     const declaredLength = parseContentLength(response.headers?.get?.('content-length'));
     if (declaredLength !== null && declaredLength > maxBytes) throw new Error(`PDF excede límite declarado de ${maxBytes} bytes`);
-    const bytes = await readBodyBounded(response, maxBytes);
+    const bytes = await readBodyBounded(response, maxBytes, controller.signal);
     if (declaredLength !== null && declaredLength !== bytes.byteLength) throw new Error(`Content-Length no coincide: declarado=${declaredLength} real=${bytes.byteLength}`);
     assertPdfMagic(bytes);
     const sha256 = createHash('sha256').update(bytes).digest('hex');
