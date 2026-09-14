@@ -30,14 +30,25 @@ class Track:
     detection: Detection
     age: int = 1
     missed: int = 0
+    velocity_x: float = 0.0
+    velocity_y: float = 0.0
+
+    @property
+    def predicted_cx(self) -> float:
+        return self.detection.cx + self.velocity_x * (self.missed + 1)
+
+    @property
+    def predicted_cy(self) -> float:
+        return self.detection.cy + self.velocity_y * (self.missed + 1)
 
 
 class CentroidTracker:
-    """Small deterministic baseline tracker.
+    """Small deterministic motion-aware baseline tracker.
 
-    It is intentionally dependency-free. It is not intended to replace
-    ByteTrack/BoT-SORT; it provides a stable 7Metros output contract and a
-    testable fallback while stronger trackers are integrated.
+    Matching uses a constant-velocity prediction learned from the previous
+    observation. It remains intentionally dependency-free and is not intended
+    to replace ByteTrack/BoT-SORT; it provides a stable, testable fallback
+    while stronger trackers are integrated.
     """
 
     def __init__(self, max_distance: float = 80.0, max_missed: int = 8) -> None:
@@ -60,8 +71,8 @@ class CentroidTracker:
         for track_id, track in self._tracks.items():
             for idx, detection in enumerate(detections):
                 distance = hypot(
-                    track.detection.cx - detection.cx,
-                    track.detection.cy - detection.cy,
+                    track.predicted_cx - detection.cx,
+                    track.predicted_cy - detection.cy,
                 )
                 if distance <= self.max_distance:
                     candidates.append((distance, track_id, idx))
@@ -70,7 +81,11 @@ class CentroidTracker:
             if track_id not in unmatched_track_ids or idx not in unmatched_detection_indexes:
                 continue
             track = self._tracks[track_id]
+            previous_cx = track.detection.cx
+            previous_cy = track.detection.cy
             track.detection = detections[idx]
+            track.velocity_x = track.detection.cx - previous_cx
+            track.velocity_y = track.detection.cy - previous_cy
             track.age += 1
             track.missed = 0
             unmatched_track_ids.remove(track_id)
@@ -95,6 +110,8 @@ class CentroidTracker:
                 detection=t.detection,
                 age=t.age,
                 missed=t.missed,
+                velocity_x=t.velocity_x,
+                velocity_y=t.velocity_y,
             )
             for t in sorted(self._tracks.values(), key=lambda item: item.track_id)
             if t.missed == 0
