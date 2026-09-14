@@ -105,7 +105,11 @@ function prepareDataset(dataset) {
     partido_id: Number(row.partido_id),
     jugador_id: Number(row.jugador_id),
     equipo_id: Number(row.equipo_id)
-  })).filter(row => Number.isFinite(row.jugador_id));
+  })).filter(row =>
+    Number.isFinite(row.jugador_id) &&
+    Number.isFinite(row.partido_id) &&
+    Number.isFinite(row.equipo_id)
+  );
 
   const teamById = new Map(state.teams.map(row => [row.id, row]));
   const clubById = new Map(state.clubs.map(row => [row.id, row]));
@@ -147,10 +151,19 @@ function prepareDataset(dataset) {
     };
   }).filter(Boolean);
 
+  const playerIds = new Set(state.players.map(row => row.id));
+  const matchById = new Map(state.matches.map(row => [row.id, row]));
+  state.participations = state.participations.filter(row => {
+    if (!playerIds.has(row.jugador_id) || !teamById.has(row.equipo_id)) return false;
+    const match = matchById.get(row.partido_id);
+    if (!match) return false;
+    return row.equipo_id === match.homeTeamId || row.equipo_id === match.awayTeamId;
+  });
+
   state.index.clubById = new Map(state.clubs.map(row => [row.id, row]));
   state.index.teamById = new Map(state.teams.map(row => [row.id, row]));
   state.index.playerById = new Map(state.players.map(row => [row.id, row]));
-  state.index.matchById = new Map(state.matches.map(row => [row.id, row]));
+  state.index.matchById = matchById;
   state.index.rosterByPlayer = new Map();
   state.index.rosterByTeam = new Map();
   state.index.participationsByPlayer = new Map();
@@ -162,7 +175,7 @@ function prepareDataset(dataset) {
   });
   state.participations.forEach(row => {
     pushMapList(state.index.participationsByPlayer, row.jugador_id, row);
-    if (Number.isFinite(row.partido_id)) pushMapList(state.index.participationsByMatch, row.partido_id, row);
+    pushMapList(state.index.participationsByMatch, row.partido_id, row);
   });
 }
 
@@ -307,7 +320,7 @@ export function getTopDivisionMatches(branch = null) {
 
 function participationStats(playerId, allowedTeamIds = filteredTeamIds()) {
   const rows = (state.index.participationsByPlayer.get(Number(playerId)) || [])
-    .filter(row => !row.equipo_id || allowedTeamIds.has(Number(row.equipo_id)));
+    .filter(row => allowedTeamIds.has(Number(row.equipo_id)));
 
   const matchIds = new Set(rows.map(row => Number(row.partido_id)).filter(Number.isFinite));
   const goals = rows.reduce((sum, row) => sum + toNumber(field(row, ['goles'], 0)), 0);
