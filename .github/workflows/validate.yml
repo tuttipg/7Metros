@@ -83,6 +83,8 @@ jobs:
           node --check n8n/tournamenttracker-public-core-smoke.mjs
           node --check n8n/tournamenttracker-static-endpoint-core.mjs
           node --check n8n/tournamenttracker-static-endpoint-core-smoke.mjs
+          node --check n8n/tournamenttracker-indexed-route-core.mjs
+          node --check n8n/tournamenttracker-indexed-route-core-smoke.mjs
 
       - name: Check Python syntax
         run: python -m py_compile validate_site.py validate_backend_contract.py tools/femebal_public_discovery.py tests/test_femebal_public_discovery.py
@@ -170,6 +172,9 @@ jobs:
 
       - name: FEMEBAL TournamentTracker static endpoint candidate SAFE smoke test
         run: node n8n/tournamenttracker-static-endpoint-core-smoke.mjs
+
+      - name: FEMEBAL TournamentTracker indexed route SAFE smoke test
+        run: node n8n/tournamenttracker-indexed-route-core-smoke.mjs
 
       - name: FEMEBAL public discovery unit tests
         run: python -m unittest -v tests.test_femebal_public_discovery
