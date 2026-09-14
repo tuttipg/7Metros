@@ -73,6 +73,17 @@ const SENSITIVE_OR_MUTATING_PATH_SEGMENTS = new Set([
   'upload',
   'write',
 ]);
+const SENSITIVE_PATH_PREFIXES = new Set([
+  'admin',
+  'auth',
+  'login',
+  'logout',
+  'oauth',
+  'password',
+  'register',
+  'session',
+  'token',
+]);
 const STATIC_RESOURCE_EXTENSION = /\.(?:css|gif|ico|jpe?g|js|json|map|mjs|pdf|png|svg|webp|woff2?|ttf|eot)$/i;
 const MAX_EXPLICIT_URL_LENGTH = 2048;
 const AMBIGUOUS_RAW_URL_CHARS = /[\\\x00-\x1f\x7f]/;
@@ -125,6 +136,7 @@ function isSensitiveOrMutatingPathSegment(segment) {
   const normalized = String(segment ?? '').trim().toLowerCase();
   if (!normalized) return false;
   if (SENSITIVE_OR_MUTATING_PATH_SEGMENTS.has(normalized)) return true;
+  if ([...SENSITIVE_PATH_PREFIXES].some((token) => normalized.startsWith(token))) return true;
   return [...MUTATING_QUERY_VALUES].some((operation) => normalized.startsWith(operation));
 }
 
@@ -377,6 +389,7 @@ export function classifyTournamentTrackerCandidatePolicy(extractionResult) {
       onlyExplicitHttpsLiterals: true,
       femebalSameOrganizationOnlyForReviewableGet: true,
       sensitiveOrMutatingPathsBlocked: true,
+      compoundSensitivePathPrefixesBlocked: true,
       compoundMutatingPathPrefixesBlocked: true,
       sensitiveOrMutatingQueriesBlocked: true,
       compoundSensitiveQueryKeysBlocked: true,
