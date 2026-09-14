@@ -65,6 +65,12 @@ const STATIC_RESOURCE_EXTENSION = /\.(?:css|gif|ico|jpe?g|js|json|map|mjs|pdf|pn
 const MAX_EXPLICIT_URL_LENGTH = 2048;
 const AMBIGUOUS_RAW_URL_CHARS = /[\\\x00-\x1f\x7f]/;
 
+function isMutatingOperationValue(value) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (!normalized) return false;
+  return [...MUTATING_QUERY_VALUES].some((operation) => normalized.startsWith(operation));
+}
+
 function classifyExplicitHttpsLiteral(rawValue) {
   const raw = String(rawValue ?? '');
   if (!raw || raw.length > MAX_EXPLICIT_URL_LENGTH) return { accepted: false, reason: 'invalid_length' };
@@ -94,7 +100,7 @@ function classifyExplicitHttpsLiteral(rawValue) {
     if (MUTATING_QUERY_KEYS.has(key)) {
       return { accepted: false, reason: 'mutating_query_key' };
     }
-    if (OPERATION_QUERY_KEYS.has(key) && MUTATING_QUERY_VALUES.has(queryValue)) {
+    if (OPERATION_QUERY_KEYS.has(key) && isMutatingOperationValue(queryValue)) {
       return { accepted: false, reason: 'mutating_query_operation' };
     }
   }
