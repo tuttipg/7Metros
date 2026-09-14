@@ -18,6 +18,7 @@ def frame_payload(*, frame_index: int, timestamp_ms: float, width: int, height: 
             "confidence": round(float(det.confidence), 6),
             "bbox_xyxy": [round(float(det.x1), 3), round(float(det.y1), 3), round(float(det.x2), 3), round(float(det.y2), 3)],
             "center_xy": [round(det.cx, 3), round(det.cy, 3)],
+            "velocity_xy": [round(track.velocity_x, 3), round(track.velocity_y, 3)],
             "team": det.team,
         })
     return {
