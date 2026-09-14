@@ -15,6 +15,28 @@ const SENSITIVE_QUERY_KEYS = new Set([
 ]);
 
 const FEMEBAL_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
+const SENSITIVE_OR_MUTATING_PATH_SEGMENTS = new Set([
+  'admin',
+  'auth',
+  'create',
+  'delete',
+  'import',
+  'insert',
+  'login',
+  'logout',
+  'mutate',
+  'oauth',
+  'password',
+  'register',
+  'remove',
+  'reset',
+  'session',
+  'token',
+  'update',
+  'upload',
+  'write',
+]);
+const STATIC_RESOURCE_EXTENSION = /\.(?:css|gif|ico|jpe?g|js|json|map|mjs|pdf|png|svg|webp|woff2?|ttf|eot)$/i;
 const MAX_EXPLICIT_URL_LENGTH = 2048;
 
 function classifyExplicitHttpsLiteral(rawValue) {
@@ -70,6 +92,91 @@ function isConcatenatedLiteral(text, matchIndex, matchLength) {
   const before = text.slice(0, matchIndex).trimEnd();
   const after = text.slice(matchIndex + matchLength).trimStart();
   return before.endsWith('+') || after.startsWith('+');
+}
+
+function extractionResultIsPolicyEligible(extractionResult) {
+  return extractionResult
+    && typeof extractionResult === 'object'
+    && extractionResult.safe === true
+    && extractionResult.dry_run === true
+    && extractionResult.sourceValidated === true
+    && extractionResult.state === 'static_candidates_only'
+    && extractionResult.probeAllowed === false
+    && extractionResult.executionAllowed === false
+    && extractionResult.constraints?.automaticProbingAllowed === false
+    && extractionResult.constraints?.sourceBodyIntegrityRequired === true
+    && Array.isArray(extractionResult.candidates);
+}
+
+function classifyCandidateForPolicy(candidate) {
+  if (!candidate || typeof candidate !== 'object') {
+    return { state: 'invalid_candidate', probeAllowed: false, anonymousGetReviewable: false };
+  }
+  if (candidate.evidence !== 'explicit_https_string_literal'
+      || candidate.probeAllowed !== false
+      || candidate.requiresPolicyReview !== true) {
+    return { state: 'invalid_candidate_contract', probeAllowed: false, anonymousGetReviewable: false };
+  }
+
+  const classified = classifyExplicitHttpsLiteral(candidate.url);
+  if (!classified.accepted) {
+    return {
+      url: String(candidate.url ?? ''),
+      state: 'rejected_on_policy_revalidation',
+      reason: classified.reason,
+      probeAllowed: false,
+      anonymousGetReviewable: false,
+    };
+  }
+
+  if (classified.hostScope !== 'femebal_same_organization') {
+    return {
+      url: classified.url,
+      state: 'external_untrusted',
+      hostScope: classified.hostScope,
+      probeAllowed: false,
+      anonymousGetReviewable: false,
+      manualReviewRequired: true,
+    };
+  }
+
+  const url = new URL(classified.url);
+  const pathSegments = url.pathname.toLowerCase().split('/').filter(Boolean);
+  const sensitiveSegment = pathSegments.find((segment) => SENSITIVE_OR_MUTATING_PATH_SEGMENTS.has(segment));
+  if (sensitiveSegment) {
+    return {
+      url: classified.url,
+      state: 'blocked_sensitive_or_mutating_path',
+      hostScope: classified.hostScope,
+      reason: `blocked_path_segment:${sensitiveSegment}`,
+      probeAllowed: false,
+      anonymousGetReviewable: false,
+      manualReviewRequired: true,
+    };
+  }
+
+  if (STATIC_RESOURCE_EXTENSION.test(url.pathname)) {
+    return {
+      url: classified.url,
+      state: 'static_resource_not_endpoint',
+      hostScope: classified.hostScope,
+      probeAllowed: false,
+      anonymousGetReviewable: false,
+      manualReviewRequired: true,
+    };
+  }
+
+  return {
+    url: classified.url,
+    state: 'femebal_public_get_reviewable',
+    hostScope: classified.hostScope,
+    probeAllowed: false,
+    anonymousGetReviewable: true,
+    manualReviewRequired: true,
+    allowedMethodIfReviewed: 'GET',
+    authAllowed: false,
+    writesAllowed: false,
+  };
 }
 
 export function extractTournamentTrackerExplicitHttpsCandidates({ body, assetClassification } = {}) {
@@ -132,6 +239,40 @@ export function extractTournamentTrackerExplicitHttpsCandidates({ body, assetCla
       javascriptExecutionAllowed: false,
       automaticProbingAllowed: false,
       sourceBodyIntegrityRequired: true,
+    },
+  };
+}
+
+export function classifyTournamentTrackerCandidatePolicy(extractionResult) {
+  if (!extractionResultIsPolicyEligible(extractionResult)) {
+    return {
+      safe: true,
+      dry_run: true,
+      state: 'source_extraction_not_policy_eligible',
+      candidates: [],
+      probeAllowed: false,
+      automaticProbingAllowed: false,
+      writesAllowed: false,
+      authAllowed: false,
+    };
+  }
+
+  return {
+    safe: true,
+    dry_run: true,
+    state: 'policy_classified_candidates',
+    candidates: extractionResult.candidates.map(classifyCandidateForPolicy),
+    probeAllowed: false,
+    automaticProbingAllowed: false,
+    writesAllowed: false,
+    authAllowed: false,
+    constraints: {
+      onlyExplicitHttpsLiterals: true,
+      femebalSameOrganizationOnlyForReviewableGet: true,
+      sensitiveOrMutatingPathsBlocked: true,
+      externalHostsBlocked: true,
+      staticResourcesBlockedAsEndpoints: true,
+      manualReviewRequiredBeforeAnyGet: true,
     },
   };
 }
