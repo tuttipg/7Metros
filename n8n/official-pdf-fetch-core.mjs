@@ -12,9 +12,11 @@ function assertPdfMagic(bytes) {
 }
 
 function parseContentLength(value) {
-  if (value === null || value === undefined || value === '') return null;
-  const n = Number(value);
-  if (!Number.isInteger(n) || n < 0) throw new Error('Content-Length inválido');
+  if (value === null || value === undefined) return null;
+  const raw = String(value).trim();
+  if (!/^\d+$/.test(raw)) throw new Error('Content-Length inválido');
+  const n = Number(raw);
+  if (!Number.isSafeInteger(n)) throw new Error('Content-Length inválido');
   return n;
 }
 
