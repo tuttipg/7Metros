@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 export const FEMEBAL_TOURNAMENTTRACKER_URL = 'https://www.femebal.com/tournament-tracker/?noAdv=0';
 
 const ALLOWED_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
@@ -172,6 +174,7 @@ export function classifyTournamentTrackerStaticAssetResponse({
   const status = Number.isFinite(Number(statusCode)) ? Number(statusCode) : null;
   const text = String(body ?? '');
   const bodyBytes = new TextEncoder().encode(text).byteLength;
+  const bodySha256 = createHash('sha256').update(text, 'utf8').digest('hex');
   const byteLimit = Number.isSafeInteger(maxBytes) && maxBytes > 0
     ? maxBytes
     : TOURNAMENTTRACKER_MAX_STATIC_ASSET_BYTES;
@@ -264,6 +267,7 @@ export function classifyTournamentTrackerStaticAssetResponse({
     canonicalFinalUrl,
     contentType: normalizedContentType,
     bodyBytes,
+    bodySha256,
     maxBytes: byteLimit,
     executionAllowed: false,
     analysisMode: 'static_text_only',
