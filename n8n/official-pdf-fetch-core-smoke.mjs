@@ -55,9 +55,25 @@ let timeoutSignal=null;
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{timeoutMs:100,fetchImpl:async(_url,options)=>{timeoutSignal=options.signal;return await new Promise(()=>{});}}),/timeout SAFE/);
 assert.equal(timeoutSignal?.aborted,true, 'El timeout SAFE debe abortar la solicitud subyacente');
 
+let hangingCancelled=false;
+let hangingReleased=false;
+const hangingResponse={
+  status:200,
+  headers:headers({'content-type':'application/pdf'}),
+  body:{getReader(){return {
+    async read(){return await new Promise(()=>{});},
+    async cancel(){hangingCancelled=true;},
+    releaseLock(){hangingReleased=true;},
+  };}},
+};
+await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{timeoutMs:100,fetchImpl:async()=>hangingResponse}),/timeout SAFE/);
+await new Promise(resolve=>setTimeout(resolve,0));
+assert.equal(hangingCancelled,true, 'El timeout SAFE debe cancelar explícitamente el reader del body');
+assert.equal(hangingReleased,false, 'Un read() artificial que nunca resuelve no puede liberar el lock antes de que termine la operación');
+
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({status:302})}),/Redirect/);
-await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentType:'text\/html'})}),/Content-Type/);
-await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentType:'application\/pdfx'})}),/Content-Type/);
+await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentType:'text/html'})}),/Content-Type/);
+await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentType:'application/pdfx'})}),/Content-Type/);
 const withPdfParameter=await fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentType:'application/pdf; charset=binary'})});
 assert.equal(withPdfParameter.sha256,out.sha256);
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentLength:pdfBytes.byteLength+1})}),/Content-Length no coincide/);
@@ -90,4 +106,4 @@ const ambiguousBackslash='https://djfhz848yeeat.cloudfront.net\\pdf_planillas/5/
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem({url:ambiguousBackslash,source:{pdf_url:ambiguousBackslash}}),{fetchImpl:async()=>{networkCalled=true;return fakeResponse();}}),/ambiguos\/normalizables/);
 assert.equal(networkCalled,false, 'Una URL raw ambigua debe bloquearse antes de cualquier acceso de red');
 
-console.log('✓ official PDF fetch core SAFE/fail-closed + host control real + strict PDF media type + strict decimal Content-Length + bounded streaming-only body + immutable 12 MiB ceiling + abortable 30s timeout ceiling + SHA-256 provenance + raw URL ambiguity rejection OK');
+console.log('✓ official PDF fetch core SAFE/fail-closed + host control real + strict PDF media type + strict decimal Content-Length + bounded streaming-only body + immutable 12 MiB ceiling + abortable 30s timeout with reader cancellation + SHA-256 provenance + raw URL ambiguity rejection OK');
