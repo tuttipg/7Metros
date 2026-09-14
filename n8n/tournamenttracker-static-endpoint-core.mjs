@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 const SENSITIVE_QUERY_KEYS = new Set([
   'access_token',
   'apikey',
@@ -48,13 +50,25 @@ function classifyExplicitHttpsLiteral(rawValue) {
   };
 }
 
+function bodyMatchesValidatedAsset(text, assetClassification) {
+  if (!assetClassification || typeof assetClassification !== 'object') return false;
+  const bodyBytes = new TextEncoder().encode(text).byteLength;
+  const bodySha256 = createHash('sha256').update(text, 'utf8').digest('hex');
+  const expectedSha256 = String(assetClassification.bodySha256 ?? '').toLowerCase();
+
+  return assetClassification.state === 'public_static_javascript'
+    && assetClassification.analyzableStaticJavascript === true
+    && assetClassification.analysisMode === 'static_text_only'
+    && assetClassification.executionAllowed === false
+    && Number.isSafeInteger(assetClassification.bodyBytes)
+    && assetClassification.bodyBytes === bodyBytes
+    && /^[0-9a-f]{64}$/.test(expectedSha256)
+    && expectedSha256 === bodySha256;
+}
+
 export function extractTournamentTrackerExplicitHttpsCandidates({ body, assetClassification } = {}) {
-  const sourceValidated = Boolean(
-    assetClassification
-      && assetClassification.analyzableStaticJavascript === true
-      && assetClassification.analysisMode === 'static_text_only'
-      && assetClassification.executionAllowed === false,
-  );
+  const text = String(body ?? '');
+  const sourceValidated = bodyMatchesValidatedAsset(text, assetClassification);
 
   if (!sourceValidated) {
     return {
@@ -69,7 +83,6 @@ export function extractTournamentTrackerExplicitHttpsCandidates({ body, assetCla
     };
   }
 
-  const text = String(body ?? '');
   const accepted = new Map();
   let rejectedCount = 0;
 
@@ -107,6 +120,7 @@ export function extractTournamentTrackerExplicitHttpsCandidates({ body, assetCla
       deobfuscationAllowed: false,
       javascriptExecutionAllowed: false,
       automaticProbingAllowed: false,
+      sourceBodyIntegrityRequired: true,
     },
   };
 }
