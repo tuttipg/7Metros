@@ -83,6 +83,7 @@ jobs:
           node --check n8n/tournamenttracker-public-core-smoke.mjs
           node --check n8n/tournamenttracker-static-endpoint-core.mjs
           node --check n8n/tournamenttracker-static-endpoint-core-smoke.mjs
+          node --check n8n/tournamenttracker-query-policy-smoke.mjs
           node --check n8n/tournamenttracker-indexed-route-core.mjs
           node --check n8n/tournamenttracker-indexed-route-core-smoke.mjs
 
@@ -172,6 +173,9 @@ jobs:
 
       - name: FEMEBAL TournamentTracker static endpoint candidate SAFE smoke test
         run: node n8n/tournamenttracker-static-endpoint-core-smoke.mjs
+
+      - name: FEMEBAL TournamentTracker mutating query SAFE smoke test
+        run: node n8n/tournamenttracker-query-policy-smoke.mjs
 
       - name: FEMEBAL TournamentTracker indexed route SAFE smoke test
         run: node n8n/tournamenttracker-indexed-route-core-smoke.mjs
