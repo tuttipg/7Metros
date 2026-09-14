@@ -16,6 +16,22 @@ class _Detector:
         return [Detection(x, 10, x + 20, 50, confidence=0.9)]
 
 
+class _TeamClassifier:
+    def classify(self, frame, detections):
+        return [
+            Detection(
+                detection.x1,
+                detection.y1,
+                detection.x2,
+                detection.y2,
+                confidence=detection.confidence,
+                label=detection.label,
+                team="home",
+            )
+            for detection in detections
+        ]
+
+
 class _Capture:
     def __init__(self, path):
         self.frames = [{"index": 0}, {"index": 1}, {"index": 2}]
@@ -90,16 +106,20 @@ class PipelineTests(unittest.TestCase):
                 _Detector(),
                 output_jsonl=output_jsonl,
                 output_video=output_video,
+                team_classifier=_TeamClassifier(),
                 max_distance=30,
             )
 
             rows = [json.loads(line) for line in output_jsonl.read_text(encoding="utf-8").splitlines()]
             self.assertEqual(summary["frames_processed"], 3)
             self.assertEqual(summary["detections_total"], 3)
+            self.assertEqual(summary["team_labels_total"], 3)
+            self.assertEqual(summary["team_label_rate"], 1.0)
             self.assertEqual(summary["unique_tracks"], 1)
             self.assertEqual(summary["output_video"], str(output_video))
             self.assertEqual(len(rows), 3)
             self.assertEqual([row["objects"][0]["track_id"] for row in rows], [1, 1, 1])
+            self.assertTrue(all(row["objects"][0]["team"] == "home" for row in rows))
             self.assertEqual(len(state["writer"].frames), 3)
             self.assertTrue(all(frame.get("labelled") for frame in state["writer"].frames))
             self.assertEqual(state["writer"].fps, 25.0)
