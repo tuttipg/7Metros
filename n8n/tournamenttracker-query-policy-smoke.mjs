@@ -41,6 +41,20 @@ for (const key of ['action', 'method', 'op', 'operation']) {
     assert.equal(candidate.reason, 'mutating_query_operation');
     assert.equal(candidate.anonymousGetReviewable, false);
   }
+
+  for (const value of ['createMatch', 'deleteMatch', 'import_batch', 'insert-row', 'mutateRoster', 'removePlayer', 'reset:table', 'updateScore', 'upload/file', 'write.v2']) {
+    const candidate = classify(`https://www.femebal.com/api/matches?${key}=${encodeURIComponent(value)}`);
+    assert.equal(candidate.state, 'rejected_on_policy_revalidation');
+    assert.equal(candidate.reason, 'mutating_query_operation');
+    assert.equal(candidate.anonymousGetReviewable, false);
+  }
+}
+
+for (const value of ['read', 'list', 'getMatches', 'search']) {
+  const candidate = classify(`https://www.femebal.com/api/matches?action=${value}`);
+  assert.equal(candidate.state, 'femebal_public_get_reviewable');
+  assert.equal(candidate.anonymousGetReviewable, true);
+  assert.equal(candidate.probeAllowed, false);
 }
 
 const benign = classify('https://www.femebal.com/api/matches?season=2026&category=LHC');
