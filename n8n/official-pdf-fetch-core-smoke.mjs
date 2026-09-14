@@ -8,7 +8,6 @@ function workItem(overrides={}) {
 }
 const pdfBytes=new TextEncoder().encode('%PDF-1.7\nfixture');
 const headers=values=>({get(name){return Object.fromEntries(Object.entries(values).map(([k,v])=>[k.toLowerCase(),String(v)]))[String(name).toLowerCase()]??null;}});
-const fakeResponse=({status=200,contentType='application/pdf',contentLength=pdfBytes.byteLength,body=pdfBytes}={})=>({status,headers:headers({'content-type':contentType,'content-length':contentLength}),async arrayBuffer(){return body.buffer.slice(body.byteOffset,body.byteOffset+body.byteLength);}});
 function streamingResponse(chunks,{status=200,contentType='application/pdf',contentLength=null}={}) {
   let index=0; let cancelled=false; let released=false;
   const reader={
@@ -23,6 +22,7 @@ function streamingResponse(chunks,{status=200,contentType='application/pdf',cont
     state(){return {cancelled,released};},
   };
 }
+const fakeResponse=({status=200,contentType='application/pdf',contentLength=pdfBytes.byteLength,body=pdfBytes}={})=>streamingResponse([body],{status,contentType,contentLength});
 
 let seen=null;
 const out=await fetchOfficialFemebalPdf(workItem(),{fetchImpl:async(url,options)=>{seen={url,options};return fakeResponse();}});
@@ -48,7 +48,20 @@ assert.equal(networkCalled,false, 'El techo SAFE de 12 MiB debe validarse antes 
 
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({status:302})}),/Redirect/);
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentType:'text\/html'})}),/Content-Type/);
+await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentType:'application\/pdfx'})}),/Content-Type/);
+const withPdfParameter=await fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentType:'application/pdf; charset=binary'})});
+assert.equal(withPdfParameter.sha256,out.sha256);
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentLength:pdfBytes.byteLength+1})}),/Content-Length no coincide/);
+
+let arrayBufferCalled=false;
+const nonStreamingResponse={
+  status:200,
+  headers:headers({'content-type':'application/pdf','content-length':pdfBytes.byteLength}),
+  async arrayBuffer(){arrayBufferCalled=true;return pdfBytes.buffer.slice(pdfBytes.byteOffset,pdfBytes.byteOffset+pdfBytes.byteLength);},
+};
+await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>nonStreamingResponse}),/streaming acotado/);
+assert.equal(arrayBufferCalled,false, 'El modo SAFE no debe materializar un body no-streaming antes de poder acotarlo');
+
 networkCalled=false;
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem({url:'https://another.cloudfront.net/pdf_planillas/5/c/e/x.pdf',source:{pdf_url:'https://another.cloudfront.net/pdf_planillas/5/c/e/x.pdf'}}),{fetchImpl:async()=>{networkCalled=true;return fakeResponse();}}),/allowlist/);
 assert.equal(networkCalled,false);
@@ -58,4 +71,4 @@ const ambiguousBackslash='https://djfhz848yeeat.cloudfront.net\\pdf_planillas/5/
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem({url:ambiguousBackslash,source:{pdf_url:ambiguousBackslash}}),{fetchImpl:async()=>{networkCalled=true;return fakeResponse();}}),/ambiguos\/normalizables/);
 assert.equal(networkCalled,false, 'Una URL raw ambigua debe bloquearse antes de cualquier acceso de red');
 
-console.log('✓ official PDF fetch core SAFE/fail-closed + host control real + bounded streaming + immutable 12 MiB ceiling + SHA-256 provenance + raw URL ambiguity rejection OK');
+console.log('✓ official PDF fetch core SAFE/fail-closed + host control real + strict PDF media type + bounded streaming-only body + immutable 12 MiB ceiling + SHA-256 provenance + raw URL ambiguity rejection OK');
