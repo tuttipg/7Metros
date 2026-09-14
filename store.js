@@ -90,6 +90,9 @@ function prepareDataset(dataset) {
     weight: numericField(row, ['peso_kg'])
   })).filter(row => Number.isFinite(row.id));
 
+  const validPlayerIds = new Set(state.players.map(row => row.id));
+  const validTeamIds = new Set(state.teams.map(row => row.id));
+
   state.rosters = (dataset.planteles || []).map(row => ({
     ...row,
     id: Number(row.id),
@@ -97,7 +100,12 @@ function prepareDataset(dataset) {
     equipo_id: Number(row.equipo_id),
     dorsal: row.dorsal ?? null,
     posicion: row.posicion || 'Sin posición'
-  })).filter(row => Number.isFinite(row.jugador_id) && Number.isFinite(row.equipo_id));
+  })).filter(row =>
+    Number.isFinite(row.jugador_id) &&
+    Number.isFinite(row.equipo_id) &&
+    validPlayerIds.has(row.jugador_id) &&
+    validTeamIds.has(row.equipo_id)
+  );
 
   state.participations = (dataset.participaciones || []).map(row => ({
     ...row,
