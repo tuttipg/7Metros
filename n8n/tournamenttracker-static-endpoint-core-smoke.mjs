@@ -30,7 +30,8 @@ const body = `
   const fragment = "https://www.femebal.com/api/matches#private";
   const interpolated = \`https://www.femebal.com/api/matches/\${id}\`;
   const relative = "/api/matches";
-  const concatenated = "https://www.femebal.com/api/" + matchId;
+  const concatenatedAfter = "https://www.femebal.com/api/" + matchId;
+  const concatenatedBefore = apiBase + "https://www.femebal.com/v1/";
   const insecure = "http://www.femebal.com/api/matches";
 `;
 const validatedAsset = classifyBody(body);
@@ -64,13 +65,6 @@ assert.deepEqual(extracted.candidates, [
     requiresPolicyReview: true,
   },
   {
-    url: 'https://www.femebal.com/api/',
-    hostScope: 'femebal_same_organization',
-    evidence: 'explicit_https_string_literal',
-    probeAllowed: false,
-    requiresPolicyReview: true,
-  },
-  {
     url: 'https://www.femebal.com/api/matches?season=2026',
     hostScope: 'femebal_same_organization',
     evidence: 'explicit_https_string_literal',
@@ -78,8 +72,9 @@ assert.deepEqual(extracted.candidates, [
     requiresPolicyReview: true,
   },
 ]);
-assert.equal(extracted.rejectedCount, 5);
+assert.equal(extracted.rejectedCount, 7);
 assert.equal(extracted.candidates.some((item) => /secret|pass|token=/i.test(item.url)), false);
+assert.equal(extracted.candidates.some((item) => item.url.endsWith('/api/') || item.url.endsWith('/v1/')), false);
 
 // Fail closed if a classification is accidentally paired with a different body,
 // even when byte length is unchanged. SHA-256 binds the exact validated response.
