@@ -20,7 +20,12 @@ const pdfArtifact=await fetchOfficialFemebalPdf(workItem,{fetchImpl:async(url,in
   fetchCalls+=1;
   assert.equal(url,sourceUrl);
   observedInit=init;
-  return {status:200,headers:{get(name){const key=String(name).toLowerCase();if(key==='content-type') return 'application/pdf';if(key==='content-length') return String(bytes.byteLength);return null;}},async arrayBuffer(){return bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);}};
+  let read=false;
+  return {
+    status:200,
+    headers:{get(name){const key=String(name).toLowerCase();if(key==='content-type') return 'application/pdf';if(key==='content-length') return String(bytes.byteLength);return null;}},
+    body:{getReader(){return {async read(){if(read)return {done:true,value:undefined};read=true;return {done:false,value:bytes};},releaseLock(){}};}},
+  };
 }});
 assert.equal(fetchCalls,1);
 assert.equal(observedInit.method,'GET');
@@ -108,4 +113,4 @@ assert.throws(()=>validatePdfExtractionEnvelope({...envelope,write_enabled:true}
 assert.throws(()=>validatePdfExtractionEnvelope({...envelope,work_item:{...envelope.work_item,url:'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/otro.pdf'}},workItem),/snapshot no coincide/);
 assert.throws(()=>parseExtractionWithEnvelopeDryRun({workItem:{...workItem,write_enabled:true},envelope,extraction:{text}}),/no puede habilitar escritura|snapshot no coincide/);
 assert.throws(()=>parseExtractionWithEnvelopeDryRun({workItem,envelope,extraction:{text},expected:{goles_visitante:26}}),/Marcador visitante inesperado/);
-console.log('✓ SAFE E2E FEMEBAL: manifest → GET-only PDF → SHA-256 → envelope → parser control 20–27');
+console.log('✓ SAFE E2E FEMEBAL: manifest → GET-only streaming PDF → SHA-256 → envelope → parser control 20–27');
