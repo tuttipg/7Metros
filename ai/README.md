@@ -12,8 +12,9 @@ Este módulo **no afirma que exista un modelo entrenado específicamente para ha
 - Detecta personas mediante un modelo Ultralytics configurable.
 - Asigna IDs persistentes con un tracker determinista que usa centroide y predicción de velocidad constante.
 - Escribe un JSONL por frame con `track_id`, bounding box, confianza, centro y velocidad estimada.
+- Puede producir un MP4 anotado con bounding boxes, confianza e IDs persistentes para inspección visual cuadro a cuadro.
 - Devuelve métricas del procesamiento y salud del tracking: observaciones por track, span medio, tracks de un solo frame y tasa de IDs nuevos cada 100 frames.
-- Mantiene tests del tracker, métricas y contrato de salida sin requerir GPU.
+- Mantiene tests del tracker, métricas, visualización y contrato de salida sin requerir GPU.
 
 ## Instalación
 
@@ -26,14 +27,25 @@ pip install -e ".[vision]"
 
 ## Ejecución
 
+Salida de datos:
+
 ```bash
 7metros-ai --video partido.mp4 --output-jsonl artifacts/tracks.jsonl
+```
+
+Salida de datos + video anotado:
+
+```bash
+7metros-ai \
+  --video partido.mp4 \
+  --output-jsonl artifacts/tracks.jsonl \
+  --output-video artifacts/annotated.mp4
 ```
 
 Para una prueba corta:
 
 ```bash
-7metros-ai --video partido.mp4 --output-jsonl artifacts/tracks.jsonl --max-frames 300
+7metros-ai --video partido.mp4 --output-jsonl artifacts/tracks.jsonl --output-video artifacts/annotated.mp4 --max-frames 300
 ```
 
 La salida de consola incluye `tracking_metrics`. Estas métricas sirven para comparar configuraciones o trackers sobre exactamente el mismo video, pero **no equivalen a métricas de identidad como IDF1/HOTA** porque todavía no existe ground truth anotado verificado.
@@ -51,7 +63,7 @@ cd ai
 python -m unittest discover -s tests -v
 ```
 
-Los tests actuales verifican persistencia de ID, creación de ID nuevo ante salto espacial, recuperación tras un frame perdido, continuidad de ID con movimiento rápido usando predicción de velocidad, serialización estable del contrato `7metros-ai.v1` y cálculo determinista de métricas de salud del tracking.
+Los tests actuales verifican persistencia de ID, creación de ID nuevo ante salto espacial, recuperación tras un frame perdido, continuidad de ID con movimiento rápido usando predicción de velocidad, serialización estable del contrato `7metros-ai.v1`, cálculo determinista de métricas de salud del tracking y formato estable de las etiquetas del video anotado.
 
 Estos tests también forman parte de `.github/workflows/validate.yml`, por lo que el PR falla si se rompe el baseline de tracking o su contrato.
 
@@ -67,9 +79,8 @@ Estos tests también forman parte de `.github/workflows/validate.yml`, por lo qu
 ## Próximos hitos
 
 1. incorporar un video de prueba descargable de forma reproducible;
-2. medir detecciones y estabilidad de IDs sobre handball real con las métricas actuales;
+2. medir detecciones y estabilidad de IDs sobre handball real con las métricas actuales y revisar el MP4 anotado;
 3. sustituir/comparar el tracker baseline con ByteTrack/BoT-SORT;
 4. añadir detector de pelota separado;
 5. añadir clasificación de equipos y coordenadas de cancha;
-6. producir video anotado además de JSONL;
-7. agregar eventos de posesión, lanzamiento y gol sobre señales verificables.
+6. agregar eventos de posesión, lanzamiento y gol sobre señales verificables.
