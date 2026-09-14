@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from .metrics import TrackingMetrics
 from .schema import frame_payload
 from .tracking import CentroidTracker
 
@@ -26,6 +27,7 @@ def analyze_video(input_path: str | Path, detector, *, output_jsonl: str | Path,
     width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
     height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
     tracker = CentroidTracker(max_distance=max_distance, max_missed=max_missed)
+    tracking_metrics = TrackingMetrics()
     output_jsonl.parent.mkdir(parents=True, exist_ok=True)
     frames = 0
     detections_total = 0
@@ -40,6 +42,7 @@ def analyze_video(input_path: str | Path, detector, *, output_jsonl: str | Path,
                 break
             detections = detector.detect(frame)
             tracks = tracker.update(detections)
+            tracking_metrics.observe(frames, tracks)
             detections_total += len(detections)
             unique_track_ids.update(track.track_id for track in tracks)
             timestamp_ms = (frames * 1000.0 / fps) if fps > 0 else 0.0
@@ -48,4 +51,13 @@ def analyze_video(input_path: str | Path, detector, *, output_jsonl: str | Path,
             frames += 1
 
     capture.release()
-    return {"frames_processed": frames, "detections_total": detections_total, "unique_tracks": len(unique_track_ids), "fps": fps, "width": width, "height": height, "output_jsonl": str(output_jsonl)}
+    return {
+        "frames_processed": frames,
+        "detections_total": detections_total,
+        "unique_tracks": len(unique_track_ids),
+        "fps": fps,
+        "width": width,
+        "height": height,
+        "output_jsonl": str(output_jsonl),
+        "tracking_metrics": tracking_metrics.summary(),
+    }
