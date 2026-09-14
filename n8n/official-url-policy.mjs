@@ -7,8 +7,16 @@ function rawPathFromHttpsUrl(value) {
   return match ? (match[1] || '/') : '';
 }
 
+function assertUnambiguousRawHttpsInput(raw) {
+  if(/[\\\u0000-\u001f\u007f]/.test(raw)) {
+    throw new Error('URL FEMEBAL con caracteres ambiguos/normalizables rechazada');
+  }
+}
+
 export function canonicalizeOfficialFemebalUrl(value, { pdf = false } = {}) {
   const raw = String(value ?? '');
+  assertUnambiguousRawHttpsInput(raw);
+
   let url;
   try {
     url = new URL(raw);
