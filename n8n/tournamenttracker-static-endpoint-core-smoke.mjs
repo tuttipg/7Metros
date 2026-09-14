@@ -62,6 +62,7 @@ assert.equal(extracted.constraints.automaticProbingAllowed, false);
 assert.equal(extracted.constraints.sourceBodyIntegrityRequired, true);
 assert.equal(extracted.constraints.percentEncodedPathsAllowed, false);
 assert.equal(extracted.constraints.nonstandardHttpsPortsAllowed, false);
+assert.equal(extracted.constraints.ambiguousRawUrlCharactersAllowed, false);
 
 assert.deepEqual(extracted.candidates, [
   {
@@ -92,6 +93,7 @@ assert.equal(policy.authAllowed, false);
 assert.equal(policy.constraints.manualReviewRequiredBeforeAnyGet, true);
 assert.equal(policy.constraints.percentEncodedPathsBlocked, true);
 assert.equal(policy.constraints.nonstandardHttpsPortsBlocked, true);
+assert.equal(policy.constraints.ambiguousRawUrlCharactersBlocked, true);
 assert.deepEqual(policy.candidates, [
   {
     url: 'https://public.example.org/v1/fixtures',
@@ -137,16 +139,37 @@ forgedAmbiguous.candidates.push(
     probeAllowed: false,
     requiresPolicyReview: true,
   },
+  {
+    url: 'https://www.femebal.com\\admin/matches',
+    hostScope: 'femebal_same_organization',
+    evidence: 'explicit_https_string_literal',
+    probeAllowed: false,
+    requiresPolicyReview: true,
+  },
+  {
+    url: 'https://www.femebal.com/api/\tmatches',
+    hostScope: 'femebal_same_organization',
+    evidence: 'explicit_https_string_literal',
+    probeAllowed: false,
+    requiresPolicyReview: true,
+  },
 );
 const forgedAmbiguousPolicy = classifyTournamentTrackerCandidatePolicy(forgedAmbiguous);
-const encodedPolicyCandidate = forgedAmbiguousPolicy.candidates.at(-2);
-const portPolicyCandidate = forgedAmbiguousPolicy.candidates.at(-1);
+const encodedPolicyCandidate = forgedAmbiguousPolicy.candidates.at(-4);
+const portPolicyCandidate = forgedAmbiguousPolicy.candidates.at(-3);
+const backslashPolicyCandidate = forgedAmbiguousPolicy.candidates.at(-2);
+const controlPolicyCandidate = forgedAmbiguousPolicy.candidates.at(-1);
 assert.equal(encodedPolicyCandidate.state, 'rejected_on_policy_revalidation');
 assert.equal(encodedPolicyCandidate.reason, 'percent_encoded_path_not_allowed');
 assert.equal(encodedPolicyCandidate.anonymousGetReviewable, false);
 assert.equal(portPolicyCandidate.state, 'rejected_on_policy_revalidation');
 assert.equal(portPolicyCandidate.reason, 'nonstandard_https_port');
 assert.equal(portPolicyCandidate.anonymousGetReviewable, false);
+for (const candidate of [backslashPolicyCandidate, controlPolicyCandidate]) {
+  assert.equal(candidate.state, 'rejected_on_policy_revalidation');
+  assert.equal(candidate.reason, 'ambiguous_raw_url_characters');
+  assert.equal(candidate.anonymousGetReviewable, false);
+}
 
 const policyBody = `
   const admin = "https://www.femebal.com/admin/matches";
