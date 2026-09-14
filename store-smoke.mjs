@@ -55,7 +55,14 @@ const db = {
     {id:1,partido_id:201,jugador_id:11,equipo_id:101,goles:10,exclusiones_2min:1,tarjeta_amarilla:0,tarjeta_roja:0},
     {id:2,partido_id:201,jugador_id:12,equipo_id:102,goles:8,exclusiones_2min:0,tarjeta_amarilla:1,tarjeta_roja:0},
     {id:3,partido_id:203,jugador_id:13,equipo_id:103,goles:6,exclusiones_2min:0,tarjeta_amarilla:0,tarjeta_roja:0},
-    {id:4,partido_id:203,jugador_id:11,equipo_id:103,goles:4,exclusiones_2min:0,tarjeta_amarilla:0,tarjeta_roja:0}
+    {id:4,partido_id:203,jugador_id:11,equipo_id:103,goles:4,exclusiones_2min:0,tarjeta_amarilla:0,tarjeta_roja:0},
+    {id:5,partido_id:201,jugador_id:11,equipo_id:null,goles:99},
+    {id:6,partido_id:null,jugador_id:11,equipo_id:101,goles:99},
+    {id:7,partido_id:201,jugador_id:null,equipo_id:101,goles:99},
+    {id:8,partido_id:201,jugador_id:11,equipo_id:999,goles:99},
+    {id:9,partido_id:999,jugador_id:11,equipo_id:101,goles:99},
+    {id:10,partido_id:201,jugador_id:11,equipo_id:103,goles:99},
+    {id:11,partido_id:204,jugador_id:11,equipo_id:101,goles:99}
   ]
 };
 
@@ -100,6 +107,11 @@ assert.deepEqual(
   [201, 202, 203],
   'prepareDataset debe descartar partidos con uno o ambos equipos fuera del catálogo cargado'
 );
+assert.deepEqual(
+  store.state.participations.map(row => row.id).sort((a, b) => a - b),
+  [1, 2, 3, 4],
+  'prepareDataset debe descartar participaciones con refs ausentes/externas, partido descartado o equipo ajeno al partido'
+);
 assert.equal(store.getClubs().length, 3, 'A y B deben ser filas deportivas separadas');
 assert.equal(store.getPlayers().length, 4, 'Un jugador con dos planteles debe tener una fila deportiva por equipo');
 assert.equal(store.getMatches().length, 3);
@@ -119,8 +131,8 @@ assert.equal(store.getBaseClub(2).logoUrl, null);
 
 const juan = store.getPlayer(11);
 assert.equal(juan.teamId, 101);
-assert.equal(juan.goals, 10);
-assert.equal(juan.matchesPlayed, 1);
+assert.equal(juan.goals, 10, 'Participaciones inválidas no deben contaminar goles');
+assert.equal(juan.matchesPlayed, 1, 'Participaciones inválidas no deben contaminar partidos jugados');
 assert.equal(juan.goalsPerMatch, 10);
 assert.equal(juan.assists, null, 'Métricas ausentes no deben inventarse como 0');
 
@@ -153,4 +165,4 @@ assert.equal(table[1].name, 'Ferro Carril Oeste · Equipo B');
 assert.equal(table[1].points, 3);
 assert.equal(table[2].points, 2, 'Dos derrotas ordinarias valen un punto cada una');
 
-console.log('✓ store-smoke: configuración, resumen global, carga, fail-closed de partidos, logos, equipos A/B, multi-plantel, filtros, estadísticas y posiciones FEMEBAL 3-2-1 OK');
+console.log('✓ store-smoke: configuración, resumen global, carga, fail-closed de partidos y participaciones, logos, equipos A/B, multi-plantel, filtros, estadísticas y posiciones FEMEBAL 3-2-1 OK');
