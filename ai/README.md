@@ -10,8 +10,8 @@ Este módulo **no afirma que exista un modelo entrenado específicamente para ha
 
 - Lee un video local con OpenCV.
 - Detecta personas mediante un modelo Ultralytics configurable.
-- Asigna IDs persistentes con un tracker de centroides simple.
-- Escribe un JSONL por frame con `track_id`, bounding box, confianza y centro.
+- Asigna IDs persistentes con un tracker determinista que usa centroide y predicción de velocidad constante.
+- Escribe un JSONL por frame con `track_id`, bounding box, confianza, centro y velocidad estimada.
 - Devuelve métricas básicas del procesamiento.
 - Mantiene tests del tracker y del contrato de salida sin requerir GPU.
 
@@ -38,7 +38,7 @@ Para una prueba corta:
 
 ## Contrato `7metros-ai.v1`
 
-Cada línea del JSONL representa un frame y contiene: versión de esquema, índice y timestamp del frame, tamaño de imagen y objetos con `track_id`, tipo, confianza, bounding box, centro y equipo opcional.
+Cada línea del JSONL representa un frame y contiene: versión de esquema, índice y timestamp del frame, tamaño de imagen y objetos con `track_id`, tipo, confianza, bounding box, centro, velocidad estimada y equipo opcional.
 
 El contrato puede ampliarse sin romper los campos base con `team`, `player_id`, `court_xy`, `possession`, eventos y pelota.
 
@@ -49,12 +49,14 @@ cd ai
 python -m unittest discover -s tests -v
 ```
 
-Los tests actuales verifican persistencia de ID, creación de ID nuevo ante salto espacial, recuperación tras un frame perdido y serialización estable del contrato `7metros-ai.v1`.
+Los tests actuales verifican persistencia de ID, creación de ID nuevo ante salto espacial, recuperación tras un frame perdido, continuidad de ID con movimiento rápido usando predicción de velocidad y serialización estable del contrato `7metros-ai.v1`.
+
+Estos tests también forman parte de `.github/workflows/validate.yml`, por lo que el PR falla si se rompe el baseline de tracking o su contrato.
 
 ## Limitaciones conocidas
 
 - El detector genérico de personas no está ajustado a handball.
-- El tracker por centroides es un baseline, no el tracker final.
+- La predicción de velocidad mejora el baseline, pero no reemplaza ByteTrack/BoT-SORT ni resuelve por sí sola oclusiones o cruces complejos.
 - Aún no hay detección de pelota, arqueros, equipos ni eventos.
 - La precisión real sobre partidos FEMEBAL no se puede afirmar sin un video de prueba accesible al runtime.
 - Los pesos de Ultralytics pueden requerir descarga la primera vez.
