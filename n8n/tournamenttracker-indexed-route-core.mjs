@@ -1,6 +1,7 @@
 const FEMEBAL_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
 const MAX_ROUTE_TOKEN_LENGTH = 256;
 const INDEXED_ROUTE_PREFIX = '/tournament-tracker/';
+const PUBLIC_EVIDENCE_KINDS = new Set(['public_index', 'explicit_public_link']);
 
 function decodeSinglePathSegment(rawSegment) {
   const raw = String(rawSegment ?? '');
@@ -26,6 +27,35 @@ function decodeSinglePathSegment(rawSegment) {
   }
 
   return decoded;
+}
+
+function validatePublicEvidence(targetCanonicalUrl, evidence) {
+  if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) {
+    throw new Error('La evidencia pública debe ser un objeto estructurado');
+  }
+
+  const kind = String(evidence.kind ?? '');
+  if (!PUBLIC_EVIDENCE_KINDS.has(kind)) {
+    throw new Error('Tipo de evidencia pública no permitido');
+  }
+
+  const observedUrl = canonicalizeIndexedTournamentTrackerRoute(evidence.observedUrl);
+  if (observedUrl !== targetCanonicalUrl) {
+    throw new Error('La evidencia pública no corresponde a la ruta solicitada');
+  }
+
+  const sourceUrl = new URL(String(evidence.sourceUrl ?? ''));
+  if (sourceUrl.protocol !== 'https:') throw new Error('La fuente de evidencia pública requiere HTTPS');
+  if (sourceUrl.username || sourceUrl.password) {
+    throw new Error('La fuente de evidencia pública no admite credenciales en URL');
+  }
+  if (sourceUrl.hash) throw new Error('La fuente de evidencia pública no admite fragments');
+
+  return {
+    kind,
+    observedUrl,
+    sourceUrl: sourceUrl.toString(),
+  };
 }
 
 export function canonicalizeIndexedTournamentTrackerRoute(value) {
@@ -76,15 +106,31 @@ export function classifyIndexedTournamentTrackerRoute(value) {
   }
 }
 
-export function buildReviewedIndexedTournamentTrackerGet(value, { publicEvidence = false } = {}) {
+export function buildReviewedIndexedTournamentTrackerGet(value, { publicEvidence = null } = {}) {
   const classified = classifyIndexedTournamentTrackerRoute(value);
-  if (classified.state !== 'public_indexed_route_reviewable' || publicEvidence !== true) {
+  if (classified.state !== 'public_indexed_route_reviewable') {
     return {
       safe: true,
       dry_run: true,
       state: 'probe_not_authorized',
       probe: null,
-      reason: publicEvidence === true ? classified.reason : 'Falta evidencia pública explícita de la ruta',
+      reason: classified.reason,
+      automaticProbeAllowed: false,
+      writesAllowed: false,
+      authAllowed: false,
+    };
+  }
+
+  let evidence;
+  try {
+    evidence = validatePublicEvidence(classified.url, publicEvidence);
+  } catch (error) {
+    return {
+      safe: true,
+      dry_run: true,
+      state: 'probe_not_authorized',
+      probe: null,
+      reason: error instanceof Error ? error.message : String(error),
       automaticProbeAllowed: false,
       writesAllowed: false,
       authAllowed: false,
@@ -95,6 +141,7 @@ export function buildReviewedIndexedTournamentTrackerGet(value, { publicEvidence
     safe: true,
     dry_run: true,
     state: 'reviewed_anonymous_get_only',
+    evidence,
     probe: {
       method: 'GET',
       url: classified.url,
