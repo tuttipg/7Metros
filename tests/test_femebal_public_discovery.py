@@ -132,6 +132,24 @@ class T(unittest.TestCase):
                 with self.assertRaises(ValueError): _assert_allowed(url)
         _assert_allowed('https://femebal.com/x'); _assert_allowed('https://www.femebal.com:443/x')
         _assert_allowed(CONTROL_PLANILLA,allow_planilla=True)
+    def test_reject_raw_control_and_backslash_urls_before_urllib_normalization(self):
+        unsafe_pages=[
+            'https://femebal.com/\nprogramaciones/',
+            'https://femebal.com/\tprogramaciones/',
+            'https://femebal.com/programaciones/\\extra',
+            'https://femebal.com/\x7fprogramaciones/',
+        ]
+        for url in unsafe_pages:
+            with self.subTest(url=repr(url)):
+                with self.assertRaises(ValueError): _canonical_official_page_url(url)
+        unsafe_pdfs=[
+            CONTROL_PLANILLA.replace('/pdf_planillas/','/pdf_planillas/\n'),
+            CONTROL_PLANILLA.replace('/pdf_planillas/','/pdf_planillas/\t'),
+            CONTROL_PLANILLA.replace('/pdf_planillas/','/pdf_planillas/\\'),
+        ]
+        for url in unsafe_pdfs:
+            with self.subTest(url=repr(url)):
+                self.assertFalse(_is_official_upload_pdf(url))
     def test_redirect_handler_blocks_external_planilla_fragment_and_tracking_destinations(self):
         h=SafeRedirectHandler(); req=Request('https://femebal.com/programaciones/')
         for target in ['https://evil.example/collect',CONTROL_PLANILLA,'https://femebal.com/programaciones/#fecha-1','https://femebal.com/programaciones/?utm_source=redirect']:
