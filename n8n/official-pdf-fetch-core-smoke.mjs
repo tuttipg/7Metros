@@ -42,10 +42,14 @@ const oversized=streamingResponse([oversizedChunk]);
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>oversized,maxBytes:1024}),/límite real/);
 assert.equal(oversized.state().cancelled,true); assert.equal(oversized.state().released,true);
 
+let networkCalled=false;
+await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{maxBytes:(12*1024*1024)+1,fetchImpl:async()=>{networkCalled=true;return fakeResponse();}}),/maxBytes inválido/);
+assert.equal(networkCalled,false, 'El techo SAFE de 12 MiB debe validarse antes de cualquier acceso de red');
+
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({status:302})}),/Redirect/);
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentType:'text\/html'})}),/Content-Type/);
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentLength:pdfBytes.byteLength+1})}),/Content-Length no coincide/);
-let networkCalled=false;
+networkCalled=false;
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem({url:'https://another.cloudfront.net/pdf_planillas/5/c/e/x.pdf',source:{pdf_url:'https://another.cloudfront.net/pdf_planillas/5/c/e/x.pdf'}}),{fetchImpl:async()=>{networkCalled=true;return fakeResponse();}}),/allowlist/);
 assert.equal(networkCalled,false);
 
@@ -54,4 +58,4 @@ const ambiguousBackslash='https://djfhz848yeeat.cloudfront.net\\pdf_planillas/5/
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem({url:ambiguousBackslash,source:{pdf_url:ambiguousBackslash}}),{fetchImpl:async()=>{networkCalled=true;return fakeResponse();}}),/ambiguos\/normalizables/);
 assert.equal(networkCalled,false, 'Una URL raw ambigua debe bloquearse antes de cualquier acceso de red');
 
-console.log('✓ official PDF fetch core SAFE/fail-closed + host control real + bounded streaming + SHA-256 provenance + raw URL ambiguity rejection OK');
+console.log('✓ official PDF fetch core SAFE/fail-closed + host control real + bounded streaming + immutable 12 MiB ceiling + SHA-256 provenance + raw URL ambiguity rejection OK');
