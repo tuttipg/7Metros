@@ -13,6 +13,17 @@ const SENSITIVE_QUERY_KEYS = new Set([
   'session',
   'token',
 ]);
+const SENSITIVE_COMPOUND_QUERY_TOKENS = new Set([
+  'accesstoken',
+  'apikey',
+  'auth',
+  'authorization',
+  'cookie',
+  'password',
+  'secret',
+  'session',
+  'token',
+]);
 const MUTATING_QUERY_KEYS = new Set([
   'create',
   'delete',
@@ -65,6 +76,32 @@ const STATIC_RESOURCE_EXTENSION = /\.(?:css|gif|ico|jpe?g|js|json|map|mjs|pdf|pn
 const MAX_EXPLICIT_URL_LENGTH = 2048;
 const AMBIGUOUS_RAW_URL_CHARS = /[\\\x00-\x1f\x7f]/;
 
+function compactQueryKey(value) {
+  return String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function isSensitiveQueryKey(value) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (!normalized) return false;
+  if (SENSITIVE_QUERY_KEYS.has(normalized)) return true;
+
+  const compact = compactQueryKey(normalized);
+  if (!compact) return false;
+  return [...SENSITIVE_COMPOUND_QUERY_TOKENS].some((token) => (
+    compact === token || compact.startsWith(token) || compact.endsWith(token)
+  ));
+}
+
+function isMutatingQueryKey(value) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (!normalized) return false;
+  if (MUTATING_QUERY_KEYS.has(normalized)) return true;
+
+  const compact = compactQueryKey(normalized);
+  if (!compact) return false;
+  return [...MUTATING_QUERY_KEYS].some((operation) => compact.startsWith(operation));
+}
+
 function isMutatingOperationValue(value) {
   const normalized = String(value ?? '').trim().toLowerCase();
   if (!normalized) return false;
@@ -101,10 +138,10 @@ function classifyExplicitHttpsLiteral(rawValue) {
   for (const [rawKey, rawQueryValue] of url.searchParams.entries()) {
     const key = rawKey.toLowerCase();
     const queryValue = rawQueryValue.trim().toLowerCase();
-    if (SENSITIVE_QUERY_KEYS.has(key)) {
+    if (isSensitiveQueryKey(key)) {
       return { accepted: false, reason: 'sensitive_query_key' };
     }
-    if (MUTATING_QUERY_KEYS.has(key)) {
+    if (isMutatingQueryKey(key)) {
       return { accepted: false, reason: 'mutating_query_key' };
     }
     if (OPERATION_QUERY_KEYS.has(key) && isMutatingOperationValue(queryValue)) {
@@ -293,6 +330,8 @@ export function extractTournamentTrackerExplicitHttpsCandidates({ body, assetCla
       nonstandardHttpsPortsAllowed: false,
       ambiguousRawUrlCharactersAllowed: false,
       mutatingQuerySemanticsAllowed: false,
+      compoundSensitiveQueryKeysAllowed: false,
+      compoundMutatingQueryKeysAllowed: false,
     },
   };
 }
@@ -326,6 +365,8 @@ export function classifyTournamentTrackerCandidatePolicy(extractionResult) {
       sensitiveOrMutatingPathsBlocked: true,
       compoundMutatingPathPrefixesBlocked: true,
       sensitiveOrMutatingQueriesBlocked: true,
+      compoundSensitiveQueryKeysBlocked: true,
+      compoundMutatingQueryKeysBlocked: true,
       externalHostsBlocked: true,
       staticResourcesBlockedAsEndpoints: true,
       percentEncodedPathsBlocked: true,
