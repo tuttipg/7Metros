@@ -69,32 +69,62 @@ for (const badEvidence of [
   {
     kind: 'public_index',
     observedUrl: observedPublicIndexedRoute,
-    sourceUrl: 'http://www.google.com/search?q=femebal',
+    sourceUrl: 'http://www.google.com/search?q=femebal+tournament-tracker',
   },
   {
     kind: 'public_index',
     observedUrl: observedPublicIndexedRoute,
-    sourceUrl: 'https://user:pass@www.google.com/search?q=femebal',
+    sourceUrl: 'https://user:pass@www.google.com/search?q=femebal+tournament-tracker',
   },
   {
     kind: 'public_index',
     observedUrl: observedPublicIndexedRoute,
-    sourceUrl: 'https://www.google.com/search?q=femebal#fragment',
+    sourceUrl: 'https://www.google.com/search?q=femebal+tournament-tracker#fragment',
   },
   {
     kind: 'public_index',
     observedUrl: observedPublicIndexedRoute,
-    sourceUrl: 'https://search.example/result',
+    sourceUrl: 'https://search.example/search?q=femebal+tournament-tracker',
+  },
+  {
+    kind: 'public_index',
+    observedUrl: observedPublicIndexedRoute,
+    sourceUrl: 'https://www.google.com/maps?q=femebal+tournament-tracker',
+  },
+  {
+    kind: 'public_index',
+    observedUrl: observedPublicIndexedRoute,
+    sourceUrl: 'https://www.google.com/search',
+  },
+  {
+    kind: 'public_index',
+    observedUrl: observedPublicIndexedRoute,
+    sourceUrl: 'https://www.google.com/search?q=femebal',
+  },
+  {
+    kind: 'public_index',
+    observedUrl: observedPublicIndexedRoute,
+    sourceUrl: 'https://www.bing.com/search?q=tournament-tracker',
   },
   {
     kind: 'explicit_public_link',
     observedUrl: observedPublicIndexedRoute,
-    sourceUrl: 'https://www.google.com/search?q=femebal',
+    sourceUrl: 'https://www.google.com/search?q=femebal+tournament-tracker',
   },
   {
     kind: 'explicit_public_link',
     observedUrl: observedPublicIndexedRoute,
     sourceUrl: 'https://evil.example/fixture-publico',
+  },
+  {
+    kind: 'explicit_public_link',
+    observedUrl: observedPublicIndexedRoute,
+    sourceUrl: observedPublicIndexedRoute,
+  },
+  {
+    kind: 'explicit_public_link',
+    observedUrl: observedPublicIndexedRoute,
+    sourceUrl: 'https://www.femebal.com/tournament-tracker/OTROTOKEN=',
   },
 ]) {
   const rejected = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: badEvidence });
