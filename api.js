@@ -119,8 +119,20 @@ export function filterMatchesToTeamIds(matches, teamIds) {
 }
 
 export function filterParticipationsToMatches(participations, matches) {
-  const allowedMatchIds = new Set((matches || []).map(row => Number(row?.id)).filter(Number.isFinite));
-  return (participations || []).filter(row => allowedMatchIds.has(Number(row?.partido_id)));
+  const teamsByMatch = new Map();
+  for (const row of matches || []) {
+    const matchId = Number(row?.id);
+    const homeTeamId = Number(row?.local_equipo_id ?? row?.local_id);
+    const awayTeamId = Number(row?.visitante_equipo_id ?? row?.visitante_id);
+    if (!Number.isFinite(matchId) || !Number.isFinite(homeTeamId) || !Number.isFinite(awayTeamId)) continue;
+    teamsByMatch.set(matchId, new Set([homeTeamId, awayTeamId]));
+  }
+  return (participations || []).filter(row => {
+    const matchId = Number(row?.partido_id);
+    const teamId = Number(row?.equipo_id);
+    const matchTeams = teamsByMatch.get(matchId);
+    return Number.isFinite(matchId) && Number.isFinite(teamId) && Boolean(matchTeams?.has(teamId));
+  });
 }
 
 async function loadSeasonMatches(season, teamIds) {
