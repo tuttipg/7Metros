@@ -94,6 +94,7 @@ assert.equal(policy.constraints.manualReviewRequiredBeforeAnyGet, true);
 assert.equal(policy.constraints.percentEncodedPathsBlocked, true);
 assert.equal(policy.constraints.nonstandardHttpsPortsBlocked, true);
 assert.equal(policy.constraints.ambiguousRawUrlCharactersBlocked, true);
+assert.equal(policy.constraints.compoundMutatingPathPrefixesBlocked, true);
 assert.deepEqual(policy.candidates, [
   {
     url: 'https://public.example.org/v1/fixtures',
@@ -174,8 +175,12 @@ for (const candidate of [backslashPolicyCandidate, controlPolicyCandidate]) {
 const policyBody = `
   const admin = "https://www.femebal.com/admin/matches";
   const mutating = "https://www.femebal.com/api/delete/match";
+  const compoundDelete = "https://www.femebal.com/api/deleteMatch/42";
+  const compoundUpdate = "https://www.femebal.com/api/updateScore/42";
+  const compoundImport = "https://www.femebal.com/api/import_batch/2026";
   const staticAsset = "https://www.femebal.com/tournament-tracker/static/js/runtime.js";
   const reviewable = "https://femebal.com/api/public/fixtures?season=2026";
+  const readOperation = "https://www.femebal.com/api/getMatches?season=2026";
 `;
 const policyExtraction = extractTournamentTrackerExplicitHttpsCandidates({
   body: policyBody,
@@ -185,8 +190,17 @@ const classifiedPolicyBody = classifyTournamentTrackerCandidatePolicy(policyExtr
 const byUrl = new Map(classifiedPolicyBody.candidates.map((item) => [item.url, item]));
 assert.equal(byUrl.get('https://www.femebal.com/admin/matches').state, 'blocked_sensitive_or_mutating_path');
 assert.equal(byUrl.get('https://www.femebal.com/api/delete/match').state, 'blocked_sensitive_or_mutating_path');
+for (const url of [
+  'https://www.femebal.com/api/deleteMatch/42',
+  'https://www.femebal.com/api/updateScore/42',
+  'https://www.femebal.com/api/import_batch/2026',
+]) {
+  assert.equal(byUrl.get(url).state, 'blocked_sensitive_or_mutating_path');
+  assert.equal(byUrl.get(url).anonymousGetReviewable, false);
+}
 assert.equal(byUrl.get('https://www.femebal.com/tournament-tracker/static/js/runtime.js').state, 'static_resource_not_endpoint');
 assert.equal(byUrl.get('https://femebal.com/api/public/fixtures?season=2026').state, 'femebal_public_get_reviewable');
+assert.equal(byUrl.get('https://www.femebal.com/api/getMatches?season=2026').state, 'femebal_public_get_reviewable');
 assert.equal(classifiedPolicyBody.candidates.every((item) => item.probeAllowed === false), true);
 
 const invalidPolicySource = classifyTournamentTrackerCandidatePolicy({
