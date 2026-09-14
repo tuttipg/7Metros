@@ -55,6 +55,8 @@ function classifyExplicitHttpsLiteral(rawValue) {
   if (url.username || url.password) return { accepted: false, reason: 'embedded_credentials' };
   if (url.hash) return { accepted: false, reason: 'fragment_not_allowed' };
   if (!url.hostname || url.pathname === '/') return { accepted: false, reason: 'non_endpoint_root_url' };
+  if (url.port && url.port !== '443') return { accepted: false, reason: 'nonstandard_https_port' };
+  if (/%[0-9a-f]{2}/i.test(url.pathname)) return { accepted: false, reason: 'percent_encoded_path_not_allowed' };
 
   for (const key of url.searchParams.keys()) {
     if (SENSITIVE_QUERY_KEYS.has(key.toLowerCase())) {
@@ -239,6 +241,8 @@ export function extractTournamentTrackerExplicitHttpsCandidates({ body, assetCla
       javascriptExecutionAllowed: false,
       automaticProbingAllowed: false,
       sourceBodyIntegrityRequired: true,
+      percentEncodedPathsAllowed: false,
+      nonstandardHttpsPortsAllowed: false,
     },
   };
 }
@@ -272,6 +276,8 @@ export function classifyTournamentTrackerCandidatePolicy(extractionResult) {
       sensitiveOrMutatingPathsBlocked: true,
       externalHostsBlocked: true,
       staticResourcesBlockedAsEndpoints: true,
+      percentEncodedPathsBlocked: true,
+      nonstandardHttpsPortsBlocked: true,
       manualReviewRequiredBeforeAnyGet: true,
     },
   };
