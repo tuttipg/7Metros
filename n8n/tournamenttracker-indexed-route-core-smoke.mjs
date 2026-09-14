@@ -6,13 +6,20 @@ import {
 } from './tournamenttracker-indexed-route-core.mjs';
 
 const observedPublicIndexedRoute = 'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc%3D';
+const canonicalObservedRoute = 'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc=';
+const publicEvidence = {
+  kind: 'public_index',
+  observedUrl: observedPublicIndexedRoute,
+  sourceUrl: 'https://www.google.com/search?q=site%3Afemebal.com%2Ftournament-tracker',
+};
+
 assert.equal(
   canonicalizeIndexedTournamentTrackerRoute(observedPublicIndexedRoute),
-  'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc=',
+  canonicalObservedRoute,
 );
 assert.equal(
   canonicalizeIndexedTournamentTrackerRoute('https://femebal.com:443/tournament-tracker/RUdVX3VkfFc='),
-  'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc=',
+  canonicalObservedRoute,
 );
 
 for (const unsafe of [
@@ -44,19 +51,67 @@ assert.equal(noEvidence.state, 'probe_not_authorized');
 assert.equal(noEvidence.probe, null);
 assert.equal(noEvidence.automaticProbeAllowed, false);
 
-const reviewed = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: true });
+const booleanEvidence = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: true });
+assert.equal(booleanEvidence.state, 'probe_not_authorized');
+assert.equal(booleanEvidence.probe, null);
+
+for (const badEvidence of [
+  {
+    kind: 'public_index',
+    observedUrl: 'https://www.femebal.com/tournament-tracker/QUJDRA==',
+    sourceUrl: publicEvidence.sourceUrl,
+  },
+  {
+    kind: 'manual_guess',
+    observedUrl: observedPublicIndexedRoute,
+    sourceUrl: publicEvidence.sourceUrl,
+  },
+  {
+    kind: 'public_index',
+    observedUrl: observedPublicIndexedRoute,
+    sourceUrl: 'http://www.google.com/search?q=femebal',
+  },
+  {
+    kind: 'public_index',
+    observedUrl: observedPublicIndexedRoute,
+    sourceUrl: 'https://user:pass@search.example/result',
+  },
+  {
+    kind: 'public_index',
+    observedUrl: observedPublicIndexedRoute,
+    sourceUrl: 'https://search.example/result#fragment',
+  },
+]) {
+  const rejected = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: badEvidence });
+  assert.equal(rejected.state, 'probe_not_authorized');
+  assert.equal(rejected.probe, null);
+}
+
+const reviewed = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence });
 assert.equal(reviewed.state, 'reviewed_anonymous_get_only');
 assert.equal(reviewed.probe.method, 'GET');
-assert.equal(reviewed.probe.url, 'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc=');
+assert.equal(reviewed.probe.url, canonicalObservedRoute);
 assert.equal(reviewed.probe.auth, false);
 assert.equal(reviewed.probe.writes, false);
 assert.equal('Authorization' in reviewed.probe.headers, false);
 assert.equal('Cookie' in reviewed.probe.headers, false);
 assert.equal(reviewed.automaticProbeAllowed, false);
+assert.equal(reviewed.evidence.kind, 'public_index');
+assert.equal(reviewed.evidence.observedUrl, canonicalObservedRoute);
+assert.equal(reviewed.evidence.sourceUrl, publicEvidence.sourceUrl);
+
+const explicitLinkEvidence = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, {
+  publicEvidence: {
+    kind: 'explicit_public_link',
+    observedUrl: canonicalObservedRoute,
+    sourceUrl: 'https://www.femebal.com/fixture-publico',
+  },
+});
+assert.equal(explicitLinkEvidence.state, 'reviewed_anonymous_get_only');
 
 const invalidReviewed = buildReviewedIndexedTournamentTrackerGet(
   'https://evil.example/tournament-tracker/RUdVX3VkfFc=',
-  { publicEvidence: true },
+  { publicEvidence },
 );
 assert.equal(invalidReviewed.state, 'probe_not_authorized');
 assert.equal(invalidReviewed.probe, null);
