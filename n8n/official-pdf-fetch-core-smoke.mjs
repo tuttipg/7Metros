@@ -48,4 +48,10 @@ await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>
 let networkCalled=false;
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem({url:'https://another.cloudfront.net/pdf_planillas/5/c/e/x.pdf',source:{pdf_url:'https://another.cloudfront.net/pdf_planillas/5/c/e/x.pdf'}}),{fetchImpl:async()=>{networkCalled=true;return fakeResponse();}}),/allowlist/);
 assert.equal(networkCalled,false);
-console.log('✓ official PDF fetch core SAFE/fail-closed + host control real + bounded streaming + SHA-256 provenance OK');
+
+networkCalled=false;
+const ambiguousBackslash='https://djfhz848yeeat.cloudfront.net\\pdf_planillas/5/c/e/5ce377051ea0acb1.pdf';
+await assert.rejects(()=>fetchOfficialFemebalPdf(workItem({url:ambiguousBackslash,source:{pdf_url:ambiguousBackslash}}),{fetchImpl:async()=>{networkCalled=true;return fakeResponse();}}),/ambiguos\/normalizables/);
+assert.equal(networkCalled,false, 'Una URL raw ambigua debe bloquearse antes de cualquier acceso de red');
+
+console.log('✓ official PDF fetch core SAFE/fail-closed + host control real + bounded streaming + SHA-256 provenance + raw URL ambiguity rejection OK');
