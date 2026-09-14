@@ -33,6 +33,7 @@ assert.match(out.sha256,/^[0-9a-f]{64}$/);
 assert.equal(seen.url,CONTROL_PDF);
 assert.equal(seen.options.method,'GET'); assert.equal(seen.options.redirect,'manual'); assert.equal(seen.options.credentials,'omit');
 assert.deepEqual(seen.options.headers,{Accept:'application/pdf'}); assert.equal('Authorization' in seen.options.headers,false); assert.equal('Cookie' in seen.options.headers,false);
+assert.equal(typeof seen.options.signal,'object'); assert.equal(seen.options.signal.aborted,false);
 
 const streamed=streamingResponse([pdfBytes.slice(0,5),pdfBytes.slice(5)]);
 const streamedOut=await fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>streamed,maxBytes:1024});
@@ -45,6 +46,14 @@ assert.equal(oversized.state().cancelled,true); assert.equal(oversized.state().r
 let networkCalled=false;
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{maxBytes:(12*1024*1024)+1,fetchImpl:async()=>{networkCalled=true;return fakeResponse();}}),/maxBytes inválido/);
 assert.equal(networkCalled,false, 'El techo SAFE de 12 MiB debe validarse antes de cualquier acceso de red');
+
+networkCalled=false;
+await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{timeoutMs:30_001,fetchImpl:async()=>{networkCalled=true;return fakeResponse();}}),/timeoutMs inválido/);
+assert.equal(networkCalled,false, 'El techo SAFE de timeout debe validarse antes de cualquier acceso de red');
+
+let timeoutSignal=null;
+await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{timeoutMs:100,fetchImpl:async(_url,options)=>{timeoutSignal=options.signal;return await new Promise(()=>{});}}),/timeout SAFE/);
+assert.equal(timeoutSignal?.aborted,true, 'El timeout SAFE debe abortar la solicitud subyacente');
 
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({status:302})}),/Redirect/);
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentType:'text\/html'})}),/Content-Type/);
@@ -71,4 +80,4 @@ const ambiguousBackslash='https://djfhz848yeeat.cloudfront.net\\pdf_planillas/5/
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem({url:ambiguousBackslash,source:{pdf_url:ambiguousBackslash}}),{fetchImpl:async()=>{networkCalled=true;return fakeResponse();}}),/ambiguos\/normalizables/);
 assert.equal(networkCalled,false, 'Una URL raw ambigua debe bloquearse antes de cualquier acceso de red');
 
-console.log('✓ official PDF fetch core SAFE/fail-closed + host control real + strict PDF media type + bounded streaming-only body + immutable 12 MiB ceiling + SHA-256 provenance + raw URL ambiguity rejection OK');
+console.log('✓ official PDF fetch core SAFE/fail-closed + host control real + strict PDF media type + bounded streaming-only body + immutable 12 MiB ceiling + abortable 30s timeout ceiling + SHA-256 provenance + raw URL ambiguity rejection OK');
