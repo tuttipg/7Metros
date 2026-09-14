@@ -26,13 +26,25 @@ class TrackingTests(unittest.TestCase):
         third = tracker.update([Detection(2, 0, 22, 40)])
         self.assertEqual(first[0].track_id, third[0].track_id)
 
+    def test_velocity_prediction_handles_fast_motion(self):
+        tracker = CentroidTracker(max_distance=15, max_missed=1)
+        first = tracker.update([Detection(0, 0, 10, 10)])
+        second = tracker.update([Detection(10, 0, 20, 10)])
+        third = tracker.update([Detection(30, 0, 40, 10)])
+        self.assertEqual(first[0].track_id, second[0].track_id)
+        self.assertEqual(second[0].track_id, third[0].track_id)
+        self.assertEqual(third[0].velocity_x, 20.0)
+        self.assertEqual(third[0].velocity_y, 0.0)
+
     def test_frame_payload_contract(self):
         tracker = CentroidTracker()
-        tracks = tracker.update([Detection(1, 2, 11, 22, confidence=0.91)])
+        tracker.update([Detection(1, 2, 11, 22, confidence=0.91)])
+        tracks = tracker.update([Detection(4, 2, 14, 22, confidence=0.92)])
         payload = frame_payload(frame_index=3, timestamp_ms=120.0, width=1920, height=1080, tracks=tracks)
         self.assertEqual(payload["schema"], "7metros-ai.v1")
         self.assertEqual(payload["objects"][0]["track_id"], 1)
         self.assertEqual(payload["objects"][0]["kind"], "player")
+        self.assertEqual(payload["objects"][0]["velocity_xy"], [3.0, 0.0])
         json.dumps(payload)
 
 
