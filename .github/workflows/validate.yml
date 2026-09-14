@@ -87,7 +87,7 @@ jobs:
           node --check n8n/tournamenttracker-indexed-route-core-smoke.mjs
 
       - name: Check Python syntax
-        run: python -m py_compile validate_site.py validate_backend_contract.py tools/femebal_public_discovery.py tests/test_femebal_public_discovery.py
+        run: python -m py_compile validate_site.py validate_backend_contract.py tools/femebal_public_discovery.py tests/test_femebal_public_discovery.py tests/test_femebal_public_discovery_http.py
 
       - name: Store smoke test
         run: node store-smoke.mjs
@@ -177,7 +177,7 @@ jobs:
         run: node n8n/tournamenttracker-indexed-route-core-smoke.mjs
 
       - name: FEMEBAL public discovery unit tests
-        run: python -m unittest -v tests.test_femebal_public_discovery
+        run: python -m unittest -v tests.test_femebal_public_discovery tests.test_femebal_public_discovery_http
 
       - name: Validate static site
         run: python validate_site.py
