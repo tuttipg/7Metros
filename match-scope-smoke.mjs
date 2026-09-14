@@ -23,12 +23,14 @@ const participations = [
   { id: 102, partido_id: 3, equipo_id: 10 },
   { id: 103, partido_id: 999, equipo_id: 10 },
   { id: 104, partido_id: 5, equipo_id: 11 },
-  { id: 105, partido_id: null, equipo_id: 10 }
+  { id: 105, partido_id: null, equipo_id: 10 },
+  { id: 106, partido_id: 1, equipo_id: 12 },
+  { id: 107, partido_id: 5, equipo_id: null }
 ];
 assert.deepEqual(
   filterParticipationsToMatches(participations, scopedMatches).map(row => row.id),
   [101, 104],
-  'Participaciones de partidos filtrados, huérfanos o sin partido no deben contaminar estadísticas'
+  'Participaciones de partidos filtrados, huérfanos, sin partido o con equipo ajeno al partido no deben contaminar estadísticas'
 );
 assert.deepEqual(filterParticipationsToMatches(participations, []), [], 'Sin partidos válidos las participaciones deben fallar cerradas');
 
