@@ -41,14 +41,14 @@ for (const key of ['createMatch', 'deleteMatch', 'import_batch', 'insert-row', '
   assert.equal(candidate.anonymousGetReviewable, false);
 }
 
-for (const key of ['access_token', 'apikey', 'api_key', 'auth', 'authorization', 'cookie', 'key', 'password', 'secret', 'session', 'token']) {
+for (const key of ['access_token', 'apikey', 'api_key', 'auth', 'authorization', 'bearer', 'cookie', 'credential', 'credentials', 'csrf', 'jwt', 'key', 'password', 'secret', 'session', 'token', 'xsrf']) {
   const candidate = classify(`https://www.femebal.com/api/matches?${key}=redacted`);
   assert.equal(candidate.state, 'rejected_on_policy_revalidation');
   assert.equal(candidate.reason, 'sensitive_query_key');
   assert.equal(candidate.anonymousGetReviewable, false);
 }
 
-for (const key of ['accessToken', 'authToken', 'client_secret', 'sessionId', 'playerToken', 'passwordReset', 'apiKeyValue']) {
+for (const key of ['accessToken', 'accessKeyId', 'authToken', 'bearerToken', 'clientKey', 'client_secret', 'credentialId', 'csrfToken', 'jwtToken', 'privateKey', 'secretKey', 'sessionId', 'signingKey', 'playerToken', 'passwordReset', 'apiKeyValue', 'xsrfToken']) {
   const candidate = classify(`https://www.femebal.com/api/matches?${key}=redacted`);
   assert.equal(candidate.state, 'rejected_on_policy_revalidation');
   assert.equal(candidate.reason, 'sensitive_query_key');
