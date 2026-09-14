@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from math import sqrt
-from typing import Iterable, Mapping
+from typing import Iterable, Mapping, Sequence
 
 from .tracking import Detection
 
@@ -24,6 +24,84 @@ def chromatic_distance(left: RGB, right: RGB) -> float:
     a = _chromaticity(left)
     b = _chromaticity(right)
     return sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
+
+
+def _mean_rgb(values: Sequence[RGB]) -> RGB:
+    if not values:
+        raise ValueError("cannot average an empty color cluster")
+    count = float(len(values))
+    return tuple(sum(color[channel] for color in values) / count for channel in range(3))  # type: ignore[return-value]
+
+
+def fit_team_color_references(
+    samples: Iterable[RGB],
+    *,
+    team_names: tuple[str, str] = ("team_a", "team_b"),
+    min_samples: int = 6,
+    max_iterations: int = 32,
+) -> dict[str, RGB]:
+    """Fit two deterministic jersey-color references from unlabeled samples.
+
+    This is a small, dependency-free two-cluster baseline intended for match-level
+    calibration. Initialization uses the farthest chromatic pair, then Lloyd-style
+    assignment/update iterations. Returned references preserve mean RGB brightness
+    while assignment is performed in chromaticity space.
+
+    The function deliberately refuses underdetermined/degenerate inputs instead of
+    inventing two teams from effectively one color family.
+    """
+    values = [tuple(float(channel) for channel in sample) for sample in samples]
+    if min_samples < 2:
+        raise ValueError("min_samples must be >= 2")
+    if len(values) < min_samples:
+        raise ValueError(f"at least {min_samples} jersey samples are required")
+    if len(team_names) != 2 or not all(str(name).strip() for name in team_names):
+        raise ValueError("team_names must contain two non-empty labels")
+    if team_names[0] == team_names[1]:
+        raise ValueError("team_names must be distinct")
+    if max_iterations <= 0:
+        raise ValueError("max_iterations must be > 0")
+
+    best_pair: tuple[int, int] | None = None
+    best_distance = -1.0
+    for i in range(len(values)):
+        for j in range(i + 1, len(values)):
+            distance = chromatic_distance(values[i], values[j])
+            if distance > best_distance:
+                best_distance = distance
+                best_pair = (i, j)
+
+    if best_pair is None or best_distance <= 1e-6:
+        raise ValueError("jersey samples do not contain two separable color families")
+
+    centers = [values[best_pair[0]], values[best_pair[1]]]
+    assignments: list[int] | None = None
+
+    for _ in range(max_iterations):
+        next_assignments = [
+            0 if chromatic_distance(sample, centers[0]) <= chromatic_distance(sample, centers[1]) else 1
+            for sample in values
+        ]
+        clusters = [
+            [sample for sample, cluster_id in zip(values, next_assignments) if cluster_id == 0],
+            [sample for sample, cluster_id in zip(values, next_assignments) if cluster_id == 1],
+        ]
+        if not clusters[0] or not clusters[1]:
+            raise ValueError("automatic calibration collapsed to one color cluster")
+
+        new_centers = [_mean_rgb(clusters[0]), _mean_rgb(clusters[1])]
+        if next_assignments == assignments:
+            centers = new_centers
+            break
+        assignments = next_assignments
+        centers = new_centers
+
+    if chromatic_distance(centers[0], centers[1]) <= 0.03:
+        raise ValueError("automatic calibration found jersey colors that are too similar")
+
+    # Stable ordering makes repeated runs reproducible regardless of input order.
+    centers.sort(key=lambda rgb: _chromaticity(rgb))
+    return {str(team_names[0]): centers[0], str(team_names[1]): centers[1]}
 
 
 def classify_rgb(
