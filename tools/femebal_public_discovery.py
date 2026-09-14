@@ -13,6 +13,7 @@ PROGRAMACIONES_URL="https://femebal.com/programaciones/"
 UA="7Metros-public-discovery/1.0 (+read-only; official-public-pages-only)"
 MANIFEST_SCHEMA_VERSION=2
 TRACKING_QUERY_KEYS={"fbclid","gclid","dclid","msclkid","mc_cid","mc_eid"}
+AMBIGUOUS_RAW_URL_CHARS=re.compile(r'[\\\x00-\x1f\x7f]')
 
 class LinkParser(HTMLParser):
     def __init__(self): super().__init__(); self.links=[]; self._href=None; self._text=[]
@@ -29,7 +30,14 @@ class Source: page_url:str; title:str; source_type:str; phase:str|None; round_nu
 @dataclass(frozen=True)
 class PdfSource: page_url:str; page_title:str; pdf_url:str; anchor_text:str; source_type:str; phase:str|None; round_number:int|None
 
+def _has_ambiguous_raw_url_chars(url:str)->bool:
+    return bool(AMBIGUOUS_RAW_URL_CHARS.search(str(url)))
+
 def _assert_allowed(url:str, *, allow_planilla:bool=False)->None:
+    # urllib.parse silently strips ASCII tabs/newlines from URLs. Reject the raw
+    # spelling first so Python discovery cannot accept an input that the Node
+    # policy treats as ambiguous/normalizable.
+    if _has_ambiguous_raw_url_chars(url): raise ValueError(f"URL con caracteres ambiguos/normalizables rechazada: {url!r}")
     p=urlparse(url)
     allowed_hosts=set(FEMEBAL_WEB_HOSTS)
     if allow_planilla: allowed_hosts.add(FEMEBAL_PLANILLA_HOST)
@@ -60,6 +68,7 @@ def _canonical_official_page_url(url:str)->str:
     return f"https://{p.hostname}{path}{query}"
 
 def _is_official_upload_pdf(url:str)->bool:
+    if _has_ambiguous_raw_url_chars(url): return False
     p=urlparse(url)
     if p.scheme!="https" or p.query or p.fragment: return False
     # Keep semantic parity with n8n/official-url-policy.mjs: official path prefixes
