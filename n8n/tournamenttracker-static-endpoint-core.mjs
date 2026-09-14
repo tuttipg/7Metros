@@ -71,6 +71,13 @@ function isMutatingOperationValue(value) {
   return [...MUTATING_QUERY_VALUES].some((operation) => normalized.startsWith(operation));
 }
 
+function isSensitiveOrMutatingPathSegment(segment) {
+  const normalized = String(segment ?? '').trim().toLowerCase();
+  if (!normalized) return false;
+  if (SENSITIVE_OR_MUTATING_PATH_SEGMENTS.has(normalized)) return true;
+  return [...MUTATING_QUERY_VALUES].some((operation) => normalized.startsWith(operation));
+}
+
 function classifyExplicitHttpsLiteral(rawValue) {
   const raw = String(rawValue ?? '');
   if (!raw || raw.length > MAX_EXPLICIT_URL_LENGTH) return { accepted: false, reason: 'invalid_length' };
@@ -185,7 +192,7 @@ function classifyCandidateForPolicy(candidate) {
 
   const url = new URL(classified.url);
   const pathSegments = url.pathname.toLowerCase().split('/').filter(Boolean);
-  const sensitiveSegment = pathSegments.find((segment) => SENSITIVE_OR_MUTATING_PATH_SEGMENTS.has(segment));
+  const sensitiveSegment = pathSegments.find(isSensitiveOrMutatingPathSegment);
   if (sensitiveSegment) {
     return {
       url: classified.url,
@@ -317,6 +324,7 @@ export function classifyTournamentTrackerCandidatePolicy(extractionResult) {
       onlyExplicitHttpsLiterals: true,
       femebalSameOrganizationOnlyForReviewableGet: true,
       sensitiveOrMutatingPathsBlocked: true,
+      compoundMutatingPathPrefixesBlocked: true,
       sensitiveOrMutatingQueriesBlocked: true,
       externalHostsBlocked: true,
       staticResourcesBlockedAsEndpoints: true,
