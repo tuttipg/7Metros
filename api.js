@@ -166,13 +166,29 @@ async function loadGlobalSummaryView() {
   }
 }
 
-async function loadSeasonMatches(season) {
+export function filterMatchesToTeamIds(matches, teamIds) {
+  const allowed = teamIds instanceof Set
+    ? teamIds
+    : new Set((teamIds || []).map(Number).filter(Number.isFinite));
+
+  return (matches || []).filter(row => {
+    const homeTeamId = Number(row?.local_equipo_id ?? row?.local_id);
+    const awayTeamId = Number(row?.visitante_equipo_id ?? row?.visitante_id);
+    return Number.isFinite(homeTeamId)
+      && Number.isFinite(awayTeamId)
+      && allowed.has(homeTeamId)
+      && allowed.has(awayTeamId);
+  });
+}
+
+async function loadSeasonMatches(season, teamIds) {
   try {
     return await supabaseGetAll('partidos', `?select=*&temporada_id=eq.${season}`);
   } catch {
-    // Fallback para esquemas antiguos: el store descarta cruces fuera del catálogo
-    // de equipos de la temporada, por lo que sigue siendo correcto aunque sea menos eficiente.
-    return supabaseGetAll('partidos', '?select=*');
+    // Fallback para esquemas antiguos: ante la falta del filtro por temporada,
+    // aceptar sólo cruces cuyos dos equipos pertenezcan al alcance solicitado.
+    const rows = await supabaseGetAll('partidos', '?select=*');
+    return filterMatchesToTeamIds(rows, teamIds);
   }
 }
 
@@ -198,7 +214,7 @@ export async function loadPublicDataset(seasonId) {
 
   const [jugadores, partidos, participaciones] = await Promise.all([
     supabaseGetByIds('jugadores', 'id', playerIds, 'id,nombre,apellido,fecha_nacimiento,brazo_habil,altura_cm,peso_kg'),
-    loadSeasonMatches(season),
+    loadSeasonMatches(season, teamIds),
     supabaseGetByIds('participaciones', 'equipo_id', teamIds, '*')
   ]);
 
