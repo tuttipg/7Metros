@@ -13,6 +13,31 @@ const SENSITIVE_QUERY_KEYS = new Set([
   'session',
   'token',
 ]);
+const MUTATING_QUERY_KEYS = new Set([
+  'create',
+  'delete',
+  'import',
+  'insert',
+  'mutate',
+  'remove',
+  'reset',
+  'update',
+  'upload',
+  'write',
+]);
+const MUTATING_QUERY_VALUES = new Set([
+  'create',
+  'delete',
+  'import',
+  'insert',
+  'mutate',
+  'remove',
+  'reset',
+  'update',
+  'upload',
+  'write',
+]);
+const OPERATION_QUERY_KEYS = new Set(['action', 'method', 'op', 'operation']);
 
 const FEMEBAL_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
 const SENSITIVE_OR_MUTATING_PATH_SEGMENTS = new Set([
@@ -60,9 +85,17 @@ function classifyExplicitHttpsLiteral(rawValue) {
   if (url.port && url.port !== '443') return { accepted: false, reason: 'nonstandard_https_port' };
   if (/%[0-9a-f]{2}/i.test(url.pathname)) return { accepted: false, reason: 'percent_encoded_path_not_allowed' };
 
-  for (const key of url.searchParams.keys()) {
-    if (SENSITIVE_QUERY_KEYS.has(key.toLowerCase())) {
+  for (const [rawKey, rawQueryValue] of url.searchParams.entries()) {
+    const key = rawKey.toLowerCase();
+    const queryValue = rawQueryValue.trim().toLowerCase();
+    if (SENSITIVE_QUERY_KEYS.has(key)) {
       return { accepted: false, reason: 'sensitive_query_key' };
+    }
+    if (MUTATING_QUERY_KEYS.has(key)) {
+      return { accepted: false, reason: 'mutating_query_key' };
+    }
+    if (OPERATION_QUERY_KEYS.has(key) && MUTATING_QUERY_VALUES.has(queryValue)) {
+      return { accepted: false, reason: 'mutating_query_operation' };
     }
   }
 
@@ -246,6 +279,7 @@ export function extractTournamentTrackerExplicitHttpsCandidates({ body, assetCla
       percentEncodedPathsAllowed: false,
       nonstandardHttpsPortsAllowed: false,
       ambiguousRawUrlCharactersAllowed: false,
+      mutatingQuerySemanticsAllowed: false,
     },
   };
 }
@@ -277,6 +311,7 @@ export function classifyTournamentTrackerCandidatePolicy(extractionResult) {
       onlyExplicitHttpsLiterals: true,
       femebalSameOrganizationOnlyForReviewableGet: true,
       sensitiveOrMutatingPathsBlocked: true,
+      sensitiveOrMutatingQueriesBlocked: true,
       externalHostsBlocked: true,
       staticResourcesBlockedAsEndpoints: true,
       percentEncodedPathsBlocked: true,
