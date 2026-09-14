@@ -54,7 +54,9 @@ async function readBodyBounded(response, maxBytes) {
 export async function fetchOfficialFemebalPdf(workItem, { fetchImpl = globalThis.fetch, maxBytes = DEFAULT_MAX_BYTES } = {}) {
   const sourceUrl = validatePdfWorkItem(workItem);
   if (typeof fetchImpl !== 'function') throw new Error('fetch no disponible');
-  if (!Number.isInteger(maxBytes) || maxBytes < 1024) throw new Error('maxBytes inválido');
+  if (!Number.isInteger(maxBytes) || maxBytes < 1024 || maxBytes > DEFAULT_MAX_BYTES) {
+    throw new Error(`maxBytes inválido: debe estar entre 1024 y ${DEFAULT_MAX_BYTES}`);
+  }
   const response = await fetchImpl(sourceUrl, { method: 'GET', redirect: 'manual', credentials: 'omit', headers: { Accept: 'application/pdf' } });
   if (!response || typeof response !== 'object') throw new Error('Respuesta HTTP inválida');
   const status = Number(response.status);
