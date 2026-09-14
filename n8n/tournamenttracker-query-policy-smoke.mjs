@@ -34,6 +34,27 @@ for (const key of ['create', 'delete', 'import', 'insert', 'mutate', 'remove', '
   assert.equal(candidate.anonymousGetReviewable, false);
 }
 
+for (const key of ['createMatch', 'deleteMatch', 'import_batch', 'insert-row', 'mutateRoster', 'removePlayer', 'resetTable', 'updateScore', 'uploadFile', 'writeV2']) {
+  const candidate = classify(`https://www.femebal.com/api/matches?${key}=1`);
+  assert.equal(candidate.state, 'rejected_on_policy_revalidation');
+  assert.equal(candidate.reason, 'mutating_query_key');
+  assert.equal(candidate.anonymousGetReviewable, false);
+}
+
+for (const key of ['access_token', 'apikey', 'api_key', 'auth', 'authorization', 'cookie', 'key', 'password', 'secret', 'session', 'token']) {
+  const candidate = classify(`https://www.femebal.com/api/matches?${key}=redacted`);
+  assert.equal(candidate.state, 'rejected_on_policy_revalidation');
+  assert.equal(candidate.reason, 'sensitive_query_key');
+  assert.equal(candidate.anonymousGetReviewable, false);
+}
+
+for (const key of ['accessToken', 'authToken', 'client_secret', 'sessionId', 'playerToken', 'passwordReset', 'apiKeyValue']) {
+  const candidate = classify(`https://www.femebal.com/api/matches?${key}=redacted`);
+  assert.equal(candidate.state, 'rejected_on_policy_revalidation');
+  assert.equal(candidate.reason, 'sensitive_query_key');
+  assert.equal(candidate.anonymousGetReviewable, false);
+}
+
 for (const key of ['action', 'method', 'op', 'operation']) {
   for (const value of ['create', 'delete', 'import', 'insert', 'mutate', 'remove', 'reset', 'update', 'upload', 'write']) {
     const candidate = classify(`https://www.femebal.com/api/matches?${key}=${value}`);
@@ -57,11 +78,11 @@ for (const value of ['read', 'list', 'getMatches', 'search']) {
   assert.equal(candidate.probeAllowed, false);
 }
 
-const benign = classify('https://www.femebal.com/api/matches?season=2026&category=LHC');
+const benign = classify('https://www.femebal.com/api/matches?season=2026&category=LHC&sortKey=date');
 assert.equal(benign.state, 'femebal_public_get_reviewable');
 assert.equal(benign.anonymousGetReviewable, true);
 assert.equal(benign.probeAllowed, false);
 assert.equal(benign.authAllowed, false);
 assert.equal(benign.writesAllowed, false);
 
-console.log('TournamentTracker mutating query policy SAFE smoke OK');
+console.log('TournamentTracker sensitive/mutating query policy SAFE smoke OK');
