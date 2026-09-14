@@ -74,12 +74,27 @@ for (const badEvidence of [
   {
     kind: 'public_index',
     observedUrl: observedPublicIndexedRoute,
-    sourceUrl: 'https://user:pass@search.example/result',
+    sourceUrl: 'https://user:pass@www.google.com/search?q=femebal',
   },
   {
     kind: 'public_index',
     observedUrl: observedPublicIndexedRoute,
-    sourceUrl: 'https://search.example/result#fragment',
+    sourceUrl: 'https://www.google.com/search?q=femebal#fragment',
+  },
+  {
+    kind: 'public_index',
+    observedUrl: observedPublicIndexedRoute,
+    sourceUrl: 'https://search.example/result',
+  },
+  {
+    kind: 'explicit_public_link',
+    observedUrl: observedPublicIndexedRoute,
+    sourceUrl: 'https://www.google.com/search?q=femebal',
+  },
+  {
+    kind: 'explicit_public_link',
+    observedUrl: observedPublicIndexedRoute,
+    sourceUrl: 'https://evil.example/fixture-publico',
   },
 ]) {
   const rejected = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: badEvidence });
@@ -99,6 +114,15 @@ assert.equal(reviewed.automaticProbeAllowed, false);
 assert.equal(reviewed.evidence.kind, 'public_index');
 assert.equal(reviewed.evidence.observedUrl, canonicalObservedRoute);
 assert.equal(reviewed.evidence.sourceUrl, publicEvidence.sourceUrl);
+
+const bingEvidence = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, {
+  publicEvidence: {
+    kind: 'public_index',
+    observedUrl: canonicalObservedRoute,
+    sourceUrl: 'https://www.bing.com/search?q=site%3Afemebal.com%2Ftournament-tracker',
+  },
+});
+assert.equal(bingEvidence.state, 'reviewed_anonymous_get_only');
 
 const explicitLinkEvidence = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, {
   publicEvidence: {
