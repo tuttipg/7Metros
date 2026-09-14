@@ -36,6 +36,7 @@ jobs:
           node --check utils.js
           node --check config.js
           node --check store-smoke.mjs
+          node --check team-integrity-smoke.mjs
           node --check navigation-smoke.mjs
           node --check category-order-smoke.mjs
           node --check dashboard-scope-smoke.mjs
@@ -71,6 +72,9 @@ jobs:
 
       - name: Store smoke test
         run: node store-smoke.mjs
+
+      - name: Team integrity smoke test
+        run: node team-integrity-smoke.mjs
 
       - name: Navigation smoke test
         run: node navigation-smoke.mjs
