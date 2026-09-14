@@ -1,4 +1,10 @@
 const FEMEBAL_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
+const PUBLIC_INDEX_HOSTS = new Set([
+  'google.com',
+  'www.google.com',
+  'bing.com',
+  'www.bing.com',
+]);
 const MAX_ROUTE_TOKEN_LENGTH = 256;
 const INDEXED_ROUTE_PREFIX = '/tournament-tracker/';
 const PUBLIC_EVIDENCE_KINDS = new Set(['public_index', 'explicit_public_link']);
@@ -50,6 +56,14 @@ function validatePublicEvidence(targetCanonicalUrl, evidence) {
     throw new Error('La fuente de evidencia pública no admite credenciales en URL');
   }
   if (sourceUrl.hash) throw new Error('La fuente de evidencia pública no admite fragments');
+
+  const sourceHost = sourceUrl.hostname.toLowerCase();
+  if (kind === 'public_index' && !PUBLIC_INDEX_HOSTS.has(sourceHost)) {
+    throw new Error('La evidencia public_index requiere una fuente de índice público permitida');
+  }
+  if (kind === 'explicit_public_link' && !FEMEBAL_HOSTS.has(sourceHost)) {
+    throw new Error('La evidencia explicit_public_link requiere una fuente oficial FEMEBAL');
+  }
 
   return {
     kind,
