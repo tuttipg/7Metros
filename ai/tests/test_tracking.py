@@ -2,7 +2,7 @@ import json
 import unittest
 
 from sevenmetros_ai.schema import frame_payload
-from sevenmetros_ai.tracking import CentroidTracker, Detection
+from sevenmetros_ai.tracking import CentroidTracker, Detection, bbox_iou
 
 
 class TrackingTests(unittest.TestCase):
@@ -35,6 +35,46 @@ class TrackingTests(unittest.TestCase):
         self.assertEqual(second[0].track_id, third[0].track_id)
         self.assertEqual(third[0].velocity_x, 20.0)
         self.assertEqual(third[0].velocity_y, 0.0)
+
+    def test_team_gating_prevents_id_swap_at_crossing(self):
+        tracker = CentroidTracker(max_distance=30, max_missed=1)
+        first = tracker.update([
+            Detection(0, 0, 10, 20, team="local"),
+            Detection(40, 0, 50, 20, team="visitor"),
+        ])
+        local_id = first[0].track_id
+        visitor_id = first[1].track_id
+
+        tracker.update([
+            Detection(15, 0, 25, 20, team="local"),
+            Detection(25, 0, 35, 20, team="visitor"),
+        ])
+        crossed = tracker.update([
+            Detection(30, 0, 40, 20, team="local"),
+            Detection(10, 0, 20, 20, team="visitor"),
+        ])
+
+        by_team = {track.detection.team: track.track_id for track in crossed}
+        self.assertEqual(by_team["local"], local_id)
+        self.assertEqual(by_team["visitor"], visitor_id)
+
+    def test_label_gating_prevents_ball_from_stealing_player_track(self):
+        tracker = CentroidTracker(max_distance=20, max_missed=1)
+        first = tracker.update([Detection(0, 0, 10, 20, label="player")])
+        player_id = first[0].track_id
+        second = tracker.update([Detection(2, 2, 6, 6, label="ball")])
+        self.assertNotEqual(second[0].track_id, player_id)
+        self.assertEqual(second[0].detection.label, "ball")
+
+    def test_bbox_iou(self):
+        self.assertAlmostEqual(
+            bbox_iou(Detection(0, 0, 10, 10), Detection(5, 0, 15, 10)),
+            1 / 3,
+        )
+        self.assertEqual(
+            bbox_iou(Detection(0, 0, 10, 10), Detection(20, 20, 30, 30)),
+            0.0,
+        )
 
     def test_frame_payload_contract(self):
         tracker = CentroidTracker()
