@@ -15,6 +15,7 @@ def analyze_video(
     *,
     output_jsonl: str | Path,
     output_video: str | Path | None = None,
+    team_classifier=None,
     max_distance: float = 80.0,
     max_missed: int = 8,
     max_frames: int | None = None,
@@ -57,6 +58,7 @@ def analyze_video(
 
     frames = 0
     detections_total = 0
+    team_labels_total = 0
     unique_track_ids: set[int] = set()
 
     try:
@@ -68,6 +70,9 @@ def analyze_video(
                 if max_frames is not None and frames >= max_frames:
                     break
                 detections = detector.detect(frame)
+                if team_classifier is not None:
+                    detections = team_classifier.classify(frame, detections)
+                team_labels_total += sum(1 for detection in detections if detection.team is not None)
                 tracks = tracker.update(detections)
                 tracking_metrics.observe(frames, tracks)
                 detections_total += len(detections)
@@ -86,6 +91,8 @@ def analyze_video(
     return {
         "frames_processed": frames,
         "detections_total": detections_total,
+        "team_labels_total": team_labels_total,
+        "team_label_rate": (team_labels_total / detections_total) if detections_total else 0.0,
         "unique_tracks": len(unique_track_ids),
         "fps": fps,
         "width": width,
