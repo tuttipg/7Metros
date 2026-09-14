@@ -49,6 +49,7 @@ const MUTATING_QUERY_VALUES = new Set([
   'write',
 ]);
 const OPERATION_QUERY_KEYS = new Set(['action', 'method', 'op', 'operation']);
+const OPERATION_COMPOUND_QUERY_TOKENS = new Set(['action', 'method', 'operation']);
 
 const FEMEBAL_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
 const SENSITIVE_OR_MUTATING_PATH_SEGMENTS = new Set([
@@ -102,6 +103,18 @@ function isMutatingQueryKey(value) {
   return [...MUTATING_QUERY_KEYS].some((operation) => compact.startsWith(operation));
 }
 
+function isOperationQueryKey(value) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (!normalized) return false;
+  if (OPERATION_QUERY_KEYS.has(normalized)) return true;
+
+  const compact = compactQueryKey(normalized);
+  if (!compact) return false;
+  return [...OPERATION_COMPOUND_QUERY_TOKENS].some((token) => (
+    compact.startsWith(token) || compact.endsWith(token)
+  ));
+}
+
 function isMutatingOperationValue(value) {
   const normalized = String(value ?? '').trim().toLowerCase();
   if (!normalized) return false;
@@ -144,7 +157,7 @@ function classifyExplicitHttpsLiteral(rawValue) {
     if (isMutatingQueryKey(key)) {
       return { accepted: false, reason: 'mutating_query_key' };
     }
-    if (OPERATION_QUERY_KEYS.has(key) && isMutatingOperationValue(queryValue)) {
+    if (isOperationQueryKey(key) && isMutatingOperationValue(queryValue)) {
       return { accepted: false, reason: 'mutating_query_operation' };
     }
   }
@@ -332,6 +345,7 @@ export function extractTournamentTrackerExplicitHttpsCandidates({ body, assetCla
       mutatingQuerySemanticsAllowed: false,
       compoundSensitiveQueryKeysAllowed: false,
       compoundMutatingQueryKeysAllowed: false,
+      compoundOperationQueryKeysAllowed: false,
     },
   };
 }
@@ -367,6 +381,7 @@ export function classifyTournamentTrackerCandidatePolicy(extractionResult) {
       sensitiveOrMutatingQueriesBlocked: true,
       compoundSensitiveQueryKeysBlocked: true,
       compoundMutatingQueryKeysBlocked: true,
+      compoundOperationQueryKeysBlocked: true,
       externalHostsBlocked: true,
       staticResourcesBlockedAsEndpoints: true,
       percentEncodedPathsBlocked: true,
