@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { classifyTournamentTrackerStaticAssetResponse } from './tournamenttracker-public-core.mjs';
-import { extractTournamentTrackerExplicitHttpsCandidates } from './tournamenttracker-static-endpoint-core.mjs';
+import {
+  classifyTournamentTrackerCandidatePolicy,
+  extractTournamentTrackerExplicitHttpsCandidates,
+} from './tournamenttracker-static-endpoint-core.mjs';
 
 function classifyBody(body) {
   return classifyTournamentTrackerStaticAssetResponse({
@@ -75,6 +78,68 @@ assert.deepEqual(extracted.candidates, [
 assert.equal(extracted.rejectedCount, 7);
 assert.equal(extracted.candidates.some((item) => /secret|pass|token=/i.test(item.url)), false);
 assert.equal(extracted.candidates.some((item) => item.url.endsWith('/api/') || item.url.endsWith('/v1/')), false);
+
+const policy = classifyTournamentTrackerCandidatePolicy(extracted);
+assert.equal(policy.state, 'policy_classified_candidates');
+assert.equal(policy.probeAllowed, false);
+assert.equal(policy.automaticProbingAllowed, false);
+assert.equal(policy.writesAllowed, false);
+assert.equal(policy.authAllowed, false);
+assert.equal(policy.constraints.manualReviewRequiredBeforeAnyGet, true);
+assert.deepEqual(policy.candidates, [
+  {
+    url: 'https://public.example.org/v1/fixtures',
+    state: 'external_untrusted',
+    hostScope: 'external_untrusted',
+    probeAllowed: false,
+    anonymousGetReviewable: false,
+    manualReviewRequired: true,
+  },
+  {
+    url: 'https://www.femebal.com/api/matches?season=2026',
+    state: 'femebal_public_get_reviewable',
+    hostScope: 'femebal_same_organization',
+    probeAllowed: false,
+    anonymousGetReviewable: true,
+    manualReviewRequired: true,
+    allowedMethodIfReviewed: 'GET',
+    authAllowed: false,
+    writesAllowed: false,
+  },
+]);
+
+// Policy revalidates URLs instead of trusting extractor metadata.
+const forgedScope = structuredClone(extracted);
+forgedScope.candidates[0].hostScope = 'femebal_same_organization';
+const forgedScopePolicy = classifyTournamentTrackerCandidatePolicy(forgedScope);
+assert.equal(forgedScopePolicy.candidates[0].state, 'external_untrusted');
+assert.equal(forgedScopePolicy.candidates[0].anonymousGetReviewable, false);
+
+const policyBody = `
+  const admin = "https://www.femebal.com/admin/matches";
+  const mutating = "https://www.femebal.com/api/delete/match";
+  const staticAsset = "https://www.femebal.com/tournament-tracker/static/js/runtime.js";
+  const reviewable = "https://femebal.com/api/public/fixtures?season=2026";
+`;
+const policyExtraction = extractTournamentTrackerExplicitHttpsCandidates({
+  body: policyBody,
+  assetClassification: classifyBody(policyBody),
+});
+const classifiedPolicyBody = classifyTournamentTrackerCandidatePolicy(policyExtraction);
+const byUrl = new Map(classifiedPolicyBody.candidates.map((item) => [item.url, item]));
+assert.equal(byUrl.get('https://www.femebal.com/admin/matches').state, 'blocked_sensitive_or_mutating_path');
+assert.equal(byUrl.get('https://www.femebal.com/api/delete/match').state, 'blocked_sensitive_or_mutating_path');
+assert.equal(byUrl.get('https://www.femebal.com/tournament-tracker/static/js/runtime.js').state, 'static_resource_not_endpoint');
+assert.equal(byUrl.get('https://femebal.com/api/public/fixtures?season=2026').state, 'femebal_public_get_reviewable');
+assert.equal(classifiedPolicyBody.candidates.every((item) => item.probeAllowed === false), true);
+
+const invalidPolicySource = classifyTournamentTrackerCandidatePolicy({
+  ...extracted,
+  sourceValidated: false,
+});
+assert.equal(invalidPolicySource.state, 'source_extraction_not_policy_eligible');
+assert.deepEqual(invalidPolicySource.candidates, []);
+assert.equal(invalidPolicySource.probeAllowed, false);
 
 // Fail closed if a classification is accidentally paired with a different body,
 // even when byte length is unchanged. SHA-256 binds the exact validated response.
