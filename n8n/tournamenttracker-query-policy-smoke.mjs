@@ -71,12 +71,33 @@ for (const key of ['action', 'method', 'op', 'operation']) {
   }
 }
 
+for (const key of ['actionType', 'methodName', 'operationName', 'requestAction', 'requestMethod', 'requestOperation']) {
+  for (const value of ['deleteMatch', 'updateScore', 'import_batch', 'write.v2']) {
+    const candidate = classify(`https://www.femebal.com/api/matches?${key}=${encodeURIComponent(value)}`);
+    assert.equal(candidate.state, 'rejected_on_policy_revalidation');
+    assert.equal(candidate.reason, 'mutating_query_operation');
+    assert.equal(candidate.anonymousGetReviewable, false);
+  }
+}
+
 for (const value of ['read', 'list', 'getMatches', 'search']) {
   const candidate = classify(`https://www.femebal.com/api/matches?action=${value}`);
   assert.equal(candidate.state, 'femebal_public_get_reviewable');
   assert.equal(candidate.anonymousGetReviewable, true);
   assert.equal(candidate.probeAllowed, false);
 }
+
+for (const key of ['actionType', 'methodName', 'operationName', 'requestAction', 'requestMethod', 'requestOperation']) {
+  const candidate = classify(`https://www.femebal.com/api/matches?${key}=getMatches`);
+  assert.equal(candidate.state, 'femebal_public_get_reviewable');
+  assert.equal(candidate.anonymousGetReviewable, true);
+  assert.equal(candidate.probeAllowed, false);
+}
+
+const optionLike = classify('https://www.femebal.com/api/matches?option=update&season=2026');
+assert.equal(optionLike.state, 'femebal_public_get_reviewable');
+assert.equal(optionLike.anonymousGetReviewable, true);
+assert.equal(optionLike.probeAllowed, false);
 
 const benign = classify('https://www.femebal.com/api/matches?season=2026&category=LHC&sortKey=date');
 assert.equal(benign.state, 'femebal_public_get_reviewable');
