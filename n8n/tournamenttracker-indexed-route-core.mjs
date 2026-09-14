@@ -35,6 +35,33 @@ function decodeSinglePathSegment(rawSegment) {
   return decoded;
 }
 
+function validatePublicIndexSource(sourceUrl) {
+  if (sourceUrl.pathname !== '/search') {
+    throw new Error('La evidencia public_index requiere una página de búsqueda explícita');
+  }
+
+  const query = sourceUrl.searchParams.get('q');
+  if (!query) {
+    throw new Error('La evidencia public_index requiere una consulta de búsqueda explícita');
+  }
+
+  const normalizedQuery = query.toLowerCase();
+  if (!normalizedQuery.includes('femebal') || !normalizedQuery.includes('tournament-tracker')) {
+    throw new Error('La consulta public_index debe referenciar FEMEBAL TournamentTracker');
+  }
+}
+
+function validateExplicitPublicLinkSource(sourceUrl, targetCanonicalUrl) {
+  if (sourceUrl.pathname.startsWith(INDEXED_ROUTE_PREFIX)) {
+    throw new Error('La evidencia explicit_public_link no puede usar TournamentTracker como fuente circular');
+  }
+
+  const canonicalSource = sourceUrl.toString();
+  if (canonicalSource === targetCanonicalUrl) {
+    throw new Error('La evidencia explicit_public_link no puede ser la propia ruta objetivo');
+  }
+}
+
 function validatePublicEvidence(targetCanonicalUrl, evidence) {
   if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) {
     throw new Error('La evidencia pública debe ser un objeto estructurado');
@@ -58,11 +85,17 @@ function validatePublicEvidence(targetCanonicalUrl, evidence) {
   if (sourceUrl.hash) throw new Error('La fuente de evidencia pública no admite fragments');
 
   const sourceHost = sourceUrl.hostname.toLowerCase();
-  if (kind === 'public_index' && !PUBLIC_INDEX_HOSTS.has(sourceHost)) {
-    throw new Error('La evidencia public_index requiere una fuente de índice público permitida');
+  if (kind === 'public_index') {
+    if (!PUBLIC_INDEX_HOSTS.has(sourceHost)) {
+      throw new Error('La evidencia public_index requiere una fuente de índice público permitida');
+    }
+    validatePublicIndexSource(sourceUrl);
   }
-  if (kind === 'explicit_public_link' && !FEMEBAL_HOSTS.has(sourceHost)) {
-    throw new Error('La evidencia explicit_public_link requiere una fuente oficial FEMEBAL');
+  if (kind === 'explicit_public_link') {
+    if (!FEMEBAL_HOSTS.has(sourceHost)) {
+      throw new Error('La evidencia explicit_public_link requiere una fuente oficial FEMEBAL');
+    }
+    validateExplicitPublicLinkSource(sourceUrl, targetCanonicalUrl);
   }
 
   return {
