@@ -62,6 +62,16 @@ const withPdfParameter=await fetchOfficialFemebalPdf(workItem(),{fetchImpl:async
 assert.equal(withPdfParameter.sha256,out.sha256);
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentLength:pdfBytes.byteLength+1})}),/Content-Length no coincide/);
 
+for (const invalidLength of ['', '+17', '1e3', '0x10', '17.0', '9007199254740992']) {
+  await assert.rejects(
+    ()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentLength:invalidLength})}),
+    /Content-Length inválido/,
+    `Content-Length no decimal debe rechazarse fail-closed: ${JSON.stringify(invalidLength)}`,
+  );
+}
+const paddedDecimal=await fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentLength:`  ${pdfBytes.byteLength}  `})});
+assert.equal(paddedDecimal.sha256,out.sha256);
+
 let arrayBufferCalled=false;
 const nonStreamingResponse={
   status:200,
@@ -80,4 +90,4 @@ const ambiguousBackslash='https://djfhz848yeeat.cloudfront.net\\pdf_planillas/5/
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem({url:ambiguousBackslash,source:{pdf_url:ambiguousBackslash}}),{fetchImpl:async()=>{networkCalled=true;return fakeResponse();}}),/ambiguos\/normalizables/);
 assert.equal(networkCalled,false, 'Una URL raw ambigua debe bloquearse antes de cualquier acceso de red');
 
-console.log('✓ official PDF fetch core SAFE/fail-closed + host control real + strict PDF media type + bounded streaming-only body + immutable 12 MiB ceiling + abortable 30s timeout ceiling + SHA-256 provenance + raw URL ambiguity rejection OK');
+console.log('✓ official PDF fetch core SAFE/fail-closed + host control real + strict PDF media type + strict decimal Content-Length + bounded streaming-only body + immutable 12 MiB ceiling + abortable 30s timeout ceiling + SHA-256 provenance + raw URL ambiguity rejection OK');
