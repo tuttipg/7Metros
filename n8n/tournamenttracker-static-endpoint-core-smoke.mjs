@@ -94,6 +94,7 @@ assert.equal(policy.constraints.manualReviewRequiredBeforeAnyGet, true);
 assert.equal(policy.constraints.percentEncodedPathsBlocked, true);
 assert.equal(policy.constraints.nonstandardHttpsPortsBlocked, true);
 assert.equal(policy.constraints.ambiguousRawUrlCharactersBlocked, true);
+assert.equal(policy.constraints.compoundSensitivePathPrefixesBlocked, true);
 assert.equal(policy.constraints.compoundMutatingPathPrefixesBlocked, true);
 assert.deepEqual(policy.candidates, [
   {
@@ -178,6 +179,11 @@ const policyBody = `
   const compoundDelete = "https://www.femebal.com/api/deleteMatch/42";
   const compoundUpdate = "https://www.femebal.com/api/updateScore/42";
   const compoundImport = "https://www.femebal.com/api/import_batch/2026";
+  const authCallback = "https://www.femebal.com/api/authCallback";
+  const tokenRefresh = "https://www.femebal.com/api/tokenRefresh";
+  const passwordReset = "https://www.femebal.com/api/passwordReset";
+  const sessionInfo = "https://www.femebal.com/api/sessionInfo";
+  const adminPanel = "https://www.femebal.com/api/adminPanel";
   const staticAsset = "https://www.femebal.com/tournament-tracker/static/js/runtime.js";
   const reviewable = "https://femebal.com/api/public/fixtures?season=2026";
   const readOperation = "https://www.femebal.com/api/getMatches?season=2026";
@@ -194,6 +200,11 @@ for (const url of [
   'https://www.femebal.com/api/deleteMatch/42',
   'https://www.femebal.com/api/updateScore/42',
   'https://www.femebal.com/api/import_batch/2026',
+  'https://www.femebal.com/api/authCallback',
+  'https://www.femebal.com/api/tokenRefresh',
+  'https://www.femebal.com/api/passwordReset',
+  'https://www.femebal.com/api/sessionInfo',
+  'https://www.femebal.com/api/adminPanel',
 ]) {
   assert.equal(byUrl.get(url).state, 'blocked_sensitive_or_mutating_path');
   assert.equal(byUrl.get(url).anonymousGetReviewable, false);
