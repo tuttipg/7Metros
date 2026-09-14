@@ -12,6 +12,8 @@ FEMEBAL_PLANILLA_HOST="djfhz848yeeat.cloudfront.net"
 PROGRAMACIONES_URL="https://femebal.com/programaciones/"
 UA="7Metros-public-discovery/1.0 (+read-only; official-public-pages-only)"
 MANIFEST_SCHEMA_VERSION=2
+MAX_HTML_BYTES=2*1024*1024
+ALLOWED_HTML_MEDIA_TYPES={"text/html","application/xhtml+xml"}
 TRACKING_QUERY_KEYS={"fbclid","gclid","dclid","msclkid","mc_cid","mc_eid"}
 AMBIGUOUS_RAW_URL_CHARS=re.compile(r'[\\\x00-\x1f\x7f]')
 
@@ -92,12 +94,26 @@ class SafeRedirectHandler(HTTPRedirectHandler):
         canonical=_canonical_official_page_url(absolute)
         return super().redirect_request(req,fp,code,msg,headers,canonical)
 
-def get_text(url:str,timeout=20)->str:
+def _validate_html_response(response, *, max_bytes:int=MAX_HTML_BYTES)->None:
+    media_type=response.headers.get_content_type().lower()
+    if media_type not in ALLOWED_HTML_MEDIA_TYPES:
+        raise ValueError(f"Media type HTML no permitido: {media_type}")
+    raw_length=response.headers.get('Content-Length')
+    if raw_length is not None:
+        try: declared=int(raw_length)
+        except (TypeError,ValueError) as e: raise ValueError("Content-Length HTML inválido") from e
+        if declared < 0 or declared > max_bytes:
+            raise ValueError(f"Respuesta HTML declarada fuera de límite: {declared} bytes")
+
+def get_text(url:str,timeout=20, *, max_bytes:int=MAX_HTML_BYTES)->str:
     canonical=_canonical_official_page_url(url)
-    req=Request(canonical,headers={"User-Agent":UA,"Accept":"text/html,application/xhtml+xml,*/*"},method="GET")
+    req=Request(canonical,headers={"User-Agent":UA,"Accept":"text/html,application/xhtml+xml"},method="GET")
     with build_opener(SafeRedirectHandler()).open(req,timeout=timeout) as r:
         _canonical_official_page_url(r.geturl())
-        return r.read().decode('utf-8',errors='replace')
+        _validate_html_response(r,max_bytes=max_bytes)
+        body=r.read(max_bytes+1)
+        if len(body)>max_bytes: raise ValueError(f"Respuesta HTML excede límite de {max_bytes} bytes")
+        return body.decode('utf-8',errors='replace')
 
 def links_from_html(html_text:str): p=LinkParser(); p.feed(html_text); return p.links
 
