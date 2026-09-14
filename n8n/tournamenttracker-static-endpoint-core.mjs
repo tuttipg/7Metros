@@ -66,6 +66,12 @@ function bodyMatchesValidatedAsset(text, assetClassification) {
     && expectedSha256 === bodySha256;
 }
 
+function isConcatenatedLiteral(text, matchIndex, matchLength) {
+  const before = text.slice(0, matchIndex).trimEnd();
+  const after = text.slice(matchIndex + matchLength).trimStart();
+  return before.endsWith('+') || after.startsWith('+');
+}
+
 export function extractTournamentTrackerExplicitHttpsCandidates({ body, assetClassification } = {}) {
   const text = String(body ?? '');
   const sourceValidated = bodyMatchesValidatedAsset(text, assetClassification);
@@ -86,10 +92,15 @@ export function extractTournamentTrackerExplicitHttpsCandidates({ body, assetCla
   const accepted = new Map();
   let rejectedCount = 0;
 
-  // Deliberately conservative: only complete HTTPS URLs inside one plain JS string literal.
+  // Deliberately conservative: only complete HTTPS URLs inside one standalone plain JS string literal.
   // No relative-path resolution, concatenation, deobfuscation, template evaluation or JS execution.
   const literalPattern = /(['"`])(https:\/\/[^'"`\\\s]+)\1/g;
   for (const match of text.matchAll(literalPattern)) {
+    if (isConcatenatedLiteral(text, match.index, match[0].length)) {
+      rejectedCount += 1;
+      continue;
+    }
+
     const classified = classifyExplicitHttpsLiteral(match[2]);
     if (!classified.accepted) {
       rejectedCount += 1;
