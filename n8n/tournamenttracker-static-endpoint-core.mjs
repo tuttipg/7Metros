@@ -38,10 +38,12 @@ const SENSITIVE_OR_MUTATING_PATH_SEGMENTS = new Set([
 ]);
 const STATIC_RESOURCE_EXTENSION = /\.(?:css|gif|ico|jpe?g|js|json|map|mjs|pdf|png|svg|webp|woff2?|ttf|eot)$/i;
 const MAX_EXPLICIT_URL_LENGTH = 2048;
+const AMBIGUOUS_RAW_URL_CHARS = /[\\\x00-\x1f\x7f]/;
 
 function classifyExplicitHttpsLiteral(rawValue) {
   const raw = String(rawValue ?? '');
   if (!raw || raw.length > MAX_EXPLICIT_URL_LENGTH) return { accepted: false, reason: 'invalid_length' };
+  if (AMBIGUOUS_RAW_URL_CHARS.test(raw)) return { accepted: false, reason: 'ambiguous_raw_url_characters' };
   if (raw.includes('${')) return { accepted: false, reason: 'template_interpolation' };
 
   let url;
@@ -243,6 +245,7 @@ export function extractTournamentTrackerExplicitHttpsCandidates({ body, assetCla
       sourceBodyIntegrityRequired: true,
       percentEncodedPathsAllowed: false,
       nonstandardHttpsPortsAllowed: false,
+      ambiguousRawUrlCharactersAllowed: false,
     },
   };
 }
@@ -278,6 +281,7 @@ export function classifyTournamentTrackerCandidatePolicy(extractionResult) {
       staticResourcesBlockedAsEndpoints: true,
       percentEncodedPathsBlocked: true,
       nonstandardHttpsPortsBlocked: true,
+      ambiguousRawUrlCharactersBlocked: true,
       manualReviewRequiredBeforeAnyGet: true,
     },
   };
