@@ -8,7 +8,7 @@ function workItem(overrides={}) {
 }
 const pdfBytes=new TextEncoder().encode('%PDF-1.7\nfixture');
 const headers=values=>({get(name){return Object.fromEntries(Object.entries(values).map(([k,v])=>[k.toLowerCase(),String(v)]))[String(name).toLowerCase()]??null;}});
-function streamingResponse(chunks,{status=200,contentType='application/pdf',contentLength=null}={}) {
+function streamingResponse(chunks,{status=200,contentType='application/pdf',contentLength=null,contentEncoding=null}={}) {
   let index=0; let cancelled=false; let released=false;
   const reader={
     async read(){ return index<chunks.length ? {done:false,value:chunks[index++]} : {done:true,value:undefined}; },
@@ -17,12 +17,12 @@ function streamingResponse(chunks,{status=200,contentType='application/pdf',cont
   };
   return {
     status,
-    headers:headers({'content-type':contentType,...(contentLength===null?{}:{'content-length':contentLength})}),
+    headers:headers({'content-type':contentType,...(contentLength===null?{}:{'content-length':contentLength}),...(contentEncoding===null?{}:{'content-encoding':contentEncoding})}),
     body:{getReader(){return reader;}},
     state(){return {cancelled,released};},
   };
 }
-const fakeResponse=({status=200,contentType='application/pdf',contentLength=pdfBytes.byteLength,body=pdfBytes}={})=>streamingResponse([body],{status,contentType,contentLength});
+const fakeResponse=({status=200,contentType='application/pdf',contentLength=pdfBytes.byteLength,contentEncoding=null,body=pdfBytes}={})=>streamingResponse([body],{status,contentType,contentLength,contentEncoding});
 
 let seen=null;
 const out=await fetchOfficialFemebalPdf(workItem(),{fetchImpl:async(url,options)=>{seen={url,options};return fakeResponse();}});
@@ -76,6 +76,15 @@ await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentType:'application/pdfx'})}),/Content-Type/);
 const withPdfParameter=await fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentType:'application/pdf; charset=binary'})});
 assert.equal(withPdfParameter.sha256,out.sha256);
+for (const encoding of ['gzip','br','deflate','gzip, br']) {
+  await assert.rejects(
+    ()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentEncoding:encoding})}),
+    /Content-Encoding no permitido/,
+    `Content-Encoding no identidad debe rechazarse fail-closed: ${encoding}`,
+  );
+}
+const identityEncoded=await fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentEncoding:' identity '})});
+assert.equal(identityEncoded.sha256,out.sha256);
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem(),{fetchImpl:async()=>fakeResponse({contentLength:pdfBytes.byteLength+1})}),/Content-Length no coincide/);
 
 for (const invalidLength of ['', '+17', '1e3', '0x10', '17.0', '9007199254740992']) {
@@ -106,4 +115,4 @@ const ambiguousBackslash='https://djfhz848yeeat.cloudfront.net\\pdf_planillas/5/
 await assert.rejects(()=>fetchOfficialFemebalPdf(workItem({url:ambiguousBackslash,source:{pdf_url:ambiguousBackslash}}),{fetchImpl:async()=>{networkCalled=true;return fakeResponse();}}),/ambiguos\/normalizables/);
 assert.equal(networkCalled,false, 'Una URL raw ambigua debe bloquearse antes de cualquier acceso de red');
 
-console.log('✓ official PDF fetch core SAFE/fail-closed + host control real + strict PDF media type + strict decimal Content-Length + bounded streaming-only body + immutable 12 MiB ceiling + abortable 30s timeout with reader cancellation + SHA-256 provenance + raw URL ambiguity rejection OK');
+console.log('✓ official PDF fetch core SAFE/fail-closed + host control real + strict PDF media type + identity-only Content-Encoding + strict decimal Content-Length + bounded streaming-only body + immutable 12 MiB ceiling + abortable 30s timeout with reader cancellation + SHA-256 provenance + raw URL ambiguity rejection OK');
