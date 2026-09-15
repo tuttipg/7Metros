@@ -218,6 +218,10 @@ export function extractTopDivisionProgrammingCandidates({ text, sourceUrl, clubC
       raw_line: line,
       source_url: canonicalSourceUrl,
       source_kind: 'official_programming_pdf',
+      evidence_scope: 'scheduled_match_identity_only',
+      result_evidence: false,
+      score_evidence: false,
+      player_statistics_evidence: false,
     });
   }
 
