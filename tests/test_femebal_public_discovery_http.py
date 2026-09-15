@@ -43,6 +43,14 @@ class HttpBoundaryTests(unittest.TestCase):
         response = FakeResponse(b'<html/>', content_type='application/xhtml+xml')
         self.assertEqual(self._fetch(response, max_bytes=64), '<html/>')
 
+    def test_rejects_invalid_or_excessive_max_bytes_before_network(self):
+        for value in (0, -1, MAX_HTML_BYTES + 1, True, 64.0, '64'):
+            with self.subTest(value=value):
+                with patch('tools.femebal_public_discovery.build_opener') as opener:
+                    with self.assertRaises(ValueError):
+                        get_text('https://femebal.com/programaciones/', max_bytes=value)
+                    opener.assert_not_called()
+
     def test_rejects_non_html_media_type_before_read(self):
         response = FakeResponse(b'{}', content_type='application/json')
         with self.assertRaises(ValueError): self._fetch(response, max_bytes=64)
