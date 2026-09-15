@@ -95,6 +95,9 @@ def _validate_html_response(response, *, max_bytes:int=MAX_HTML_BYTES)->None:
     max_bytes=_validate_max_html_bytes(max_bytes)
     media_type=response.headers.get_content_type().lower()
     if media_type not in ALLOWED_HTML_MEDIA_TYPES: raise ValueError(f"Media type HTML no permitido: {media_type}")
+    raw_encoding=response.headers.get('Content-Encoding')
+    if raw_encoding is not None and str(raw_encoding).strip().lower() != 'identity':
+        raise ValueError("Content-Encoding HTML no permitido")
     raw_length=response.headers.get('Content-Length')
     if raw_length is not None:
         normalized=str(raw_length).strip()
@@ -106,7 +109,7 @@ def get_text(url:str,timeout=DEFAULT_TIMEOUT_SECONDS, *, max_bytes:int=MAX_HTML_
     max_bytes=_validate_max_html_bytes(max_bytes)
     timeout=_validate_timeout_seconds(timeout)
     canonical=_canonical_official_page_url(url)
-    req=Request(canonical,headers={"User-Agent":UA,"Accept":"text/html,application/xhtml+xml"},method="GET")
+    req=Request(canonical,headers={"User-Agent":UA,"Accept":"text/html,application/xhtml+xml","Accept-Encoding":"identity"},method="GET")
     with build_opener(SafeRedirectHandler()).open(req,timeout=timeout) as r:
         _canonical_official_page_url(r.geturl()); _validate_html_response(r,max_bytes=max_bytes)
         body=r.read(max_bytes+1)
