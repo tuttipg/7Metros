@@ -27,74 +27,52 @@ function parsePdfContentType(value) {
   return raw;
 }
 
+function assertIdentityContentEncoding(value) {
+  if (value === null || value === undefined) return;
+  const raw = String(value).trim().toLowerCase();
+  if (raw !== '' && raw !== 'identity') throw new Error(`Content-Encoding no permitido en modo SAFE: ${raw}`);
+}
+
 async function readBodyBounded(response, maxBytes, signal) {
   const reader = response.body?.getReader?.();
-  if (!reader) {
-    throw new Error('Respuesta sin body streaming legible; SAFE requiere streaming acotado');
-  }
-
-  const cancelReaderOnAbort = () => {
-    Promise.resolve(reader.cancel?.('PDF fetch aborted by SAFE timeout')).catch(() => {});
-  };
-  if (signal?.aborted) cancelReaderOnAbort();
-  else signal?.addEventListener?.('abort', cancelReaderOnAbort, { once: true });
-
-  const chunks = [];
-  let total = 0;
+  if (!reader) throw new Error('Respuesta sin body streaming legible; SAFE requiere streaming acotado');
+  const cancelReaderOnAbort = () => { Promise.resolve(reader.cancel?.('PDF fetch aborted by SAFE timeout')).catch(() => {}); };
+  if (signal?.aborted) cancelReaderOnAbort(); else signal?.addEventListener?.('abort', cancelReaderOnAbort, { once: true });
+  const chunks = []; let total = 0;
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       if (!(value instanceof Uint8Array)) throw new Error('Chunk HTTP binario inválido');
       total += value.byteLength;
-      if (total > maxBytes) {
-        await reader.cancel?.('PDF exceeds SAFE byte limit');
-        throw new Error(`PDF excede límite real de ${maxBytes} bytes`);
-      }
+      if (total > maxBytes) { await reader.cancel?.('PDF exceeds SAFE byte limit'); throw new Error(`PDF excede límite real de ${maxBytes} bytes`); }
       chunks.push(value);
     }
   } finally {
-    signal?.removeEventListener?.('abort', cancelReaderOnAbort);
-    reader.releaseLock?.();
+    signal?.removeEventListener?.('abort', cancelReaderOnAbort); reader.releaseLock?.();
   }
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
+  const bytes = new Uint8Array(total); let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
   return bytes;
 }
 
 export async function fetchOfficialFemebalPdf(workItem, { fetchImpl = globalThis.fetch, maxBytes = DEFAULT_MAX_BYTES, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   const sourceUrl = validatePdfWorkItem(workItem);
   if (typeof fetchImpl !== 'function') throw new Error('fetch no disponible');
-  if (!Number.isInteger(maxBytes) || maxBytes < 1024 || maxBytes > DEFAULT_MAX_BYTES) {
-    throw new Error(`maxBytes inválido: debe estar entre 1024 y ${DEFAULT_MAX_BYTES}`);
-  }
-  if (!Number.isInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > MAX_TIMEOUT_MS) {
-    throw new Error(`timeoutMs inválido: debe estar entre 100 y ${MAX_TIMEOUT_MS}`);
-  }
+  if (!Number.isInteger(maxBytes) || maxBytes < 1024 || maxBytes > DEFAULT_MAX_BYTES) throw new Error(`maxBytes inválido: debe estar entre 1024 y ${DEFAULT_MAX_BYTES}`);
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > MAX_TIMEOUT_MS) throw new Error(`timeoutMs inválido: debe estar entre 100 y ${MAX_TIMEOUT_MS}`);
   if (typeof globalThis.AbortController !== 'function') throw new Error('AbortController no disponible; SAFE requiere timeout abortable');
 
-  const controller = new AbortController();
-  let timedOut = false;
-  let timer;
-  const timeoutPromise = new Promise((_, reject) => {
-    timer = setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-      reject(new Error(`Descarga FEMEBAL excedió timeout SAFE de ${timeoutMs} ms`));
-    }, timeoutMs);
-  });
-
+  const controller = new AbortController(); let timedOut = false; let timer;
+  const timeoutPromise = new Promise((_, reject) => { timer = setTimeout(() => { timedOut = true; controller.abort(); reject(new Error(`Descarga FEMEBAL excedió timeout SAFE de ${timeoutMs} ms`)); }, timeoutMs); });
   const operation = (async () => {
-    const response = await fetchImpl(sourceUrl, { method: 'GET', redirect: 'manual', credentials: 'omit', headers: { Accept: 'application/pdf' }, signal: controller.signal });
+    const response = await fetchImpl(sourceUrl, { method: 'GET', redirect: 'manual', credentials: 'omit', headers: { Accept: 'application/pdf', 'Accept-Encoding': 'identity' }, signal: controller.signal });
     if (!response || typeof response !== 'object') throw new Error('Respuesta HTTP inválida');
     const status = Number(response.status);
     if (status >= 300 && status < 400) throw new Error(`Redirect FEMEBAL rechazado: HTTP ${status}`);
     if (status !== 200) throw new Error(`Descarga FEMEBAL falló: HTTP ${status}`);
     const contentType = parsePdfContentType(response.headers?.get?.('content-type'));
+    assertIdentityContentEncoding(response.headers?.get?.('content-encoding'));
     const declaredLength = parseContentLength(response.headers?.get?.('content-length'));
     if (declaredLength !== null && declaredLength > maxBytes) throw new Error(`PDF excede límite declarado de ${maxBytes} bytes`);
     const bytes = await readBodyBounded(response, maxBytes, controller.signal);
@@ -103,13 +81,7 @@ export async function fetchOfficialFemebalPdf(workItem, { fetchImpl = globalThis
     const sha256 = createHash('sha256').update(bytes).digest('hex');
     return { dry_run: true, write_enabled: false, auth_used: false, source_url: sourceUrl, content_type: contentType, byte_length: bytes.byteLength, sha256, bytes };
   })();
-
-  try {
-    return await Promise.race([operation, timeoutPromise]);
-  } catch (error) {
-    if (timedOut) throw new Error(`Descarga FEMEBAL excedió timeout SAFE de ${timeoutMs} ms`);
-    throw error;
-  } finally {
-    clearTimeout(timer);
-  }
+  try { return await Promise.race([operation, timeoutPromise]); }
+  catch (error) { if (timedOut) throw new Error(`Descarga FEMEBAL excedió timeout SAFE de ${timeoutMs} ms`); throw error; }
+  finally { clearTimeout(timer); }
 }
