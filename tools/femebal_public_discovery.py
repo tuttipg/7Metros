@@ -13,6 +13,8 @@ PROGRAMACIONES_URL="https://femebal.com/programaciones/"
 UA="7Metros-public-discovery/1.0 (+read-only; official-public-pages-only)"
 MANIFEST_SCHEMA_VERSION=2
 MAX_HTML_BYTES=2*1024*1024
+DEFAULT_TIMEOUT_SECONDS=20
+MAX_TIMEOUT_SECONDS=30
 ALLOWED_HTML_MEDIA_TYPES={"text/html","application/xhtml+xml"}
 TRACKING_QUERY_KEYS={"fbclid","gclid","dclid","msclkid","mc_cid","mc_eid"}
 AMBIGUOUS_RAW_URL_CHARS=re.compile(r'[\\\x00-\x1f\x7f]')
@@ -84,6 +86,11 @@ def _validate_max_html_bytes(max_bytes:int)->int:
         raise ValueError(f"max_bytes HTML debe estar entre 1 y {MAX_HTML_BYTES}")
     return max_bytes
 
+def _validate_timeout_seconds(timeout:int|float)->int|float:
+    if isinstance(timeout,bool) or not isinstance(timeout,(int,float)) or timeout <= 0 or timeout > MAX_TIMEOUT_SECONDS:
+        raise ValueError(f"timeout HTML debe estar entre >0 y {MAX_TIMEOUT_SECONDS} segundos")
+    return timeout
+
 def _validate_html_response(response, *, max_bytes:int=MAX_HTML_BYTES)->None:
     max_bytes=_validate_max_html_bytes(max_bytes)
     media_type=response.headers.get_content_type().lower()
@@ -95,8 +102,9 @@ def _validate_html_response(response, *, max_bytes:int=MAX_HTML_BYTES)->None:
         declared=int(normalized)
         if declared > max_bytes: raise ValueError(f"Respuesta HTML declarada fuera de límite: {declared} bytes")
 
-def get_text(url:str,timeout=20, *, max_bytes:int=MAX_HTML_BYTES)->str:
+def get_text(url:str,timeout=DEFAULT_TIMEOUT_SECONDS, *, max_bytes:int=MAX_HTML_BYTES)->str:
     max_bytes=_validate_max_html_bytes(max_bytes)
+    timeout=_validate_timeout_seconds(timeout)
     canonical=_canonical_official_page_url(url)
     req=Request(canonical,headers={"User-Agent":UA,"Accept":"text/html,application/xhtml+xml"},method="GET")
     with build_opener(SafeRedirectHandler()).open(req,timeout=timeout) as r:
