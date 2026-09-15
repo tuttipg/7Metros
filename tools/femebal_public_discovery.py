@@ -16,6 +16,7 @@ MAX_HTML_BYTES=2*1024*1024
 ALLOWED_HTML_MEDIA_TYPES={"text/html","application/xhtml+xml"}
 TRACKING_QUERY_KEYS={"fbclid","gclid","dclid","msclkid","mc_cid","mc_eid"}
 AMBIGUOUS_RAW_URL_CHARS=re.compile(r'[\\\x00-\x1f\x7f]')
+STRICT_DECIMAL=re.compile(r'^\d+$')
 
 class LinkParser(HTMLParser):
     def __init__(self): super().__init__(); self.links=[]; self._href=None; self._text=[]
@@ -36,9 +37,6 @@ def _has_ambiguous_raw_url_chars(url:str)->bool:
     return bool(AMBIGUOUS_RAW_URL_CHARS.search(str(url)))
 
 def _assert_allowed(url:str, *, allow_planilla:bool=False)->None:
-    # urllib.parse silently strips ASCII tabs/newlines from URLs. Reject the raw
-    # spelling first so Python discovery cannot accept an input that the Node
-    # policy treats as ambiguous/normalizable.
     if _has_ambiguous_raw_url_chars(url): raise ValueError(f"URL con caracteres ambiguos/normalizables rechazada: {url!r}")
     p=urlparse(url)
     allowed_hosts=set(FEMEBAL_WEB_HOSTS)
@@ -52,30 +50,20 @@ def _assert_allowed(url:str, *, allow_planilla:bool=False)->None:
 def _has_tracking_query(query:str)->bool:
     for key,_ in parse_qsl(query,keep_blank_values=True):
         normalized=key.lower()
-        if normalized.startswith('utm_') or normalized in TRACKING_QUERY_KEYS:
-            return True
+        if normalized.startswith('utm_') or normalized in TRACKING_QUERY_KEYS: return True
     return False
 
 def _canonical_official_page_url(url:str)->str:
-    _assert_allowed(url)
-    p=urlparse(url)
-    # Match n8n/official-url-policy.mjs for non-PDF URLs: fragments are rejected,
-    # explicit :443 is collapsed, the host is normalized, and semantic query strings are preserved.
-    # Known analytics/tracking parameters are rejected fail-closed instead of becoming distinct
-    # discovery identities for the same official page.
+    _assert_allowed(url); p=urlparse(url)
     if p.fragment: raise ValueError(f"URL FEMEBAL con fragmento rechazada: {url}")
     if _has_tracking_query(p.query): raise ValueError(f"URL FEMEBAL con tracking query rechazada: {url}")
-    path=p.path or '/'
-    query=f"?{p.query}" if p.query else ''
+    path=p.path or '/'; query=f"?{p.query}" if p.query else ''
     return f"https://{p.hostname}{path}{query}"
 
 def _is_official_upload_pdf(url:str)->bool:
     if _has_ambiguous_raw_url_chars(url): return False
     p=urlparse(url)
     if p.scheme!="https" or p.query or p.fragment: return False
-    # Keep semantic parity with n8n/official-url-policy.mjs: official path prefixes
-    # are exact/case-sensitive, while only the .pdf extension is case-insensitive.
-    # Reject encoded or dot segments rather than relying on downstream/server normalization.
     if '%' in p.path or any(segment in {'.','..'} for segment in p.path.split('/')): return False
     wordpress_pdf=p.hostname in FEMEBAL_WEB_HOSTS and p.path.startswith('/wp-content/uploads/')
     planilla_pdf=p.hostname==FEMEBAL_PLANILLA_HOST and p.path.startswith('/pdf_planillas/')
@@ -83,34 +71,29 @@ def _is_official_upload_pdf(url:str)->bool:
 
 def _canonical_official_pdf_url(url:str)->str:
     if not _is_official_upload_pdf(url): raise ValueError(f"PDF oficial fuera de allowlist: {url}")
-    _assert_allowed(url,allow_planilla=True)
-    p=urlparse(url)
-    # Drop an explicit default :443 so equivalent links have one manifest identity.
+    _assert_allowed(url,allow_planilla=True); p=urlparse(url)
     return f"https://{p.hostname}{p.path}"
 
 class SafeRedirectHandler(HTTPRedirectHandler):
     def redirect_request(self,req,fp,code,msg,headers,newurl):
-        absolute=urljoin(req.full_url,newurl)
-        canonical=_canonical_official_page_url(absolute)
+        absolute=urljoin(req.full_url,newurl); canonical=_canonical_official_page_url(absolute)
         return super().redirect_request(req,fp,code,msg,headers,canonical)
 
 def _validate_html_response(response, *, max_bytes:int=MAX_HTML_BYTES)->None:
     media_type=response.headers.get_content_type().lower()
-    if media_type not in ALLOWED_HTML_MEDIA_TYPES:
-        raise ValueError(f"Media type HTML no permitido: {media_type}")
+    if media_type not in ALLOWED_HTML_MEDIA_TYPES: raise ValueError(f"Media type HTML no permitido: {media_type}")
     raw_length=response.headers.get('Content-Length')
     if raw_length is not None:
-        try: declared=int(raw_length)
-        except (TypeError,ValueError) as e: raise ValueError("Content-Length HTML inválido") from e
-        if declared < 0 or declared > max_bytes:
-            raise ValueError(f"Respuesta HTML declarada fuera de límite: {declared} bytes")
+        normalized=str(raw_length).strip()
+        if not STRICT_DECIMAL.fullmatch(normalized): raise ValueError("Content-Length HTML inválido")
+        declared=int(normalized)
+        if declared > max_bytes: raise ValueError(f"Respuesta HTML declarada fuera de límite: {declared} bytes")
 
 def get_text(url:str,timeout=20, *, max_bytes:int=MAX_HTML_BYTES)->str:
     canonical=_canonical_official_page_url(url)
     req=Request(canonical,headers={"User-Agent":UA,"Accept":"text/html,application/xhtml+xml"},method="GET")
     with build_opener(SafeRedirectHandler()).open(req,timeout=timeout) as r:
-        _canonical_official_page_url(r.geturl())
-        _validate_html_response(r,max_bytes=max_bytes)
+        _canonical_official_page_url(r.geturl()); _validate_html_response(r,max_bytes=max_bytes)
         body=r.read(max_bytes+1)
         if len(body)>max_bytes: raise ValueError(f"Respuesta HTML excede límite de {max_bytes} bytes")
         return body.decode('utf-8',errors='replace')
@@ -145,52 +128,25 @@ def discover_pdfs(page_html:str,source:Source):
         out[url]=PdfSource(source.page_url,source.title,url,text,source.source_type,source.phase,source.round_number)
     return sorted(out.values(),key=lambda x:x.pdf_url)
 
-def _pdf_source_identity(source:PdfSource):
-    return (source.page_url,source.source_type,source.phase,source.round_number)
+def _pdf_source_identity(source:PdfSource): return (source.page_url,source.source_type,source.phase,source.round_number)
 
 def _dedupe_manifest_pdfs(pdfs:list[PdfSource]):
-    by_url={}
-    conflicted=set()
-    errors=[]
+    by_url={}; conflicted=set(); errors=[]
     for source in pdfs:
         url=source.pdf_url
-        if url in conflicted:
-            continue
+        if url in conflicted: continue
         previous=by_url.get(url)
-        if previous is None:
-            by_url[url]=source
-            continue
-        if _pdf_source_identity(previous)==_pdf_source_identity(source):
-            continue
-        conflicted.add(url)
-        del by_url[url]
-        errors.append({
-            "stage":"metadata_conflict",
-            "url":url,
-            "error":"contradictory_pdf_provenance",
-            "sources":[
-                {
-                    "page_url":previous.page_url,
-                    "source_type":previous.source_type,
-                    "phase":previous.phase,
-                    "round_number":previous.round_number,
-                },
-                {
-                    "page_url":source.page_url,
-                    "source_type":source.source_type,
-                    "phase":source.phase,
-                    "round_number":source.round_number,
-                },
-            ],
-        })
+        if previous is None: by_url[url]=source; continue
+        if _pdf_source_identity(previous)==_pdf_source_identity(source): continue
+        conflicted.add(url); del by_url[url]
+        errors.append({"stage":"metadata_conflict","url":url,"error":"contradictory_pdf_provenance","sources":[{"page_url":previous.page_url,"source_type":previous.source_type,"phase":previous.phase,"round_number":previous.round_number},{"page_url":source.page_url,"source_type":source.source_type,"phase":source.phase,"round_number":source.round_number}]})
     return sorted(by_url.values(),key=lambda x:x.pdf_url),errors
 
 def build_manifest(index_html:str,page_html_by_url:dict[str,str],fetch_errors:list[dict]|None=None):
     pages=discover_pages(index_html); discovered=[]
     for page in pages:
         if page.page_url in page_html_by_url: discovered.extend(discover_pdfs(page_html_by_url[page.page_url],page))
-    pdfs,metadata_errors=_dedupe_manifest_pdfs(discovered)
-    errors=list(fetch_errors or [])+metadata_errors
+    pdfs,metadata_errors=_dedupe_manifest_pdfs(discovered); errors=list(fetch_errors or [])+metadata_errors
     return {"schema_version":MANIFEST_SCHEMA_VERSION,"safe":True,"write_enabled":False,"auth_used":False,"complete":len(errors)==0,"pages":[asdict(x) for x in pages],"pdfs":[asdict(x) for x in pdfs],"fetch_errors":errors}
 
 def main():
