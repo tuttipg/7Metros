@@ -16,26 +16,17 @@ class FakeResponse:
             self.headers['Content-Length'] = str(content_length)
         self.read_size = None
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc, tb):
-        return False
-
-    def geturl(self):
-        return self.url
-
+    def __enter__(self): return self
+    def __exit__(self, exc_type, exc, tb): return False
+    def geturl(self): return self.url
     def read(self, size=-1):
         self.read_size = size
         return self.body if size < 0 else self.body[:size]
 
 
 class FakeOpener:
-    def __init__(self, response):
-        self.response = response
-
-    def open(self, request, timeout=None):
-        return self.response
+    def __init__(self, response): self.response = response
+    def open(self, request, timeout=None): return self.response
 
 
 class HttpBoundaryTests(unittest.TestCase):
@@ -54,30 +45,30 @@ class HttpBoundaryTests(unittest.TestCase):
 
     def test_rejects_non_html_media_type_before_read(self):
         response = FakeResponse(b'{}', content_type='application/json')
-        with self.assertRaises(ValueError):
-            self._fetch(response, max_bytes=64)
+        with self.assertRaises(ValueError): self._fetch(response, max_bytes=64)
         self.assertIsNone(response.read_size)
 
     def test_rejects_declared_oversize_before_read(self):
         response = FakeResponse(b'<html/>', content_type='text/html', content_length=65)
-        with self.assertRaises(ValueError):
-            self._fetch(response, max_bytes=64)
+        with self.assertRaises(ValueError): self._fetch(response, max_bytes=64)
         self.assertIsNone(response.read_size)
 
-    def test_rejects_invalid_or_negative_content_length(self):
-        for value in ('abc', -1):
+    def test_rejects_non_decimal_content_length_spellings_before_read(self):
+        for value in ('', 'abc', '-1', '+17', '1e3', '0x10', '17.0', '1_000'):
             response = FakeResponse(b'<html/>', content_type='text/html', content_length=value)
             with self.subTest(value=value):
-                with self.assertRaises(ValueError):
-                    self._fetch(response, max_bytes=64)
+                with self.assertRaises(ValueError): self._fetch(response, max_bytes=64)
                 self.assertIsNone(response.read_size)
+
+    def test_accepts_decimal_content_length_with_outer_whitespace(self):
+        response = FakeResponse(b'<html/>', content_type='text/html', content_length='  7  ')
+        self.assertEqual(self._fetch(response, max_bytes=64), '<html/>')
+        self.assertEqual(response.read_size, 65)
 
     def test_rejects_actual_oversize_without_content_length(self):
         response = FakeResponse(b'x' * 65, content_type='text/html')
-        with self.assertRaises(ValueError):
-            self._fetch(response, max_bytes=64)
+        with self.assertRaises(ValueError): self._fetch(response, max_bytes=64)
         self.assertEqual(response.read_size, 65)
 
 
-if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__': unittest.main()
