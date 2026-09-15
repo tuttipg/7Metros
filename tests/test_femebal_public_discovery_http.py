@@ -2,7 +2,7 @@ import unittest
 from email.message import Message
 from unittest.mock import patch
 
-from tools.femebal_public_discovery import MAX_HTML_BYTES, get_text
+from tools.femebal_public_discovery import MAX_HTML_BYTES, MAX_TIMEOUT_SECONDS, get_text
 
 
 class FakeResponse:
@@ -25,23 +25,30 @@ class FakeResponse:
 
 
 class FakeOpener:
-    def __init__(self, response): self.response = response
-    def open(self, request, timeout=None): return self.response
+    def __init__(self, response): self.response = response; self.timeout = None
+    def open(self, request, timeout=None):
+        self.timeout = timeout
+        return self.response
 
 
 class HttpBoundaryTests(unittest.TestCase):
-    def _fetch(self, response, *, max_bytes=MAX_HTML_BYTES):
-        with patch('tools.femebal_public_discovery.build_opener', return_value=FakeOpener(response)):
-            return get_text('https://femebal.com/programaciones/', max_bytes=max_bytes)
+    def _fetch(self, response, *, max_bytes=MAX_HTML_BYTES, timeout=20):
+        opener = FakeOpener(response)
+        with patch('tools.femebal_public_discovery.build_opener', return_value=opener):
+            result = get_text('https://femebal.com/programaciones/', max_bytes=max_bytes, timeout=timeout)
+        return result, opener
 
     def test_accepts_bounded_html_and_reads_only_max_plus_one(self):
         response = FakeResponse(b'<html>ok</html>', content_type='text/html; charset=utf-8', content_length=15)
-        self.assertEqual(self._fetch(response, max_bytes=64), '<html>ok</html>')
+        result, opener = self._fetch(response, max_bytes=64)
+        self.assertEqual(result, '<html>ok</html>')
         self.assertEqual(response.read_size, 65)
+        self.assertEqual(opener.timeout, 20)
 
     def test_accepts_xhtml(self):
         response = FakeResponse(b'<html/>', content_type='application/xhtml+xml')
-        self.assertEqual(self._fetch(response, max_bytes=64), '<html/>')
+        result, _ = self._fetch(response, max_bytes=64)
+        self.assertEqual(result, '<html/>')
 
     def test_rejects_invalid_or_excessive_max_bytes_before_network(self):
         for value in (0, -1, MAX_HTML_BYTES + 1, True, 64.0, '64'):
@@ -50,6 +57,20 @@ class HttpBoundaryTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         get_text('https://femebal.com/programaciones/', max_bytes=value)
                     opener.assert_not_called()
+
+    def test_rejects_invalid_or_excessive_timeout_before_network(self):
+        for value in (0, -1, MAX_TIMEOUT_SECONDS + 1, True, '20', None):
+            with self.subTest(value=value):
+                with patch('tools.femebal_public_discovery.build_opener') as opener:
+                    with self.assertRaises(ValueError):
+                        get_text('https://femebal.com/programaciones/', timeout=value)
+                    opener.assert_not_called()
+
+    def test_accepts_reduced_positive_timeout(self):
+        response = FakeResponse(b'<html/>', content_type='text/html')
+        result, opener = self._fetch(response, max_bytes=64, timeout=2.5)
+        self.assertEqual(result, '<html/>')
+        self.assertEqual(opener.timeout, 2.5)
 
     def test_rejects_non_html_media_type_before_read(self):
         response = FakeResponse(b'{}', content_type='application/json')
@@ -70,7 +91,8 @@ class HttpBoundaryTests(unittest.TestCase):
 
     def test_accepts_decimal_content_length_with_outer_whitespace(self):
         response = FakeResponse(b'<html/>', content_type='text/html', content_length='  7  ')
-        self.assertEqual(self._fetch(response, max_bytes=64), '<html/>')
+        result, _ = self._fetch(response, max_bytes=64)
+        self.assertEqual(result, '<html/>')
         self.assertEqual(response.read_size, 65)
 
     def test_rejects_actual_oversize_without_content_length(self):
