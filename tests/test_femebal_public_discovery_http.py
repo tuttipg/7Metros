@@ -6,7 +6,7 @@ from tools.femebal_public_discovery import MAX_HTML_BYTES, MAX_TIMEOUT_SECONDS, 
 
 
 class FakeResponse:
-    def __init__(self, body=b'<html></html>', *, content_type='text/html', content_length=None, url='https://femebal.com/programaciones/'):
+    def __init__(self, body=b'<html></html>', *, content_type='text/html', content_length=None, content_encoding=None, url='https://femebal.com/programaciones/'):
         self.body = body
         self.url = url
         self.headers = Message()
@@ -14,6 +14,8 @@ class FakeResponse:
             self.headers['Content-Type'] = content_type
         if content_length is not None:
             self.headers['Content-Length'] = str(content_length)
+        if content_encoding is not None:
+            self.headers['Content-Encoding'] = str(content_encoding)
         self.read_size = None
 
     def __enter__(self): return self
@@ -25,9 +27,10 @@ class FakeResponse:
 
 
 class FakeOpener:
-    def __init__(self, response): self.response = response; self.timeout = None
+    def __init__(self, response): self.response = response; self.timeout = None; self.request = None
     def open(self, request, timeout=None):
         self.timeout = timeout
+        self.request = request
         return self.response
 
 
@@ -44,11 +47,24 @@ class HttpBoundaryTests(unittest.TestCase):
         self.assertEqual(result, '<html>ok</html>')
         self.assertEqual(response.read_size, 65)
         self.assertEqual(opener.timeout, 20)
+        self.assertEqual(opener.request.get_header('Accept-encoding'), 'identity')
 
     def test_accepts_xhtml(self):
         response = FakeResponse(b'<html/>', content_type='application/xhtml+xml')
         result, _ = self._fetch(response, max_bytes=64)
         self.assertEqual(result, '<html/>')
+
+    def test_accepts_identity_content_encoding(self):
+        response = FakeResponse(b'<html/>', content_type='text/html', content_encoding=' identity ')
+        result, _ = self._fetch(response, max_bytes=64)
+        self.assertEqual(result, '<html/>')
+
+    def test_rejects_encoded_or_empty_content_encoding_before_read(self):
+        for value in ('', '   ', 'gzip', 'br', 'deflate', 'gzip, br'):
+            response = FakeResponse(b'<html/>', content_type='text/html', content_encoding=value)
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError): self._fetch(response, max_bytes=64)
+                self.assertIsNone(response.read_size)
 
     def test_rejects_invalid_or_excessive_max_bytes_before_network(self):
         for value in (0, -1, MAX_HTML_BYTES + 1, True, 64.0, '64'):
