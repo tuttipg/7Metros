@@ -115,10 +115,10 @@ function prepareDataset(dataset) {
     const awayTeamId = Number(field(row, ['visitante_equipo_id', 'visitante_id'], NaN));
     const homeTeam = teamById.get(homeTeamId) || null;
     const awayTeam = teamById.get(awayTeamId) || null;
-    if (!homeTeam && !awayTeam) return null;
+    if (!homeTeam || !awayTeam) return null;
 
-    const homeClub = homeTeam ? clubById.get(Number(homeTeam.club_id)) : null;
-    const awayClub = awayTeam ? clubById.get(Number(awayTeam.club_id)) : null;
+    const homeClub = clubById.get(Number(homeTeam.club_id)) || null;
+    const awayClub = clubById.get(Number(awayTeam.club_id)) || null;
     const statusRaw = String(field(row, ['estado'], '') || '').toLowerCase();
     const hasScores = field(row, ['goles_local'], null) !== null && field(row, ['goles_visitante'], null) !== null;
     const finished = statusRaw === 'finalizado' || statusRaw === 'final' || (hasScores && statusRaw !== 'programado');
@@ -133,10 +133,10 @@ function prepareDataset(dataset) {
       awayTeamId: Number.isFinite(awayTeamId) ? awayTeamId : null,
       homeClubId: homeClub?.id ?? null,
       awayClubId: awayClub?.id ?? null,
-      homeTeamCode: homeTeam ? teamCode(homeTeam) : 'A',
-      awayTeamCode: awayTeam ? teamCode(awayTeam) : 'A',
-      home: homeTeam ? teamDisplayName(homeTeam, homeClub) : (homeClub?.name || field(row, ['local'], 'Local')),
-      away: awayTeam ? teamDisplayName(awayTeam, awayClub) : (awayClub?.name || field(row, ['visitante'], 'Visitante')),
+      homeTeamCode: teamCode(homeTeam),
+      awayTeamCode: teamCode(awayTeam),
+      home: teamDisplayName(homeTeam, homeClub),
+      away: teamDisplayName(awayTeam, awayClub),
       homeScore: finished ? toNumber(field(row, ['goles_local'], 0)) : null,
       awayScore: finished ? toNumber(field(row, ['goles_visitante'], 0)) : null,
       status: finished ? 'Finalizado' : 'Programado',

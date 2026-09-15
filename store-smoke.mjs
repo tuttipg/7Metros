@@ -46,7 +46,10 @@ const db = {
   partidos: [
     {id:201,fecha:'2026-09-01',hora:'20:00:00',jornada:1,local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:30,goles_visitante:28},
     {id:203,fecha:'2026-09-03',hora:'20:00:00',jornada:1,local_equipo_id:102,visitante_equipo_id:103,estado:'finalizado',goles_local:24,goles_visitante:26},
-    {id:202,fecha:'2026-09-08',hora:'20:00:00',jornada:2,local_equipo_id:102,visitante_equipo_id:101,estado:'programado',goles_local:null,goles_visitante:null}
+    {id:202,fecha:'2026-09-08',hora:'20:00:00',jornada:2,local_equipo_id:102,visitante_equipo_id:101,estado:'programado',goles_local:null,goles_visitante:null},
+    {id:204,fecha:'2026-09-10',hora:'20:00:00',jornada:3,local_equipo_id:101,visitante_equipo_id:999,estado:'finalizado',goles_local:31,goles_visitante:20},
+    {id:205,fecha:'2026-09-11',hora:'20:00:00',jornada:3,local_equipo_id:999,visitante_equipo_id:102,estado:'finalizado',goles_local:20,goles_visitante:31},
+    {id:206,fecha:'2026-09-12',hora:'20:00:00',jornada:3,local_equipo_id:998,visitante_equipo_id:999,estado:'finalizado',goles_local:22,goles_visitante:21}
   ],
   participaciones: [
     {id:1,partido_id:201,jugador_id:11,equipo_id:101,goles:10,exclusiones_2min:1,tarjeta_amarilla:0,tarjeta_roja:0},
@@ -92,6 +95,11 @@ const store = await import('./store.js');
 await store.loadData();
 
 assert.equal(store.state.loaded, true);
+assert.deepEqual(
+  store.state.matches.map(match => match.id).sort((a, b) => a - b),
+  [201, 202, 203],
+  'prepareDataset debe descartar partidos con uno o ambos equipos fuera del catálogo cargado'
+);
 assert.equal(store.getClubs().length, 3, 'A y B deben ser filas deportivas separadas');
 assert.equal(store.getPlayers().length, 4, 'Un jugador con dos planteles debe tener una fila deportiva por equipo');
 assert.equal(store.getMatches().length, 3);
@@ -145,4 +153,4 @@ assert.equal(table[1].name, 'Ferro Carril Oeste · Equipo B');
 assert.equal(table[1].points, 3);
 assert.equal(table[2].points, 2, 'Dos derrotas ordinarias valen un punto cada una');
 
-console.log('✓ store-smoke: configuración, resumen global, carga, logos, equipos A/B, multi-plantel, filtros, estadísticas y posiciones FEMEBAL 3-2-1 OK');
+console.log('✓ store-smoke: configuración, resumen global, carga, fail-closed de partidos, logos, equipos A/B, multi-plantel, filtros, estadísticas y posiciones FEMEBAL 3-2-1 OK');
