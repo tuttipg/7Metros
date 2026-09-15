@@ -79,7 +79,13 @@ class SafeRedirectHandler(HTTPRedirectHandler):
         absolute=urljoin(req.full_url,newurl); canonical=_canonical_official_page_url(absolute)
         return super().redirect_request(req,fp,code,msg,headers,canonical)
 
+def _validate_max_html_bytes(max_bytes:int)->int:
+    if isinstance(max_bytes,bool) or not isinstance(max_bytes,int) or max_bytes < 1 or max_bytes > MAX_HTML_BYTES:
+        raise ValueError(f"max_bytes HTML debe estar entre 1 y {MAX_HTML_BYTES}")
+    return max_bytes
+
 def _validate_html_response(response, *, max_bytes:int=MAX_HTML_BYTES)->None:
+    max_bytes=_validate_max_html_bytes(max_bytes)
     media_type=response.headers.get_content_type().lower()
     if media_type not in ALLOWED_HTML_MEDIA_TYPES: raise ValueError(f"Media type HTML no permitido: {media_type}")
     raw_length=response.headers.get('Content-Length')
@@ -90,6 +96,7 @@ def _validate_html_response(response, *, max_bytes:int=MAX_HTML_BYTES)->None:
         if declared > max_bytes: raise ValueError(f"Respuesta HTML declarada fuera de límite: {declared} bytes")
 
 def get_text(url:str,timeout=20, *, max_bytes:int=MAX_HTML_BYTES)->str:
+    max_bytes=_validate_max_html_bytes(max_bytes)
     canonical=_canonical_official_page_url(url)
     req=Request(canonical,headers={"User-Agent":UA,"Accept":"text/html,application/xhtml+xml"},method="GET")
     with build_opener(SafeRedirectHandler()).open(req,timeout=timeout) as r:
