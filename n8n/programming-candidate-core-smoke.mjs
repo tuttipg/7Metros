@@ -34,6 +34,11 @@ assert.equal(control.time, '20:15');
 assert.equal(control.branch, 'M');
 assert.match(control.raw_matchup_and_officials, /^Argentinos Juniors Ferro Carril Oeste\b/);
 assert.equal(control.source_url, SOURCE);
+assert.equal(control.source_kind, 'official_programming_pdf');
+assert.equal(control.evidence_scope, 'scheduled_match_identity_only');
+assert.equal(control.result_evidence, false, 'Una programación no acredita el resultado');
+assert.equal(control.score_evidence, false, 'Una programación no acredita el marcador');
+assert.equal(control.player_statistics_evidence, false, 'Una programación no acredita estadísticas de jugadores');
 assert.equal(control.team_resolution.status, 'resolved');
 assert.deepEqual(control.team_resolution.local, {
   id: 3,
@@ -51,6 +56,10 @@ const lhd = result.candidates.find((item) => item.division === 'LHD Hipotecario 
 assert.ok(lhd, 'Debe detectar LHD sin confundir otras divisiones');
 assert.equal(lhd.time, '18:30');
 assert.equal(lhd.branch, 'F');
+assert.equal(lhd.evidence_scope, 'scheduled_match_identity_only');
+assert.equal(lhd.result_evidence, false);
+assert.equal(lhd.score_evidence, false);
+assert.equal(lhd.player_statistics_evidence, false);
 assert.equal(lhd.team_resolution.status, 'resolved');
 assert.equal(result.candidates.some((item) => item.division === 'Liga de Honor Plata'), false);
 
