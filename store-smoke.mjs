@@ -41,7 +41,12 @@ const db = {
     {id:1,jugador_id:11,equipo_id:101,dorsal:7,posicion:'Lateral'},
     {id:2,jugador_id:12,equipo_id:102,dorsal:9,posicion:'Central'},
     {id:3,jugador_id:13,equipo_id:103,dorsal:10,posicion:'Extremo'},
-    {id:4,jugador_id:11,equipo_id:103,dorsal:17,posicion:'Lateral'}
+    {id:4,jugador_id:11,equipo_id:103,dorsal:17,posicion:'Lateral'},
+    {id:90,jugador_id:999,equipo_id:101,dorsal:90,posicion:'Inválido jugador'},
+    {id:91,jugador_id:11,equipo_id:999,dorsal:91,posicion:'Inválido equipo'},
+    {id:92,jugador_id:999,equipo_id:999,dorsal:92,posicion:'Ambos inválidos'},
+    {id:93,jugador_id:null,equipo_id:101,dorsal:93,posicion:'Jugador nulo'},
+    {id:94,jugador_id:12,equipo_id:'no-numérico',dorsal:94,posicion:'Equipo inválido'}
   ],
   partidos: [
     {id:201,fecha:'2026-09-01',hora:'20:00:00',jornada:1,local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:30,goles_visitante:28},
@@ -92,6 +97,10 @@ const store = await import('./store.js');
 await store.loadData();
 
 assert.equal(store.state.loaded, true);
+assert.equal(store.state.rosters.length, 4, 'Planteles con jugador/equipo inexistente o IDs inválidos deben descartarse');
+assert.equal(store.state.index.rosterByPlayer.has(999), false, 'Un jugador externo no debe entrar al índice de planteles');
+assert.equal(store.state.index.rosterByTeam.has(999), false, 'Un equipo externo no debe entrar al índice de planteles');
+assert.equal(store.state.index.rosterByPlayer.has(0), false, 'Un jugador nulo normalizado a 0 no debe entrar al índice');
 assert.equal(store.getClubs().length, 3, 'A y B deben ser filas deportivas separadas');
 assert.equal(store.getPlayers().length, 4, 'Un jugador con dos planteles debe tener una fila deportiva por equipo');
 assert.equal(store.getMatches().length, 3);
@@ -145,4 +154,4 @@ assert.equal(table[1].name, 'Ferro Carril Oeste · Equipo B');
 assert.equal(table[1].points, 3);
 assert.equal(table[2].points, 2, 'Dos derrotas ordinarias valen un punto cada una');
 
-console.log('✓ store-smoke: configuración, resumen global, carga, logos, equipos A/B, multi-plantel, filtros, estadísticas y posiciones FEMEBAL 3-2-1 OK');
+console.log('✓ store-smoke: configuración, resumen global, carga, logos, equipos A/B, multi-plantel, integridad de planteles, filtros, estadísticas y posiciones FEMEBAL 3-2-1 OK');
