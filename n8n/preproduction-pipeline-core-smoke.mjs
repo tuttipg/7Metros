@@ -45,7 +45,7 @@ assert.equal(result.preview.payload.fuente_planilla, sourceUrl);
 
 assert.throws(() => buildPlanillaPreproductionPreview({ workItem, extractedText, mapping }), /identidad esperada/);
 assert.throws(() => buildPlanillaPreproductionPreview({ workItem, extractedText, expected: { ...expected, goles_visitante: 26 }, mapping }), /Marcador visitante inesperado/);
-assert.throws(() => buildPlanillaPreproductionPreview({ workItem, extractedText, expected, mapping: { local_equipo_id: 3, visitante_equipo_id: 3 } }), /mismo equipo_id/);
+assert.throws(() => buildPlanillaPreproductionPreview({ workItem, extractedText, expected, mapping: { local_equipo_id: 3, visitante_equipo_id: 3 } }), /no pueden compartir equipo_id/);
 assert.throws(() => buildPlanillaPreproductionPreview({ workItem: { ...workItem, auth_used: true }, extractedText, expected, mapping }), /autenticación/);
 assert.throws(() => buildPlanillaPreproductionPreview({ workItem: { ...workItem, write_enabled: true }, extractedText, expected, mapping }), /escritura/);
 
