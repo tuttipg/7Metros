@@ -35,8 +35,10 @@ jobs:
           node --check script.js
           node --check utils.js
           node --check config.js
+          node --check config-season-smoke.mjs
           node --check store-smoke.mjs
           node --check team-integrity-smoke.mjs
+          node --check match-scope-smoke.mjs
           node --check navigation-smoke.mjs
           node --check category-order-smoke.mjs
           node --check dashboard-scope-smoke.mjs
@@ -70,11 +72,17 @@ jobs:
       - name: Check Python syntax
         run: python -m py_compile validate_site.py validate_backend_contract.py
 
+      - name: Season config regression smoke test
+        run: node config-season-smoke.mjs
+
       - name: Store smoke test
         run: node store-smoke.mjs
 
       - name: Team integrity smoke test
         run: node team-integrity-smoke.mjs
+
+      - name: Match scope smoke test
+        run: node match-scope-smoke.mjs
 
       - name: Navigation smoke test
         run: node navigation-smoke.mjs
