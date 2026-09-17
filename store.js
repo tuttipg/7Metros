@@ -61,15 +61,8 @@ export function teamDisplayName(team, club = null, { compact = false } = {}) {
   return compact ? `${base} ${code}` : `${base} · Equipo ${code}`;
 }
 
-function prepareDataset(dataset) {
+export function prepareDataset(dataset) {
   state.globalSummary = { ...state.globalSummary, ...(dataset.globalSummary || {}) };
-  state.teams = (dataset.equipos || []).map(row => ({
-    ...row,
-    id: Number(row.id),
-    club_id: Number(row.club_id),
-    temporada_id: Number(row.temporada_id),
-    equipo_codigo: teamCode(row)
-  })).filter(row => Number.isFinite(row.id));
 
   state.clubs = (dataset.clubes || []).map(row => ({
     id: Number(row.id),
@@ -78,6 +71,21 @@ function prepareDataset(dataset) {
     city: row.ciudad || '',
     logoUrl: row.logo_url || null
   })).filter(row => Number.isFinite(row.id));
+
+  const validClubIds = new Set(state.clubs.map(row => row.id));
+  state.teams = (dataset.equipos || []).map(row => ({
+    ...row,
+    id: Number(row.id),
+    club_id: Number(row.club_id),
+    temporada_id: Number(row.temporada_id),
+    equipo_codigo: teamCode(row)
+  })).filter(row =>
+    Number.isFinite(row.id) &&
+    Number.isFinite(row.club_id) &&
+    Number.isFinite(row.temporada_id) &&
+    row.temporada_id === SEASON_ID &&
+    validClubIds.has(row.club_id)
+  );
 
   state.players = (dataset.jugadores || []).map(row => ({
     id: Number(row.id),
@@ -113,7 +121,11 @@ function prepareDataset(dataset) {
     partido_id: Number(row.partido_id),
     jugador_id: Number(row.jugador_id),
     equipo_id: Number(row.equipo_id)
-  })).filter(row => Number.isFinite(row.jugador_id));
+  })).filter(row =>
+    Number.isFinite(row.jugador_id) &&
+    Number.isFinite(row.partido_id) &&
+    Number.isFinite(row.equipo_id)
+  );
 
   const teamById = new Map(state.teams.map(row => [row.id, row]));
   const clubById = new Map(state.clubs.map(row => [row.id, row]));
@@ -123,10 +135,10 @@ function prepareDataset(dataset) {
     const awayTeamId = Number(field(row, ['visitante_equipo_id', 'visitante_id'], NaN));
     const homeTeam = teamById.get(homeTeamId) || null;
     const awayTeam = teamById.get(awayTeamId) || null;
-    if (!homeTeam && !awayTeam) return null;
+    if (!homeTeam || !awayTeam) return null;
 
-    const homeClub = homeTeam ? clubById.get(Number(homeTeam.club_id)) : null;
-    const awayClub = awayTeam ? clubById.get(Number(awayTeam.club_id)) : null;
+    const homeClub = clubById.get(Number(homeTeam.club_id)) || null;
+    const awayClub = clubById.get(Number(awayTeam.club_id)) || null;
     const statusRaw = String(field(row, ['estado'], '') || '').toLowerCase();
     const hasScores = field(row, ['goles_local'], null) !== null && field(row, ['goles_visitante'], null) !== null;
     const finished = statusRaw === 'finalizado' || statusRaw === 'final' || (hasScores && statusRaw !== 'programado');
@@ -141,10 +153,10 @@ function prepareDataset(dataset) {
       awayTeamId: Number.isFinite(awayTeamId) ? awayTeamId : null,
       homeClubId: homeClub?.id ?? null,
       awayClubId: awayClub?.id ?? null,
-      homeTeamCode: homeTeam ? teamCode(homeTeam) : 'A',
-      awayTeamCode: awayTeam ? teamCode(awayTeam) : 'A',
-      home: homeTeam ? teamDisplayName(homeTeam, homeClub) : (homeClub?.name || field(row, ['local'], 'Local')),
-      away: awayTeam ? teamDisplayName(awayTeam, awayClub) : (awayClub?.name || field(row, ['visitante'], 'Visitante')),
+      homeTeamCode: teamCode(homeTeam),
+      awayTeamCode: teamCode(awayTeam),
+      home: teamDisplayName(homeTeam, homeClub),
+      away: teamDisplayName(awayTeam, awayClub),
       homeScore: finished ? toNumber(field(row, ['goles_local'], 0)) : null,
       awayScore: finished ? toNumber(field(row, ['goles_visitante'], 0)) : null,
       status: finished ? 'Finalizado' : 'Programado',
@@ -155,10 +167,18 @@ function prepareDataset(dataset) {
     };
   }).filter(Boolean);
 
+  const matchById = new Map(state.matches.map(row => [row.id, row]));
+  state.participations = state.participations.filter(row => {
+    if (!validPlayerIds.has(row.jugador_id) || !teamById.has(row.equipo_id)) return false;
+    const match = matchById.get(row.partido_id);
+    if (!match) return false;
+    return row.equipo_id === match.homeTeamId || row.equipo_id === match.awayTeamId;
+  });
+
   state.index.clubById = new Map(state.clubs.map(row => [row.id, row]));
-  state.index.teamById = new Map(state.teams.map(row => [row.id, row]));
+  state.index.teamById = teamById;
   state.index.playerById = new Map(state.players.map(row => [row.id, row]));
-  state.index.matchById = new Map(state.matches.map(row => [row.id, row]));
+  state.index.matchById = matchById;
   state.index.rosterByPlayer = new Map();
   state.index.rosterByTeam = new Map();
   state.index.participationsByPlayer = new Map();
@@ -170,7 +190,7 @@ function prepareDataset(dataset) {
   });
   state.participations.forEach(row => {
     pushMapList(state.index.participationsByPlayer, row.jugador_id, row);
-    if (Number.isFinite(row.partido_id)) pushMapList(state.index.participationsByMatch, row.partido_id, row);
+    pushMapList(state.index.participationsByMatch, row.partido_id, row);
   });
 }
 
@@ -315,7 +335,7 @@ export function getTopDivisionMatches(branch = null) {
 
 function participationStats(playerId, allowedTeamIds = filteredTeamIds()) {
   const rows = (state.index.participationsByPlayer.get(Number(playerId)) || [])
-    .filter(row => !row.equipo_id || allowedTeamIds.has(Number(row.equipo_id)));
+    .filter(row => allowedTeamIds.has(Number(row.equipo_id)));
 
   const matchIds = new Set(rows.map(row => Number(row.partido_id)).filter(Number.isFinite));
   const goals = rows.reduce((sum, row) => sum + toNumber(field(row, ['goles'], 0)), 0);
