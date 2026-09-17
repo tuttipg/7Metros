@@ -1,7 +1,7 @@
 const raw = window.SEVEN_METROS_CONFIG || {};
 
 export const CONFIG = raw;
-export const SEASON_ID = Number(raw.seasonId || 3);
+export const SEASON_ID = Number(raw.seasonId ?? 3);
 export const SEASON_LABEL = raw.seasonLabel || 'CLAUSURA 2026';
 export const LOCALE = raw.locale || 'es-AR';
 export const TIMEZONE = raw.timezone || 'America/Argentina/Buenos_Aires';
