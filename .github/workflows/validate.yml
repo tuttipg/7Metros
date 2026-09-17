@@ -74,6 +74,8 @@ jobs:
           node --check n8n/planilla-dry-run-core-smoke.mjs
           node --check n8n/pre-supabase-gate-core.mjs
           node --check n8n/pre-supabase-gate-core-smoke.mjs
+          node --check n8n/preproduction-payload-core.mjs
+          node --check n8n/preproduction-payload-core-smoke.mjs
           node --check n8n/official-pdf-fetch-core.mjs
           node --check n8n/official-pdf-fetch-core-smoke.mjs
           node --check n8n/pdf-extract-contract.mjs
@@ -146,6 +148,8 @@ jobs:
         run: node n8n/planilla-dry-run-core-smoke.mjs
       - name: FEMEBAL pre-Supabase SAFE gate smoke test
         run: node n8n/pre-supabase-gate-core-smoke.mjs
+      - name: FEMEBAL preproduction payload SAFE preview smoke test
+        run: node n8n/preproduction-payload-core-smoke.mjs
       - name: FEMEBAL official PDF fetch smoke test
         run: node n8n/official-pdf-fetch-core-smoke.mjs
       - name: FEMEBAL n8n PDF extraction contract smoke test
