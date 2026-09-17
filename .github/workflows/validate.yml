@@ -37,6 +37,7 @@ jobs:
           node --check config.js
           node --check config-season-smoke.mjs
           node --check store-smoke.mjs
+          node --check store-integrity-smoke.mjs
           node --check team-integrity-smoke.mjs
           node --check match-scope-smoke.mjs
           node --check navigation-smoke.mjs
@@ -77,6 +78,9 @@ jobs:
 
       - name: Store smoke test
         run: node store-smoke.mjs
+
+      - name: Store integrity smoke test
+        run: node store-integrity-smoke.mjs
 
       - name: Team integrity smoke test
         run: node team-integrity-smoke.mjs
