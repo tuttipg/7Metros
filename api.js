@@ -166,41 +166,93 @@ async function loadGlobalSummaryView() {
   }
 }
 
-async function loadSeasonMatches(season) {
-  try {
-    return await supabaseGetAll('partidos', `?select=*&temporada_id=eq.${season}`);
-  } catch {
-    // Fallback para esquemas antiguos: el store descarta cruces fuera del catálogo
-    // de equipos de la temporada, por lo que sigue siendo correcto aunque sea menos eficiente.
-    return supabaseGetAll('partidos', '?select=*');
+export function filterMatchesToTeamIds(matches, teamIds) {
+  const allowed = teamIds instanceof Set
+    ? teamIds
+    : new Set((teamIds || []).map(Number).filter(Number.isFinite));
+
+  return (matches || []).filter(row => {
+    const homeTeamId = Number(row?.local_equipo_id ?? row?.local_id);
+    const awayTeamId = Number(row?.visitante_equipo_id ?? row?.visitante_id);
+    return Number.isFinite(homeTeamId)
+      && Number.isFinite(awayTeamId)
+      && allowed.has(homeTeamId)
+      && allowed.has(awayTeamId);
+  });
+}
+
+export function filterParticipationsToMatches(participations, matches) {
+  const teamsByMatch = new Map();
+  for (const row of matches || []) {
+    const matchId = Number(row?.id);
+    const homeTeamId = Number(row?.local_equipo_id ?? row?.local_id);
+    const awayTeamId = Number(row?.visitante_equipo_id ?? row?.visitante_id);
+    if (!Number.isFinite(matchId) || !Number.isFinite(homeTeamId) || !Number.isFinite(awayTeamId)) continue;
+    teamsByMatch.set(matchId, new Set([homeTeamId, awayTeamId]));
   }
+
+  return (participations || []).filter(row => {
+    const matchId = Number(row?.partido_id);
+    const teamId = Number(row?.equipo_id);
+    const matchTeams = teamsByMatch.get(matchId);
+    return Number.isFinite(matchId)
+      && Number.isFinite(teamId)
+      && Boolean(matchTeams?.has(teamId));
+  });
+}
+
+async function loadSeasonMatches(season, teamIds) {
+  let rows;
+  try {
+    rows = await supabaseGetAll('partidos', `?select=*&temporada_id=eq.${season}`);
+  } catch {
+    // Fallback para esquemas antiguos. Igual se vuelve a validar contra el catálogo
+    // de equipos de la temporada para evitar cruces parciales o cross-scope.
+    rows = await supabaseGetAll('partidos', '?select=*');
+  }
+  return filterMatchesToTeamIds(rows, teamIds);
 }
 
 export async function loadPublicDataset(seasonId) {
   const season = Number(seasonId);
   if (!Number.isInteger(season) || season <= 0) throw new DataError('La temporada configurada no es válida.');
 
-  const equipos = await supabaseGetAll(
+  const rawEquipos = await supabaseGetAll(
     'equipos',
     `?select=id,club_id,temporada_id,categoria,division,rama,equipo_codigo,nombre_femebal,activo&temporada_id=eq.${season}`
   );
 
-  const teamIds = equipos.map(row => Number(row.id)).filter(Number.isFinite);
-  const clubIds = equipos.map(row => Number(row.club_id)).filter(Number.isFinite);
+  const scopedEquipos = rawEquipos.filter(row =>
+    Number.isFinite(Number(row.id)) &&
+    Number.isFinite(Number(row.club_id)) &&
+    Number.isFinite(Number(row.temporada_id)) &&
+    Number(row.temporada_id) === season
+  );
+  const requestedClubIds = scopedEquipos.map(row => Number(row.club_id));
 
-  const [clubes, planteles, summaryView] = await Promise.all([
-    supabaseGetByIds('clubes', 'id', clubIds, 'id,nombre,abreviatura,ciudad,logo_url'),
-    supabaseGetByIds('planteles', 'equipo_id', teamIds, 'id,jugador_id,equipo_id,dorsal,posicion'),
+  const [clubes, summaryView] = await Promise.all([
+    supabaseGetByIds('clubes', 'id', requestedClubIds, 'id,nombre,abreviatura,ciudad,logo_url'),
     loadGlobalSummaryView()
   ]);
 
+  const validClubIds = new Set(clubes.map(row => Number(row.id)).filter(Number.isFinite));
+  const equipos = scopedEquipos.filter(row => validClubIds.has(Number(row.club_id)));
+  const teamIds = equipos.map(row => Number(row.id));
+
+  const planteles = await supabaseGetByIds(
+    'planteles',
+    'equipo_id',
+    teamIds,
+    'id,jugador_id,equipo_id,dorsal,posicion'
+  );
   const playerIds = planteles.map(row => Number(row.jugador_id)).filter(Number.isFinite);
 
-  const [jugadores, partidos, participaciones] = await Promise.all([
+  const [jugadores, partidos, rawParticipaciones] = await Promise.all([
     supabaseGetByIds('jugadores', 'id', playerIds, 'id,nombre,apellido,fecha_nacimiento,brazo_habil,altura_cm,peso_kg'),
-    loadSeasonMatches(season),
+    loadSeasonMatches(season, teamIds),
     supabaseGetByIds('participaciones', 'equipo_id', teamIds, '*')
   ]);
+  const participaciones = filterParticipationsToMatches(rawParticipaciones, partidos);
 
   let globalSummary = summaryView;
   if (!globalSummary) {
