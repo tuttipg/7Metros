@@ -1,6 +1,23 @@
 import { validateDiscoveryManifest } from './importer-core.mjs';
 import { canonicalizeOfficialFemebalUrl, OFFICIAL_FEMEBAL_URL_POLICY } from './official-url-policy.mjs';
 
+export const DISCOVERY_PDF_TYPES = Object.freeze({
+  PROGRAMACION: 'programacion_pdf',
+  PLANILLA_PARTIDO: 'planilla_partido_pdf',
+});
+
+export function classifyDiscoveryPdf(pdfUrl) {
+  const canonical = canonicalizeOfficialFemebalUrl(pdfUrl, { pdf: true });
+  const url = new URL(canonical);
+  if (url.hostname === OFFICIAL_FEMEBAL_URL_POLICY.planilla_host && url.pathname.startsWith('/pdf_planillas/')) {
+    return DISCOVERY_PDF_TYPES.PLANILLA_PARTIDO;
+  }
+  if ((url.hostname === 'femebal.com' || url.hostname === 'www.femebal.com') && url.pathname.startsWith('/wp-content/uploads/')) {
+    return DISCOVERY_PDF_TYPES.PROGRAMACION;
+  }
+  throw new Error(`PDF oficial sin tipo reconocido: ${canonical}`);
+}
+
 function sourceMetadata(row) {
   if (!row || typeof row !== 'object' || Array.isArray(row)) {
     throw new Error('Entrada PDF inválida');
@@ -27,6 +44,17 @@ function sourceMetadata(row) {
 
   const pageUrl = canonicalizeOfficialFemebalUrl(row.page_url);
   const pdfUrl = canonicalizeOfficialFemebalUrl(row.pdf_url, { pdf: true });
+  const documentType = classifyDiscoveryPdf(pdfUrl);
+
+  // Si un manifest futuro trae el tipo explícito, debe coincidir con la
+  // clasificación derivada de la ruta oficial. Así evitamos que metadata
+  // manipulada convierta una programación en una planilla procesable.
+  if (row.document_type !== undefined && row.document_type !== null) {
+    const declared = String(row.document_type).trim();
+    if (declared !== documentType) {
+      throw new Error(`document_type contradictorio para ${pdfUrl}: ${declared || 'ausente'} != ${documentType}`);
+    }
+  }
 
   return {
     page_url: pageUrl,
@@ -36,12 +64,8 @@ function sourceMetadata(row) {
     source_type: sourceType,
     phase,
     round_number: roundNumber,
+    document_type: documentType,
   };
-}
-
-function isOfficialMatchSheetPdf(pdfUrl) {
-  const url = new URL(pdfUrl);
-  return url.hostname === OFFICIAL_FEMEBAL_URL_POLICY.planilla_host && url.pathname.startsWith('/pdf_planillas/');
 }
 
 export function buildDiscoveryPdfWorkItems(manifest) {
@@ -51,10 +75,9 @@ export function buildDiscoveryPdfWorkItems(manifest) {
   for (const row of manifest.pdfs) {
     const source = sourceMetadata(row);
 
-    // Programaciones publicadas bajo wp-content/uploads son evidencia de fixture,
-    // fecha y hora, pero NO una planilla individual de partido. El bridge hacia
-    // el parser de planillas solo puede emitir PDFs del árbol oficial /pdf_planillas/.
-    if (!isOfficialMatchSheetPdf(source.pdf_url)) continue;
+    // Programaciones son evidencia de fixture/fecha/hora. Sólo una planilla
+    // individual puede cruzar esta frontera hacia el parser de planillas.
+    if (source.document_type !== DISCOVERY_PDF_TYPES.PLANILLA_PARTIDO) continue;
 
     const previous = byUrl.get(source.pdf_url);
 
