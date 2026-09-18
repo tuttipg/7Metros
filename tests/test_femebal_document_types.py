@@ -1,6 +1,12 @@
 import unittest
 
-from tools.femebal_public_discovery import Source, build_manifest, discover_pdfs
+from tools.femebal_public_discovery import (
+    PdfSource,
+    Source,
+    _document_type_counts,
+    build_manifest,
+    discover_pdfs,
+)
 
 PROGRAMACION = 'https://femebal.com/wp-content/uploads/2026/03/Sabado-21-3.pdf'
 PLANILLA = 'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf'
@@ -28,6 +34,21 @@ class DocumentTypeContract(unittest.TestCase):
         self.assertTrue(manifest['complete'])
         self.assertFalse(manifest['write_enabled'])
         self.assertFalse(manifest['auth_used'])
+
+    def test_document_type_counts_keep_programming_and_match_sheets_separate(self):
+        pdfs = discover_pdfs(PAGE, SOURCE)
+        self.assertEqual(
+            _document_type_counts(pdfs),
+            {'programacion_pdf': 1, 'planilla_partido_pdf': 1},
+        )
+
+    def test_document_type_counts_fail_closed_on_unknown_type(self):
+        forged = PdfSource(
+            SOURCE.page_url, SOURCE.title, PROGRAMACION, 'forged',
+            'unknown_pdf', SOURCE.source_type, SOURCE.phase, SOURCE.round_number,
+        )
+        with self.assertRaisesRegex(ValueError, 'Tipo documental inesperado'):
+            _document_type_counts([forged])
 
 
 if __name__ == '__main__':
