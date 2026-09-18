@@ -33,7 +33,7 @@ function pdf(overrides = {}) {
 }
 
 {
-  const items = buildDiscoveryPdfWorkItems(manifest([pdf()]));
+  const items = buildDiscoveryPdfWorkItems(manifest([pdf({ document_type: 'planilla_partido_pdf' })]));
   assert.equal(items.length, 1);
   assert.equal(items[0].kind, 'femebal_official_pdf');
   assert.equal(items[0].method, 'GET');
@@ -43,6 +43,7 @@ function pdf(overrides = {}) {
   assert.equal(items[0].url, CONTROL_PDF);
   assert.equal(items[0].source.phase, 'apertura');
   assert.equal(items[0].source.round_number, 1);
+  assert.equal(items[0].source.document_type, 'planilla_partido_pdf');
 }
 
 {
@@ -61,17 +62,40 @@ function pdf(overrides = {}) {
   // La programación oficial del 21/03/2026 prueba fixture/fecha/hora, no es una
   // planilla individual. Debe permanecer fuera del handoff al parser de planillas.
   const items = buildDiscoveryPdfWorkItems(manifest([
-    pdf({ pdf_url: CONTROL_SCHEDULE_PDF }),
-    pdf(),
+    pdf({ pdf_url: CONTROL_SCHEDULE_PDF, document_type: 'programacion_pdf' }),
+    pdf({ document_type: 'planilla_partido_pdf' }),
   ]));
   assert.equal(items.length, 1);
   assert.equal(items[0].url, CONTROL_PDF);
 }
 
 {
-  const items = buildDiscoveryPdfWorkItems(manifest([pdf({ pdf_url: CONTROL_SCHEDULE_PDF })]));
+  const items = buildDiscoveryPdfWorkItems(manifest([
+    pdf({ pdf_url: CONTROL_SCHEDULE_PDF, document_type: 'programacion_pdf' }),
+  ]));
   assert.deepEqual(items, []);
 }
+
+// El tipo declarado nunca puede elevar una programación a planilla ni degradar
+// una planilla real para eludir el handoff. La ruta oficial es la autoridad.
+assert.throws(
+  () => buildDiscoveryPdfWorkItems(manifest([
+    pdf({ pdf_url: CONTROL_SCHEDULE_PDF, document_type: 'planilla_partido_pdf' }),
+  ])),
+  /document_type contradictorio/
+);
+assert.throws(
+  () => buildDiscoveryPdfWorkItems(manifest([
+    pdf({ document_type: 'programacion_pdf' }),
+  ])),
+  /document_type contradictorio/
+);
+assert.throws(
+  () => buildDiscoveryPdfWorkItems(manifest([
+    pdf({ document_type: 'tipo_desconocido' }),
+  ])),
+  /document_type contradictorio/
+);
 
 assert.throws(
   () => buildDiscoveryPdfWorkItems(manifest([pdf(), pdf({ source_type: 'reprogramacion', phase: null, round_number: null })])),
@@ -100,4 +124,4 @@ assert.throws(() => buildDiscoveryPdfWorkItems(manifest([pdf()], { complete: fal
 assert.throws(() => buildDiscoveryPdfWorkItems(manifest([pdf()], { write_enabled: true })), /read-only/);
 assert.throws(() => buildDiscoveryPdfWorkItems(manifest([pdf()], { auth_used: true })), /autenticación/);
 
-console.log('✓ discovery-manifest bridge: planillas individuales separadas de PDFs de programación + canonicalización + SAFE/fail-closed OK');
+console.log('✓ discovery-manifest bridge: document_type fail-closed + planillas separadas de programación + canonicalización + SAFE OK');
