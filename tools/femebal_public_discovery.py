@@ -35,7 +35,7 @@ class LinkParser(HTMLParser):
 @dataclass(frozen=True)
 class Source: page_url:str; title:str; source_type:str; phase:str|None; round_number:int|None
 @dataclass(frozen=True)
-class PdfSource: page_url:str; page_title:str; pdf_url:str; anchor_text:str; source_type:str; phase:str|None; round_number:int|None
+class PdfSource: page_url:str; page_title:str; pdf_url:str; anchor_text:str; document_type:str; source_type:str; phase:str|None; round_number:int|None
 
 def _has_ambiguous_raw_url_chars(url:str)->bool: return bool(AMBIGUOUS_RAW_URL_CHARS.search(str(url)))
 
@@ -62,14 +62,17 @@ def _canonical_official_page_url(url:str)->str:
     path=p.path or '/'; query=f"?{p.query}" if p.query else ''
     return f"https://{p.hostname}{path}{query}"
 
-def _is_official_upload_pdf(url:str)->bool:
-    if _has_ambiguous_raw_url_chars(url): return False
+def _document_type_for_official_pdf(url:str)->str|None:
+    if _has_ambiguous_raw_url_chars(url): return None
     p=urlparse(url)
-    if p.scheme!="https" or p.query or p.fragment: return False
-    if '%' in p.path or any(segment in {'.','..'} for segment in p.path.split('/')): return False
-    wordpress_pdf=p.hostname in FEMEBAL_WEB_HOSTS and p.path.startswith('/wp-content/uploads/')
-    planilla_pdf=p.hostname==FEMEBAL_PLANILLA_HOST and p.path.startswith('/pdf_planillas/')
-    return (wordpress_pdf or planilla_pdf) and p.path.lower().endswith('.pdf')
+    if p.scheme!="https" or p.query or p.fragment: return None
+    if '%' in p.path or any(segment in {'.','..'} for segment in p.path.split('/')): return None
+    if not p.path.lower().endswith('.pdf'): return None
+    if p.hostname in FEMEBAL_WEB_HOSTS and p.path.startswith('/wp-content/uploads/'): return 'programacion_pdf'
+    if p.hostname==FEMEBAL_PLANILLA_HOST and p.path.startswith('/pdf_planillas/'): return 'planilla_partido_pdf'
+    return None
+
+def _is_official_upload_pdf(url:str)->bool: return _document_type_for_official_pdf(url) is not None
 
 def _canonical_official_pdf_url(url:str)->str:
     if not _is_official_upload_pdf(url): raise ValueError(f"PDF oficial fuera de allowlist: {url}")
@@ -142,8 +145,7 @@ def load_page_seeds(path:Path|str|None=DEFAULT_SEEDS_FILE)->list[Source]:
     out={}
     for raw in pages:
         if not isinstance(raw,str): raise ValueError('Seed FEMEBAL no textual')
-        url=_canonical_official_page_url(raw)
-        src=classify_page(url,url)
+        url=_canonical_official_page_url(raw); src=classify_page(url,url)
         if src is None: raise ValueError(f'Seed FEMEBAL fuera del scope de programación metropolitana: {url}')
         out[url]=src
     return sorted(out.values(),key=lambda x:x.page_url)
@@ -162,10 +164,12 @@ def discover_pdfs(page_html:str,source:Source):
         raw_url=urljoin(source.page_url,href)
         try: url=_canonical_official_pdf_url(raw_url)
         except ValueError: continue
-        out[url]=PdfSource(source.page_url,source.title,url,text,source.source_type,source.phase,source.round_number)
+        document_type=_document_type_for_official_pdf(url)
+        if document_type is None: continue
+        out[url]=PdfSource(source.page_url,source.title,url,text,document_type,source.source_type,source.phase,source.round_number)
     return sorted(out.values(),key=lambda x:x.pdf_url)
 
-def _pdf_source_identity(source:PdfSource): return (source.page_url,source.source_type,source.phase,source.round_number)
+def _pdf_source_identity(source:PdfSource): return (source.page_url,source.document_type,source.source_type,source.phase,source.round_number)
 
 def _dedupe_manifest_pdfs(pdfs:list[PdfSource]):
     by_url={}; conflicted=set(); errors=[]
@@ -176,7 +180,7 @@ def _dedupe_manifest_pdfs(pdfs:list[PdfSource]):
         if previous is None: by_url[url]=source; continue
         if _pdf_source_identity(previous)==_pdf_source_identity(source): continue
         conflicted.add(url); del by_url[url]
-        errors.append({"stage":"metadata_conflict","url":url,"error":"contradictory_pdf_provenance","sources":[{"page_url":previous.page_url,"source_type":previous.source_type,"phase":previous.phase,"round_number":previous.round_number},{"page_url":source.page_url,"source_type":source.source_type,"phase":source.phase,"round_number":source.round_number}]})
+        errors.append({"stage":"metadata_conflict","url":url,"error":"contradictory_pdf_provenance","sources":[{"page_url":previous.page_url,"document_type":previous.document_type,"source_type":previous.source_type,"phase":previous.phase,"round_number":previous.round_number},{"page_url":source.page_url,"document_type":source.document_type,"source_type":source.source_type,"phase":source.phase,"round_number":source.round_number}]})
     return sorted(by_url.values(),key=lambda x:x.pdf_url),errors
 
 def build_manifest(index_html:str,page_html_by_url:dict[str,str],fetch_errors:list[dict]|None=None, *, seed_pages:list[Source]|None=None):
