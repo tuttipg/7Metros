@@ -45,6 +45,12 @@ class T(unittest.TestCase):
         self.assertEqual(len([x for x in merged if x.page_url.endswith('/programacion-fecha-1-torneo-metropolitano-apertura-2026/')]),1)
         recovered=[x for x in merged if x.page_url==historical][0]
         self.assertEqual((recovered.phase,recovered.round_number),('apertura',15))
+    def test_seed_loader_fails_closed_when_explicit_file_is_missing_or_not_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            with self.assertRaises(FileNotFoundError): load_page_seeds(root/'missing.json')
+            with self.assertRaises(ValueError): load_page_seeds(root)
+        self.assertEqual(load_page_seeds(None),[])
     def test_seed_loader_fails_closed_on_unsafe_contract_host_tracking_and_scope(self):
         bad_payloads=[
             {'schema_version':1,'safe':False,'auth_used':False,'write_enabled':False,'pages':['https://femebal.com/programacion-fecha-3-torneo-metropolitano-apertura-2026/']},
