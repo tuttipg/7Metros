@@ -132,7 +132,8 @@ def discover_pages(index_html:str,base=PROGRAMACIONES_URL):
 def load_page_seeds(path:Path|str|None=DEFAULT_SEEDS_FILE)->list[Source]:
     if path is None: return []
     path=Path(path)
-    if not path.exists(): return []
+    if not path.exists(): raise FileNotFoundError(f'Archivo de seeds FEMEBAL solicitado no existe: {path}')
+    if not path.is_file(): raise ValueError(f'Ruta de seeds FEMEBAL no es un archivo: {path}')
     payload=json.loads(path.read_text(encoding='utf-8'))
     if not isinstance(payload,dict) or payload.get('schema_version')!=SEEDS_SCHEMA_VERSION: raise ValueError('Archivo de seeds FEMEBAL inválido')
     if payload.get('safe') is not True or payload.get('auth_used') is not False or payload.get('write_enabled') is not False: raise ValueError('Seeds FEMEBAL sin contrato SAFE')
