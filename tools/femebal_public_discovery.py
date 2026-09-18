@@ -21,6 +21,7 @@ ALLOWED_HTML_MEDIA_TYPES={"text/html","application/xhtml+xml"}
 TRACKING_QUERY_KEYS={"fbclid","gclid","dclid","msclkid","mc_cid","mc_eid"}
 AMBIGUOUS_RAW_URL_CHARS=re.compile(r'[\\\x00-\x1f\x7f]')
 STRICT_DECIMAL=re.compile(r'^\d+$')
+DOCUMENT_TYPES=('programacion_pdf','planilla_partido_pdf')
 
 class LinkParser(HTMLParser):
     def __init__(self): super().__init__(); self.links=[]; self._href=None; self._text=[]
@@ -183,6 +184,13 @@ def _dedupe_manifest_pdfs(pdfs:list[PdfSource]):
         errors.append({"stage":"metadata_conflict","url":url,"error":"contradictory_pdf_provenance","sources":[{"page_url":previous.page_url,"document_type":previous.document_type,"source_type":previous.source_type,"phase":previous.phase,"round_number":previous.round_number},{"page_url":source.page_url,"document_type":source.document_type,"source_type":source.source_type,"phase":source.phase,"round_number":source.round_number}]})
     return sorted(by_url.values(),key=lambda x:x.pdf_url),errors
 
+def _document_type_counts(pdfs:list[PdfSource])->dict[str,int]:
+    counts={document_type:0 for document_type in DOCUMENT_TYPES}
+    for source in pdfs:
+        if source.document_type not in counts: raise ValueError(f'Tipo documental inesperado en manifest: {source.document_type}')
+        counts[source.document_type]+=1
+    return counts
+
 def build_manifest(index_html:str,page_html_by_url:dict[str,str],fetch_errors:list[dict]|None=None, *, seed_pages:list[Source]|None=None):
     pages=merge_pages(discover_pages(index_html),seed_pages or []); discovered=[]
     for page in pages:
@@ -205,7 +213,9 @@ def main():
         for p in pages:
             try: mapping[p.page_url]=get_text(p.page_url)
             except Exception as e: fetch_errors.append({"stage":"fetch_page","url":p.page_url,"error":type(e).__name__})
-    manifest=build_manifest(idx,mapping,fetch_errors,seed_pages=seed_pages); Path(args.output).write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
-    print(json.dumps({"pages":len(manifest['pages']),"seed_pages":len(seed_pages),"pdfs":len(manifest['pdfs']),"fetch_errors":len(manifest['fetch_errors']),"complete":manifest['complete'],"write_enabled":False},ensure_ascii=False))
+    manifest=build_manifest(idx,mapping,fetch_errors,seed_pages=seed_pages)
+    Path(args.output).write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
+    counts=_document_type_counts([PdfSource(**row) for row in manifest['pdfs']])
+    print(json.dumps({"pages":len(manifest['pages']),"seed_pages":len(seed_pages),"pdfs":len(manifest['pdfs']),"programacion_pdfs":counts['programacion_pdf'],"planilla_partido_pdfs":counts['planilla_partido_pdf'],"fetch_errors":len(manifest['fetch_errors']),"complete":manifest['complete'],"write_enabled":False},ensure_ascii=False))
 
 if __name__=='__main__': main()
