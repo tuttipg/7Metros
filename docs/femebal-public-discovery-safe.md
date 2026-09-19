@@ -114,9 +114,20 @@ Ese PDF de programación es `https://femebal.com/wp-content/uploads/2026/03/Saba
 
 La nueva regresión de candidatos usa exactamente esas filas oficiales de LHD 18:30 y LHC 20:15. Debe detectar ambas y conservar el cruce `Argentinos Juniors Ferro Carril Oeste` como evidencia cruda, sin asumir separadores inexistentes ni fabricar IDs de clubes.
 
-La planilla digital oficial usada como control es `https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf`, correspondiente a Argentinos Juniors 20–27 Ferro del 2026-03-21. El discovery tiene una regresión que demuestra que ese enlace puede entrar al manifiesto desde una página FEMEBAL sin ampliar la navegación a CloudFront y manteniendo `write_enabled=false` / `auth_used=false`.
+### Distinción de proveniencia del control
 
-El parser de planilla tiene además una regresión separada para ese partido: 16 jugadores por equipo, 47 goles totales y cierre exacto 20–27. La regresión del contrato PDF usa el mismo partido para verificar el tramo `Extract From File → contrato SAFE → parser` y comprueba que el SHA-256 del PDF se propague hasta el resultado parseado. La regresión del wiring agrega la comprobación de que la correlación SHA-256 sobreviva al rejoin y rechaza bytes, metadata, URL o work items cruzados. Esas regresiones se ejecutan en CI, pero la programación y la planilla digital se mantienen conceptualmente separadas como fuentes.
+La planilla `https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf`, correspondiente al control Argentinos Juniors 20–27 Ferro del 2026-03-21, se conserva como **fixture de regresión conocido** (`known_test_fixture`). Sirve para probar parser, extracción y contratos SAFE, pero no debe contarse como `publicly_discovered_planilla` mientras no exista una cadena pública reproducible que parta de una página/enlace oficial FEMEBAL y conduzca a esa URL exacta.
+
+El discovery contiene una regresión sintética que demuestra que un enlace `/pdf_planillas/` explícitamente presente en una página FEMEBAL permitida puede entrar al manifiesto sin ampliar la navegación a CloudFront. Esa prueba valida el **mecanismo y la política**, no afirma que el crawler en vivo haya descubierto la URL del partido control.
+
+Por lo tanto las métricas de cobertura deben mantener separados al menos estos estados:
+
+- `known_test_fixture`: recurso conocido y válido para regresiones, sin atribuirle descubrimiento público;
+- `publicly_discovered_planilla`: URL observada mediante una cadena pública reproducible y conservando su proveniencia.
+
+No se debe promover un recurso del primer estado al segundo por coincidencia de fecha/equipos/marcador, por conocimiento previo de la URL ni mediante enumeración/inferencia de IDs.
+
+El parser de planilla tiene una regresión separada para ese partido: 16 jugadores por equipo, 47 goles totales y cierre exacto 20–27. La regresión del contrato PDF usa el mismo partido para verificar el tramo `Extract From File → contrato SAFE → parser` y comprueba que el SHA-256 del PDF se propague hasta el resultado parseado. La regresión del wiring agrega la comprobación de que la correlación SHA-256 sobreviva al rejoin y rechaza bytes, metadata, URL o work items cruzados. Esas regresiones se ejecutan en CI, pero la programación y la planilla digital se mantienen conceptualmente separadas como fuentes.
 
 ## Ejecución
 
