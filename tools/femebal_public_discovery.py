@@ -22,6 +22,7 @@ TRACKING_QUERY_KEYS={"fbclid","gclid","dclid","msclkid","mc_cid","mc_eid"}
 AMBIGUOUS_RAW_URL_CHARS=re.compile(r'[\\\x00-\x1f\x7f]')
 STRICT_DECIMAL=re.compile(r'^\d+$')
 DOCUMENT_TYPES=('programacion_pdf','planilla_partido_pdf')
+PUBLIC_EXPLICIT_LINK_PROVENANCE='public_explicit_link'
 
 class LinkParser(HTMLParser):
     def __init__(self): super().__init__(); self.links=[]; self._href=None; self._text=[]
@@ -36,7 +37,7 @@ class LinkParser(HTMLParser):
 @dataclass(frozen=True)
 class Source: page_url:str; title:str; source_type:str; phase:str|None; round_number:int|None
 @dataclass(frozen=True)
-class PdfSource: page_url:str; page_title:str; pdf_url:str; anchor_text:str; document_type:str; source_type:str; phase:str|None; round_number:int|None
+class PdfSource: page_url:str; page_title:str; pdf_url:str; anchor_text:str; document_type:str; source_type:str; phase:str|None; round_number:int|None; provenance:str
 
 def _has_ambiguous_raw_url_chars(url:str)->bool: return bool(AMBIGUOUS_RAW_URL_CHARS.search(str(url)))
 
@@ -167,10 +168,10 @@ def discover_pdfs(page_html:str,source:Source):
         except ValueError: continue
         document_type=_document_type_for_official_pdf(url)
         if document_type is None: continue
-        out[url]=PdfSource(source.page_url,source.title,url,text,document_type,source.source_type,source.phase,source.round_number)
+        out[url]=PdfSource(source.page_url,source.title,url,text,document_type,source.source_type,source.phase,source.round_number,PUBLIC_EXPLICIT_LINK_PROVENANCE)
     return sorted(out.values(),key=lambda x:x.pdf_url)
 
-def _pdf_source_identity(source:PdfSource): return (source.page_url,source.document_type,source.source_type,source.phase,source.round_number)
+def _pdf_source_identity(source:PdfSource): return (source.page_url,source.document_type,source.source_type,source.phase,source.round_number,source.provenance)
 
 def _dedupe_manifest_pdfs(pdfs:list[PdfSource]):
     by_url={}; conflicted=set(); errors=[]
@@ -181,7 +182,7 @@ def _dedupe_manifest_pdfs(pdfs:list[PdfSource]):
         if previous is None: by_url[url]=source; continue
         if _pdf_source_identity(previous)==_pdf_source_identity(source): continue
         conflicted.add(url); del by_url[url]
-        errors.append({"stage":"metadata_conflict","url":url,"error":"contradictory_pdf_provenance","sources":[{"page_url":previous.page_url,"document_type":previous.document_type,"source_type":previous.source_type,"phase":previous.phase,"round_number":previous.round_number},{"page_url":source.page_url,"document_type":source.document_type,"source_type":source.source_type,"phase":source.phase,"round_number":source.round_number}]})
+        errors.append({"stage":"metadata_conflict","url":url,"error":"contradictory_pdf_provenance","sources":[{"page_url":previous.page_url,"document_type":previous.document_type,"source_type":previous.source_type,"phase":previous.phase,"round_number":previous.round_number,"provenance":previous.provenance},{"page_url":source.page_url,"document_type":source.document_type,"source_type":source.source_type,"phase":source.phase,"round_number":source.round_number,"provenance":source.provenance}]})
     return sorted(by_url.values(),key=lambda x:x.pdf_url),errors
 
 def _document_type_counts(pdfs:list[PdfSource])->dict[str,int]:
