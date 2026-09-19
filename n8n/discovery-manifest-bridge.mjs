@@ -6,6 +6,10 @@ export const DISCOVERY_PDF_TYPES = Object.freeze({
   PLANILLA_PARTIDO: 'planilla_partido_pdf',
 });
 
+export const DISCOVERY_PROVENANCE = Object.freeze({
+  PUBLIC_EXPLICIT_LINK: 'public_explicit_link',
+});
+
 export function classifyDiscoveryPdf(pdfUrl) {
   const canonical = canonicalizeOfficialFemebalUrl(pdfUrl, { pdf: true });
   const url = new URL(canonical);
@@ -28,6 +32,11 @@ function sourceMetadata(row) {
     throw new Error(`source_type inválido: ${sourceType || 'ausente'}`);
   }
 
+  const provenance = String(row.provenance ?? '').trim();
+  if (provenance !== DISCOVERY_PROVENANCE.PUBLIC_EXPLICIT_LINK) {
+    throw new Error(`provenance inválida o ausente: ${provenance || 'ausente'}`);
+  }
+
   let phase = row.phase ?? null;
   if (phase !== null) {
     phase = String(phase).trim().toLowerCase();
@@ -46,9 +55,6 @@ function sourceMetadata(row) {
   const pdfUrl = canonicalizeOfficialFemebalUrl(row.pdf_url, { pdf: true });
   const documentType = classifyDiscoveryPdf(pdfUrl);
 
-  // Si un manifest futuro trae el tipo explícito, debe coincidir con la
-  // clasificación derivada de la ruta oficial. Así evitamos que metadata
-  // manipulada convierta una programación en una planilla procesable.
   if (row.document_type !== undefined && row.document_type !== null) {
     const declared = String(row.document_type).trim();
     if (declared !== documentType) {
@@ -65,6 +71,7 @@ function sourceMetadata(row) {
     phase,
     round_number: roundNumber,
     document_type: documentType,
+    provenance,
   };
 }
 
@@ -74,13 +81,9 @@ export function buildDiscoveryPdfWorkItems(manifest) {
   const byUrl = new Map();
   for (const row of manifest.pdfs) {
     const source = sourceMetadata(row);
-
-    // Programaciones son evidencia de fixture/fecha/hora. Sólo una planilla
-    // individual puede cruzar esta frontera hacia el parser de planillas.
     if (source.document_type !== DISCOVERY_PDF_TYPES.PLANILLA_PARTIDO) continue;
 
     const previous = byUrl.get(source.pdf_url);
-
     if (previous) {
       const same = JSON.stringify(previous.source) === JSON.stringify(source);
       if (!same) throw new Error(`PDF con metadatos contradictorios: ${source.pdf_url}`);
