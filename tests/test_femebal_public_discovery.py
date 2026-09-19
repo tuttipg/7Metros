@@ -75,12 +75,13 @@ class T(unittest.TestCase):
         s=Source('https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/','Programación Fecha 1 – Torneo Metropolitano Apertura 2026','fecha_normal','apertura',1)
         rows=discover_pdfs(PAGE,s); self.assertEqual(len(rows),3); urls={x.pdf_url for x in rows}; self.assertIn(CONTROL_PLANILLA,urls)
         self.assertTrue(all(_is_official_upload_pdf(x.pdf_url) for x in rows))
+        self.assertTrue(all(x.provenance=='public_explicit_link' for x in rows))
         for bad in ['https://femebal.com/documentos/reglamento.pdf','https://djfhz848yeeat.cloudfront.net/not-planillas/file.pdf','https://other.cloudfront.net/pdf_planillas/file.pdf',CONTROL_PLANILLA+'?download=1',CONTROL_PLANILLA+'#page=1','https://djfhz848yeeat.cloudfront.net/pdf_planillas/%2e%2e/file.pdf','https://djfhz848yeeat.cloudfront.net/pdf_planillas/../file.pdf']:
             self.assertFalse(_is_official_upload_pdf(bad))
     def test_pdf_path_prefix_policy_matches_node_case_sensitivity(self):
         self.assertFalse(_is_official_upload_pdf('https://djfhz848yeeat.cloudfront.net/PDF_PLANILLAS/5/c/e/5ce377051ea0acb1.pdf')); self.assertFalse(_is_official_upload_pdf('https://femebal.com/WP-CONTENT/uploads/2026/03/Sabado-21-3.pdf')); self.assertTrue(_is_official_upload_pdf('https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5CE377051EA0ACB1.PDF'))
     def test_manifest_carries_control_planilla_without_enabling_writes(self):
-        page=[x for x in discover_pages(INDEX) if x.source_type=='fecha_normal'][0]; manifest=build_manifest(INDEX,{page.page_url:PAGE}); urls={row['pdf_url'] for row in manifest['pdfs']}; self.assertIn(CONTROL_PLANILLA,urls); self.assertTrue(manifest['safe']); self.assertTrue(manifest['complete']); self.assertFalse(manifest['write_enabled']); self.assertFalse(manifest['auth_used'])
+        page=[x for x in discover_pages(INDEX) if x.source_type=='fecha_normal'][0]; manifest=build_manifest(INDEX,{page.page_url:PAGE}); control=[row for row in manifest['pdfs'] if row['pdf_url']==CONTROL_PLANILLA]; self.assertEqual(len(control),1); self.assertEqual(control[0]['provenance'],'public_explicit_link'); self.assertTrue(manifest['safe']); self.assertTrue(manifest['complete']); self.assertFalse(manifest['write_enabled']); self.assertFalse(manifest['auth_used'])
     def test_manifest_marks_fetch_failures_incomplete(self):
         page=discover_pages(INDEX)[0]; errors=[{'stage':'fetch_page','url':page.page_url,'error':'TimeoutError'}]; manifest=build_manifest(INDEX,{},errors); self.assertEqual(manifest['schema_version'],2); self.assertFalse(manifest['complete']); self.assertFalse(manifest['write_enabled']); self.assertFalse(manifest['auth_used']); self.assertEqual(manifest['fetch_errors'],errors)
     def test_manifest_without_fetch_failures_is_complete(self):
