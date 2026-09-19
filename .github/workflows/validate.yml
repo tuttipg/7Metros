@@ -14,136 +14,35 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
       - name: Check JavaScript syntax
         run: |
-          node --check api.js
-          node --check store.js
-          node --check ui.js
-          node --check pages.js
-          node --check features.js
-          node --check script.js
-          node --check utils.js
-          node --check config.js
-          node --check config-season-smoke.mjs
-          node --check store-smoke.mjs
-          node --check store-integrity-smoke.mjs
-          node --check team-integrity-smoke.mjs
-          node --check match-scope-smoke.mjs
-          node --check navigation-smoke.mjs
-          node --check category-order-smoke.mjs
-          node --check dashboard-scope-smoke.mjs
-          node --check csv-safety-smoke.mjs
-          node --check date-utils-smoke.mjs
-          node --check url-safety-smoke.mjs
-          node --check standings-points-smoke.mjs
-          node --check standings-copy-smoke.mjs
-          node --check standings-core.mjs
-          node --check standings-core-smoke.mjs
-          node --check standings-adjustments.mjs
-          node --check standings-adjustments-smoke.mjs
-          node --check player-route-core.mjs
-          node --check player-route-fix.js
-          node --check player-route-smoke.mjs
-          node --check scoped-route-core.mjs
-          node --check scoped-route-fix.js
-          node --check scoped-route-smoke.mjs
-          node --check match-freshness-core.mjs
-          node --check match-freshness.js
-          node --check match-freshness-smoke.mjs
-          node --check responsive-table-smoke.mjs
-          node --check mobile-menu-a11y-smoke.mjs
-          node --check n8n/importer-core.mjs
-          node --check n8n/importer-core-smoke.mjs
-          node --check n8n/planilla-core.mjs
-          node --check n8n/planilla-core-smoke.mjs
-          node --check n8n/community-api-core.mjs
-          node --check n8n/community-api-core-smoke.mjs
-
+          for f in api.js store.js ui.js pages.js features.js script.js utils.js config.js config-season-smoke.mjs store-smoke.mjs store-integrity-smoke.mjs team-integrity-smoke.mjs match-scope-smoke.mjs navigation-smoke.mjs category-order-smoke.mjs dashboard-scope-smoke.mjs csv-safety-smoke.mjs date-utils-smoke.mjs url-safety-smoke.mjs standings-points-smoke.mjs standings-copy-smoke.mjs standings-core.mjs standings-core-smoke.mjs standings-adjustments.mjs standings-adjustments-smoke.mjs player-route-core.mjs player-route-fix.js player-route-smoke.mjs scoped-route-core.mjs scoped-route-fix.js scoped-route-smoke.mjs match-freshness-core.mjs match-freshness.js match-freshness-smoke.mjs responsive-table-smoke.mjs mobile-menu-a11y-smoke.mjs; do node --check "$f"; done
+          for f in n8n/importer-core.mjs n8n/importer-core-smoke.mjs n8n/official-url-policy.mjs n8n/discovery-manifest-bridge.mjs n8n/discovery-manifest-bridge-smoke.mjs n8n/planilla-core.mjs n8n/planilla-core-smoke.mjs n8n/planilla-dry-run-core.mjs n8n/planilla-dry-run-core-smoke.mjs n8n/pre-supabase-gate-core.mjs n8n/pre-supabase-gate-core-smoke.mjs n8n/preproduction-payload-core.mjs n8n/preproduction-payload-core-smoke.mjs n8n/preproduction-pipeline-core.mjs n8n/preproduction-pipeline-core-smoke.mjs n8n/official-pdf-fetch-core.mjs n8n/official-pdf-fetch-core-smoke.mjs n8n/pdf-extract-contract.mjs n8n/pdf-extract-contract-smoke.mjs n8n/pdf-extraction-wiring.mjs n8n/pdf-extraction-wiring-smoke.mjs n8n/femebal-safe-workflow-smoke.mjs n8n/community-api-core.mjs n8n/community-api-core-smoke.mjs n8n/programming-candidate-core.mjs n8n/programming-candidate-core-smoke.mjs n8n/tournamenttracker-public-core.mjs n8n/tournamenttracker-public-core-smoke.mjs n8n/tournamenttracker-static-endpoint-core.mjs n8n/tournamenttracker-static-endpoint-core-smoke.mjs n8n/tournamenttracker-query-policy-smoke.mjs n8n/tournamenttracker-indexed-route-core.mjs n8n/tournamenttracker-indexed-route-core-smoke.mjs; do node --check "$f"; done
       - name: Check Python syntax
-        run: python -m py_compile validate_site.py validate_backend_contract.py
-
-      - name: Season config regression smoke test
-        run: node config-season-smoke.mjs
-
-      - name: Store smoke test
-        run: node store-smoke.mjs
-
-      - name: Store integrity smoke test
-        run: node store-integrity-smoke.mjs
-
-      - name: Team integrity smoke test
-        run: node team-integrity-smoke.mjs
-
-      - name: Match scope smoke test
-        run: node match-scope-smoke.mjs
-
-      - name: Navigation smoke test
-        run: node navigation-smoke.mjs
-
-      - name: Category order smoke test
-        run: node category-order-smoke.mjs
-
-      - name: Dashboard scope smoke test
-        run: node dashboard-scope-smoke.mjs
-
-      - name: CSV safety smoke test
-        run: node csv-safety-smoke.mjs
-
-      - name: Date utilities smoke test
-        run: node date-utils-smoke.mjs
-
-      - name: URL safety smoke test
-        run: node url-safety-smoke.mjs
-
-      - name: FEMEBAL standings points smoke test
-        run: node standings-points-smoke.mjs
-
-      - name: Standings copy smoke test
-        run: node standings-copy-smoke.mjs
-
-      - name: FEMEBAL standings Olympic tiebreak smoke test
-        run: node standings-core-smoke.mjs
-
-      - name: Administrative standings adjustments smoke test
-        run: node standings-adjustments-smoke.mjs
-
-      - name: Player route context smoke test
-        run: node player-route-smoke.mjs
-
-      - name: Club and match route context smoke test
-        run: node scoped-route-smoke.mjs
-
-      - name: Match freshness smoke test
-        run: node match-freshness-smoke.mjs
-
-      - name: Responsive table smoke test
-        run: node responsive-table-smoke.mjs
-
-      - name: Mobile menu accessibility smoke test
-        run: node mobile-menu-a11y-smoke.mjs
-
-      - name: FEMEBAL importer core smoke test
-        run: node n8n/importer-core-smoke.mjs
-
-      - name: FEMEBAL planilla parser smoke test
-        run: node n8n/planilla-core-smoke.mjs
-
-      - name: FEMEBAL Community discovery smoke test
-        run: node n8n/community-api-core-smoke.mjs
-
+        run: python -m py_compile validate_site.py validate_backend_contract.py tools/femebal_public_discovery.py tests/test_femebal_public_discovery.py tests/test_femebal_public_discovery_http.py
+      - name: Application smoke tests
+        run: |
+          for f in config-season-smoke.mjs store-smoke.mjs store-integrity-smoke.mjs team-integrity-smoke.mjs match-scope-smoke.mjs navigation-smoke.mjs category-order-smoke.mjs dashboard-scope-smoke.mjs csv-safety-smoke.mjs date-utils-smoke.mjs url-safety-smoke.mjs standings-points-smoke.mjs standings-copy-smoke.mjs standings-core-smoke.mjs standings-adjustments-smoke.mjs player-route-smoke.mjs scoped-route-smoke.mjs match-freshness-smoke.mjs responsive-table-smoke.mjs mobile-menu-a11y-smoke.mjs; do node "$f"; done
+      - name: FEMEBAL SAFE pipeline smoke tests
+        run: |
+          for f in n8n/importer-core-smoke.mjs n8n/discovery-manifest-bridge-smoke.mjs n8n/planilla-core-smoke.mjs n8n/planilla-dry-run-core-smoke.mjs n8n/official-pdf-fetch-core-smoke.mjs n8n/pdf-extract-contract-smoke.mjs n8n/pdf-extraction-wiring-smoke.mjs n8n/femebal-safe-workflow-smoke.mjs n8n/community-api-core-smoke.mjs n8n/programming-candidate-core-smoke.mjs n8n/tournamenttracker-public-core-smoke.mjs n8n/tournamenttracker-static-endpoint-core-smoke.mjs n8n/tournamenttracker-query-policy-smoke.mjs n8n/tournamenttracker-indexed-route-core-smoke.mjs; do node "$f"; done
+      - name: FEMEBAL pre-Supabase gate smoke test
+        run: node n8n/pre-supabase-gate-core-smoke.mjs
+      - name: FEMEBAL preproduction payload smoke test
+        run: node n8n/preproduction-payload-core-smoke.mjs
+      - name: FEMEBAL end-to-end preproduction preview smoke test
+        run: node n8n/preproduction-pipeline-core-smoke.mjs
+      - name: FEMEBAL public discovery unit tests
+        run: python -m unittest -v tests.test_femebal_public_discovery tests.test_femebal_public_discovery_http
       - name: Validate static site
         run: python validate_site.py
-
       - name: Validate backend/importer contract
         run: python validate_backend_contract.py
