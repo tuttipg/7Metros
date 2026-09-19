@@ -4,7 +4,7 @@ import { fetchOfficialFemebalPdf } from './official-pdf-fetch-core.mjs';
 import { buildPdfExtractionEnvelope, validatePdfExtractionEnvelope, parseExtractionWithEnvelopeDryRun } from './pdf-extraction-wiring.mjs';
 
 const sourceUrl='https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf';
-const manifest={schema_version:2,safe:true,complete:true,write_enabled:false,auth_used:false,pages:[],fetch_errors:[],pdfs:[{page_url:'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',page_title:'Programación Fecha 1',pdf_url:sourceUrl,anchor_text:'Sábado 21/3',source_type:'fecha_normal',phase:'apertura',round_number:1}]};
+const manifest={schema_version:2,safe:true,complete:true,write_enabled:false,auth_used:false,pages:[],fetch_errors:[],pdfs:[{page_url:'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',page_title:'Programación Fecha 1',pdf_url:sourceUrl,anchor_text:'Sábado 21/3',source_type:'fecha_normal',phase:'apertura',round_number:1,provenance:'public_explicit_link'}]};
 const [workItem]=buildDiscoveryPdfWorkItems(manifest);
 assert.ok(workItem);
 assert.equal(workItem.url,sourceUrl);
@@ -12,6 +12,7 @@ assert.equal(workItem.method,'GET');
 assert.equal(workItem.allow_redirects,false);
 assert.equal(workItem.auth_used,false);
 assert.equal(workItem.write_enabled,false);
+assert.equal(workItem.source.provenance,'public_explicit_link');
 
 const bytes=new TextEncoder().encode('%PDF-1.7 control fixture bytes');
 let fetchCalls=0;
