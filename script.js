@@ -162,8 +162,8 @@ async function autoStart() {
   try {
     const store = await import('./store.js');
     const ui = await import('./ui.js');
-    const pages = await import('./pages.js');
-    const features = await import('./features.js');
+    const pages = await import('./pages.js?v=20260919-home2');
+    const features = await import('./features.js?v=20260919-home2');
     const freshness = await import('./match-freshness.js');
 
     ui.renderShell();
