@@ -8,17 +8,17 @@ const script = fs.readFileSync(new URL('./script.js', import.meta.url), 'utf8');
 
 assert.match(
   index,
-  /script\.js\?v=20260919-home3/,
+  /script\.js\?v=20260919-home4/,
   'Home: el bootstrap debe versionarse para evitar HTML nuevo con JS viejo en GitHub Pages'
 );
 assert.match(
   script,
-  /pages\.js\?v=20260919-home3/,
+  /pages\.js\?v=20260919-home4/,
   'Bootstrap: pages.js debe cargarse con la misma versión visible'
 );
 assert.match(
   script,
-  /features\.js\?v=20260919-home3/,
+  /features\.js\?v=20260919-home4/,
   'Bootstrap: features.js debe cargarse con la misma versión visible'
 );
 
@@ -31,6 +31,16 @@ assert.match(
   script,
   /loadGlobalSummaryFast\(\)/,
   'Bootstrap: Inicio debe pedir el resumen global rápido durante la carga'
+);
+assert.match(
+  script,
+  /api\.js\?v=20260919-home4/,
+  'Bootstrap: api.js debe versionarse junto al resumen rápido para evitar caché incompatible'
+);
+assert.match(
+  script,
+  /typeof api\.loadGlobalSummaryFast === ['"]function['"]/,
+  'Bootstrap: una API vieja en caché nunca debe romper la navegación'
 );
 
 const dashboardMatch = pages.match(/function renderDashboard\(\) \{([\s\S]*?)\n\}\n\nfunction renderClubes/);
