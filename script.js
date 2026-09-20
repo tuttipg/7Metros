@@ -162,10 +162,10 @@ async function autoStart() {
   try {
     const store = await import('./store.js');
     const ui = await import('./ui.js');
-    const pages = await import('./pages.js?v=20260919-home3');
-    const features = await import('./features.js?v=20260919-home3');
+    const pages = await import('./pages.js?v=20260919-home4');
+    const features = await import('./features.js?v=20260919-home4');
     const freshness = await import('./match-freshness.js');
-    const api = await import('./api.js');
+    const api = await import('./api.js?v=20260919-home4');
 
     ui.renderShell();
     ui.initSettingsPage();
@@ -173,10 +173,10 @@ async function autoStart() {
     ui.renderLoadingStatus();
     document.body.setAttribute('aria-busy', 'true');
 
-    if (document.body.dataset.page === 'inicio') {
+    if (document.body.dataset.page === 'inicio' && typeof api.loadGlobalSummaryFast === 'function') {
       api.loadGlobalSummaryFast()
         .then(summary => {
-          if (summary && !store.state.loaded) {
+          if (summary && !store.state.loaded && typeof pages.renderDashboardSummary === 'function') {
             pages.renderDashboardSummary(summary, { loadingDetail: true });
           }
         })
