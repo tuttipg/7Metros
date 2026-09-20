@@ -3,6 +3,24 @@ import assert from 'node:assert/strict';
 
 const pages = fs.readFileSync(new URL('./pages.js', import.meta.url), 'utf8');
 const store = fs.readFileSync(new URL('./store.js', import.meta.url), 'utf8');
+const index = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+const script = fs.readFileSync(new URL('./script.js', import.meta.url), 'utf8');
+
+assert.match(
+  index,
+  /script\.js\?v=20260919-home2/,
+  'Home: el bootstrap debe versionarse para evitar HTML nuevo con JS viejo en GitHub Pages'
+);
+assert.match(
+  script,
+  /pages\.js\?v=20260919-home2/,
+  'Bootstrap: pages.js debe cargarse con la misma versión visible'
+);
+assert.match(
+  script,
+  /features\.js\?v=20260919-home2/,
+  'Bootstrap: features.js debe cargarse con la misma versión visible'
+);
 
 const dashboardMatch = pages.match(/function renderDashboard\(\) \{([\s\S]*?)\n\}\n\nfunction renderClubes/);
 assert.ok(dashboardMatch, 'pages.js: no se encontró renderDashboard');

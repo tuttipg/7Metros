@@ -46,8 +46,13 @@ assertNavigation(ui, 'ui.js');
 
 assert.match(
   features,
-  /querySelector\('\[data-nav-competitions\], a\[href="competiciones\.html"\]'\)/,
-  'features.js: la mejora progresiva no debe duplicar Competiciones si el link canónico ya existe'
+  /querySelectorAll\('a\[href="competiciones\.html"\]'\)/,
+  'features.js: debe inspeccionar todos los links canónicos de Competiciones'
+);
+assert.match(
+  features,
+  /existing\.slice\(1\)\.forEach\(link => link\.remove\(\)\)/,
+  'features.js: debe eliminar duplicados de Competiciones de forma defensiva'
 );
 
 console.log('navigation-smoke: OK — bootstrap y navegación final conservan las mismas secciones principales sin duplicar Competiciones.');

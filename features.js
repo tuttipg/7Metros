@@ -126,7 +126,15 @@ function matchMini(match) {
 
 function injectCompetitionNav() {
   const nav = document.querySelector('.sidebar .nav');
-  if (!nav || nav.querySelector('[data-nav-competitions], a[href="competiciones.html"]')) return;
+  if (!nav) return;
+
+  const existing = [...nav.querySelectorAll('a[href="competiciones.html"]')];
+  if (existing.length) {
+    existing.slice(1).forEach(link => link.remove());
+    existing[0].dataset.navCompetitions = '1';
+    return;
+  }
+
   const home = nav.querySelector('a[href="index.html"]');
   const link = document.createElement('a');
   link.className = `nav-link ${pageFile() === 'competiciones.html' ? 'active' : ''}`;

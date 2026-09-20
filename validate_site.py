@@ -71,10 +71,14 @@ for needle, label in [
     ("loadStylesheet('seven-metros-v3-theme', 'v3.css')", 'V3 theme'),
     ("loadStylesheet('seven-metros-identity-theme', 'identity.css')", 'identity theme'),
     ("loadStylesheet('seven-metros-features-theme', 'features.css')", 'features theme'),
-    ("import('./features.js')", 'features module'),
 ]:
     if needle not in script:
         errors.append(f'script.js: {label} is not loaded')
+
+# Los módulos locales pueden llevar un cache-buster controlado (?v=...) en GitHub Pages.
+# El patrón sigue siendo fail-closed: sólo acepta ./features.js y una versión alfanumérica segura.
+if not re.search(r"""import\(['"]\./features\.js(?:\?v=[A-Za-z0-9._-]+)?['"]\)""", script):
+    errors.append('script.js: features module is not loaded')
 
 # El frontend público de 7Metros es deliberadamente de solo lectura.
 # Cualquier escritura HTTP/Supabase introducida en un módulo público debe bloquear CI.
