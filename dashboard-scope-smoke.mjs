@@ -38,6 +38,26 @@ assert.match(
   /const players = getTopDivisionPlayers\(\)/,
   'Dashboard: destacados deben limitarse a Liga de Honor'
 );
+assert.match(
+  dashboard,
+  /data-health-finished/,
+  'Dashboard: la portada debe exponer cuántos partidos ya tienen resultado'
+);
+assert.match(
+  dashboard,
+  /data-health-scheduled/,
+  'Dashboard: la portada debe exponer cuántos partidos siguen programados'
+);
+assert.match(
+  dashboard,
+  /Resultados LHC\/LHD pendientes/,
+  'Dashboard: el vacío de resultados debe explicar que la importación está pendiente'
+);
+assert.match(
+  dashboard,
+  /Sin fechas futuras cargadas/,
+  'Dashboard: el vacío de calendario debe explicar el límite de cobertura'
+);
 
 const matchScope = store.match(/export function getMatchesForTeamIds\(teamIds\) \{([\s\S]*?)\n\}/);
 assert.ok(matchScope, 'store.js: no se encontró getMatchesForTeamIds');
