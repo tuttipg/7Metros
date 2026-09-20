@@ -3,6 +3,7 @@ import { readFileSync, existsSync } from 'node:fs';
 
 const script = readFileSync(new URL('./script.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('./ui.js', import.meta.url), 'utf8');
+const features = readFileSync(new URL('./features.js', import.meta.url), 'utf8');
 
 const expectedPrimary = [
   ['inicio', 'index.html', 'home', 'Inicio'],
@@ -43,4 +44,10 @@ function assertNavigation(source, label) {
 assertNavigation(script, 'script.js');
 assertNavigation(ui, 'ui.js');
 
-console.log('navigation-smoke: OK — bootstrap y navegación final conservan las mismas secciones principales.');
+assert.match(
+  features,
+  /querySelector\('\[data-nav-competitions\], a\[href="competiciones\.html"\]'\)/,
+  'features.js: la mejora progresiva no debe duplicar Competiciones si el link canónico ya existe'
+);
+
+console.log('navigation-smoke: OK — bootstrap y navegación final conservan las mismas secciones principales sin duplicar Competiciones.');

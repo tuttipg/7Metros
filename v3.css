@@ -380,3 +380,76 @@ tbody tr:last-child td{border-bottom:0}
 @media (prefers-reduced-motion:reduce){
   .kpi-card,.club-card,.player-card,.match-row,.highlight-item,.sidebar{transition:none!important}
 }
+
+
+/* Home coverage card — visible data state instead of empty vertical space */
+.update-card{
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:18px;
+}
+.update-card-head{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  position:relative;
+  z-index:1;
+}
+.update-card-head .mini-label{margin:0}
+.update-card-copy{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  position:relative;
+  z-index:1;
+}
+.update-card-copy>b{
+  font-size:22px;
+  line-height:1.05;
+  color:#06192d;
+}
+.update-card-copy>small{
+  color:#6f7b86;
+  line-height:1.45;
+}
+.update-card-stats{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  position:relative;
+  z-index:1;
+}
+.update-card-stats>span{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  padding:12px;
+  border:1px solid #e5e9ed;
+  border-radius:12px;
+  background:#f7f9fa;
+}
+.update-card-stats b{
+  font-size:20px;
+  color:#06192d;
+}
+.update-card-stats small{
+  font-size:9px;
+  color:#7a8691;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.dashboard-grid .empty-state{
+  min-height:132px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+}
+.dashboard-grid .empty-state .text-link{margin-top:4px}
+
+@media (max-width: 760px){
+  .update-card{min-height:auto}
+  .update-card-stats{grid-template-columns:1fr 1fr}
+}

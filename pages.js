@@ -72,8 +72,13 @@ function renderDashboard() {
 
   const healthLabel = document.getElementById('data-health-label');
   const healthMeta = document.getElementById('data-health-meta');
-  if (healthLabel) healthLabel.textContent = summary.matches ? `${metric(summary.matches)} partidos en la base` : 'Base conectada';
+  const healthFinished = document.getElementById('data-health-finished');
+  const healthScheduled = document.getElementById('data-health-scheduled');
+  const scheduled = Math.max(0, summary.matches - summary.finished);
+  if (healthLabel) healthLabel.textContent = summary.matches ? `${metric(summary.matches)} partidos cargados` : 'Base conectada';
   if (healthMeta) healthMeta.textContent = `${metric(summary.players)} jugadores · ${metric(summary.clubs)} clubes · ${dataFreshnessLabel()}`;
+  if (healthFinished) healthFinished.textContent = metric(summary.finished);
+  if (healthScheduled) healthScheduled.textContent = metric(scheduled);
 
   // La portada deportiva se concentra por defecto en las dos ramas de Liga de Honor.
   const matches = getTopDivisionMatches();
@@ -82,11 +87,11 @@ function renderDashboard() {
 
   const last = document.getElementById('dashboard-last');
   if (last) {
-    last.innerHTML = finished.slice(0, 3).map(compactMatch).join('') || emptyState('Todavía no hay resultados de Liga de Honor', 'Los últimos partidos de LHC y LHD aparecerán acá.');
+    last.innerHTML = finished.slice(0, 3).map(compactMatch).join('') || emptyState('Resultados LHC/LHD pendientes', 'El calendario está cargado, pero los resultados oficiales todavía no fueron importados.', '<a class="text-link" href="partidos.html">Ver calendario cargado →</a>');
   }
 
   const next = document.getElementById('dashboard-next');
-  if (next) next.innerHTML = upcoming.slice(0, 4).map(compactMatch).join('') || emptyState('No hay próximos partidos de Liga de Honor', 'No encontramos encuentros de LHC o LHD programados desde hoy.');
+  if (next) next.innerHTML = upcoming.slice(0, 4).map(compactMatch).join('') || emptyState('Sin fechas futuras cargadas', 'La programación LHC/LHD disponible no incluye encuentros posteriores a hoy.', '<a class="text-link" href="partidos.html">Explorar todos los partidos →</a>');
 
   const standingsRoot = document.getElementById('dashboard-standings');
   if (standingsRoot) {
