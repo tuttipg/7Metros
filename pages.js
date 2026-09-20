@@ -60,20 +60,43 @@ function miniStandingsGroup(title, standings) {
   return `<section class="home-standings-group"><h3>${esc(title)}</h3><div class="mini-standings">${standings.slice(0, 5).map((club, i) => `<a href="club.html?id=${club.id}" class="mini-standing-row"><span class="standing-pos">${i + 1}</span>${clubBadge(club, true)}<b>${esc(club.name)}</b><span>${club.played} PJ</span><strong>${club.points} pts</strong></a>`).join('')}</div></section>`;
 }
 
-function renderDashboard() {
-  // Los cinco KPI del inicio son deliberadamente GLOBALES: muestran la escala real
-  // de toda la base de 7Metros, independientemente de los filtros de competencia.
-  const summary = globalDataSummary();
-  document.querySelector('[data-kpi="clubs"]')?.replaceChildren(document.createTextNode(metric(summary.clubs)));
-  document.querySelector('[data-kpi="players"]')?.replaceChildren(document.createTextNode(metric(summary.players)));
-  document.querySelector('[data-kpi="matches"]')?.replaceChildren(document.createTextNode(metric(summary.matches)));
-  document.querySelector('[data-kpi="goals"]')?.replaceChildren(document.createTextNode(metric(summary.goals)));
-  document.querySelector('[data-kpi="avgGoals"]')?.replaceChildren(document.createTextNode(summary.avgGoals === null ? '—' : metric(summary.avgGoals, 1)));
+export function renderDashboardSummary(summary, { loadingDetail = false } = {}) {
+  const safeSummary = summary || {};
+  const clubs = Number(safeSummary.clubs || 0);
+  const players = Number(safeSummary.players || 0);
+  const matches = Number(safeSummary.matches || 0);
+  const finished = Number(safeSummary.finished || 0);
+  const goals = Number(safeSummary.goals || 0);
+  const avgGoals = safeSummary.avgGoals === null || safeSummary.avgGoals === undefined
+    ? null
+    : Number(safeSummary.avgGoals);
+
+  document.querySelector('[data-kpi="clubs"]')?.replaceChildren(document.createTextNode(metric(clubs)));
+  document.querySelector('[data-kpi="players"]')?.replaceChildren(document.createTextNode(metric(players)));
+  document.querySelector('[data-kpi="matches"]')?.replaceChildren(document.createTextNode(metric(matches)));
+  document.querySelector('[data-kpi="goals"]')?.replaceChildren(document.createTextNode(metric(goals)));
+  document.querySelector('[data-kpi="avgGoals"]')?.replaceChildren(document.createTextNode(avgGoals === null ? '—' : metric(avgGoals, 1)));
 
   const healthLabel = document.getElementById('data-health-label');
   const healthMeta = document.getElementById('data-health-meta');
-  if (healthLabel) healthLabel.textContent = summary.matches ? `${metric(summary.matches)} partidos en la base` : 'Base conectada';
-  if (healthMeta) healthMeta.textContent = `${metric(summary.players)} jugadores · ${metric(summary.clubs)} clubes · ${dataFreshnessLabel()}`;
+  const healthFinished = document.getElementById('data-health-finished');
+  const healthScheduled = document.getElementById('data-health-scheduled');
+  const scheduled = Math.max(0, matches - finished);
+
+  if (healthLabel) healthLabel.textContent = matches ? `${metric(matches)} partidos cargados` : 'Base conectada';
+  if (healthMeta) {
+    healthMeta.textContent = loadingDetail
+      ? `${metric(players)} jugadores · ${metric(clubs)} clubes · cargando calendario…`
+      : `${metric(players)} jugadores · ${metric(clubs)} clubes · ${dataFreshnessLabel()}`;
+  }
+  if (healthFinished) healthFinished.textContent = metric(finished);
+  if (healthScheduled) healthScheduled.textContent = metric(scheduled);
+}
+
+function renderDashboard() {
+  // Los cinco KPI del inicio son deliberadamente GLOBALES.
+  const summary = globalDataSummary();
+  renderDashboardSummary(summary);
 
   // La portada deportiva se concentra por defecto en las dos ramas de Liga de Honor.
   const matches = getTopDivisionMatches();
@@ -82,11 +105,11 @@ function renderDashboard() {
 
   const last = document.getElementById('dashboard-last');
   if (last) {
-    last.innerHTML = finished.slice(0, 3).map(compactMatch).join('') || emptyState('Todavía no hay resultados de Liga de Honor', 'Los últimos partidos de LHC y LHD aparecerán acá.');
+    last.innerHTML = finished.slice(0, 3).map(compactMatch).join('') || emptyState('Resultados LHC/LHD pendientes', 'El calendario está cargado, pero los resultados oficiales todavía no fueron importados.', '<a class="text-link" href="partidos.html">Ver calendario cargado →</a>');
   }
 
   const next = document.getElementById('dashboard-next');
-  if (next) next.innerHTML = upcoming.slice(0, 4).map(compactMatch).join('') || emptyState('No hay próximos partidos de Liga de Honor', 'No encontramos encuentros de LHC o LHD programados desde hoy.');
+  if (next) next.innerHTML = upcoming.slice(0, 4).map(compactMatch).join('') || emptyState('Sin fechas futuras cargadas', 'La programación LHC/LHD disponible no incluye encuentros posteriores a hoy.', '<a class="text-link" href="partidos.html">Explorar todos los partidos →</a>');
 
   const standingsRoot = document.getElementById('dashboard-standings');
   if (standingsRoot) {
