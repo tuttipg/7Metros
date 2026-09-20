@@ -8,17 +8,17 @@ const script = fs.readFileSync(new URL('./script.js', import.meta.url), 'utf8');
 
 assert.match(
   index,
-  /script\.js\?v=20260919-home2/,
+  /script\.js\?v=20260919-home3/,
   'Home: el bootstrap debe versionarse para evitar HTML nuevo con JS viejo en GitHub Pages'
 );
 assert.match(
   script,
-  /pages\.js\?v=20260919-home2/,
+  /pages\.js\?v=20260919-home3/,
   'Bootstrap: pages.js debe cargarse con la misma versión visible'
 );
 assert.match(
   script,
-  /features\.js\?v=20260919-home2/,
+  /features\.js\?v=20260919-home3/,
   'Bootstrap: features.js debe cargarse con la misma versión visible'
 );
 
@@ -68,12 +68,12 @@ assert.match(
   'Dashboard: destacados deben limitarse a Liga de Honor'
 );
 assert.match(
-  dashboard,
+  pages,
   /data-health-finished/,
   'Dashboard: la portada debe exponer cuántos partidos ya tienen resultado'
 );
 assert.match(
-  dashboard,
+  pages,
   /data-health-scheduled/,
   'Dashboard: la portada debe exponer cuántos partidos siguen programados'
 );
