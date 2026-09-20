@@ -1,6 +1,19 @@
 import assert from 'node:assert/strict';
 
 const originalFetch = globalThis.fetch;
+
+// api.js importa config.js, que en producción lee window.SEVEN_METROS_CONFIG.
+// El smoke corre en Node, por lo que simulamos únicamente ese contrato público mínimo.
+globalThis.window = globalThis;
+globalThis.SEVEN_METROS_CONFIG = {
+  supabaseUrl: 'https://example.supabase.co',
+  supabaseKey: 'public-test-key',
+  seasonId: 3,
+  seasonLabel: 'CLAUSURA 2026',
+  defaults: { categoria: 'Mayores', division: 'LHC Hipotecario Seguros', rama: 'M' },
+  links: {}
+};
+
 let active = 0;
 let maxActive = 0;
 let calls = 0;
@@ -40,4 +53,6 @@ try {
   console.log('api-loading-smoke: OK — chunks concurrentes acotados y fail-closed.');
 } finally {
   globalThis.fetch = originalFetch;
+  delete globalThis.SEVEN_METROS_CONFIG;
+  delete globalThis.window;
 }
