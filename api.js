@@ -109,15 +109,35 @@ export async function supabaseCount(table) {
   return Array.isArray(page) ? page.length : 0;
 }
 
-export async function supabaseGetByIds(table, field, ids, select = '*', { chunkSize = 100 } = {}) {
+export async function supabaseGetByIds(
+  table,
+  field,
+  ids,
+  select = '*',
+  { chunkSize = 100, concurrency = 4 } = {}
+) {
   const values = [...new Set((ids || []).map(Number).filter(Number.isFinite))];
   if (!values.length) return [];
+  if (!Number.isInteger(chunkSize) || chunkSize <= 0 || chunkSize > 500) {
+    throw new DataError('El tamaño de bloque para IDs no es válido.');
+  }
+  if (!Number.isInteger(concurrency) || concurrency <= 0 || concurrency > 6) {
+    throw new DataError('La concurrencia de lectura no es válida.');
+  }
+
+  const chunks = [];
+  for (let i = 0; i < values.length; i += chunkSize) {
+    chunks.push(values.slice(i, i + chunkSize));
+  }
 
   const result = [];
-  for (let i = 0; i < values.length; i += chunkSize) {
-    const chunk = values.slice(i, i + chunkSize);
-    const query = `?select=${encodeURIComponent(select)}&${encodeURIComponent(field)}=in.(${chunk.join(',')})`;
-    result.push(...await supabaseGetAll(table, query));
+  for (let i = 0; i < chunks.length; i += concurrency) {
+    const batch = chunks.slice(i, i + concurrency);
+    const pages = await Promise.all(batch.map(chunk => {
+      const query = `?select=${encodeURIComponent(select)}&${encodeURIComponent(field)}=in.(${chunk.join(',')})`;
+      return supabaseGetAll(table, query);
+    }));
+    pages.forEach(page => result.push(...page));
   }
   return result;
 }
@@ -142,6 +162,8 @@ function summaryFromMatches(matches, clubs, players) {
   };
 }
 
+let globalSummaryPromise = null;
+
 async function loadGlobalSummaryView() {
   try {
     const rows = await supabaseGetAll(
@@ -164,6 +186,13 @@ async function loadGlobalSummaryView() {
     // Compatibilidad con instalaciones anteriores a v_global_summary.
     return null;
   }
+}
+
+export function loadGlobalSummaryFast() {
+  if (!globalSummaryPromise) {
+    globalSummaryPromise = loadGlobalSummaryView();
+  }
+  return globalSummaryPromise;
 }
 
 export function filterMatchesToTeamIds(matches, teamIds) {
@@ -217,6 +246,10 @@ export async function loadPublicDataset(seasonId) {
   const season = Number(seasonId);
   if (!Number.isInteger(season) || season <= 0) throw new DataError('La temporada configurada no es válida.');
 
+  // Arranca el resumen global en paralelo para que Inicio pueda mostrar escala
+  // de la base mientras todavía se cargan los datos detallados de la temporada.
+  const summaryViewPromise = loadGlobalSummaryFast();
+
   const rawEquipos = await supabaseGetAll(
     'equipos',
     `?select=id,club_id,temporada_id,categoria,division,rama,equipo_codigo,nombre_femebal,activo&temporada_id=eq.${season}`
@@ -232,7 +265,7 @@ export async function loadPublicDataset(seasonId) {
 
   const [clubes, summaryView] = await Promise.all([
     supabaseGetByIds('clubes', 'id', requestedClubIds, 'id,nombre,abreviatura,ciudad,logo_url'),
-    loadGlobalSummaryView()
+    summaryViewPromise
   ]);
 
   const validClubIds = new Set(clubes.map(row => Number(row.id)).filter(Number.isFinite));

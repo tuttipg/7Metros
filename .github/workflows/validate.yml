@@ -36,6 +36,7 @@ jobs:
           node --check utils.js
           node --check config.js
           node --check config-season-smoke.mjs
+          node --check api-loading-smoke.mjs
           node --check store-smoke.mjs
           node --check store-integrity-smoke.mjs
           node --check team-integrity-smoke.mjs
@@ -75,6 +76,9 @@ jobs:
 
       - name: Season config regression smoke test
         run: node config-season-smoke.mjs
+
+      - name: API loading smoke test
+        run: node api-loading-smoke.mjs
 
       - name: Store smoke test
         run: node store-smoke.mjs
