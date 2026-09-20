@@ -26,6 +26,7 @@ for (const unsafe of [
   'http://www.femebal.com/tournament-tracker/RUdVX3VkfFc=',
   'https://evil.example/tournament-tracker/RUdVX3VkfFc=',
   'https://user:pass@www.femebal.com/tournament-tracker/RUdVX3VkfFc=',
+  'https://www.femebal.com:444/tournament-tracker/RUdVX3VkfFc=',
   'https://www.femebal.com/tournament-tracker/',
   'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc=/extra',
   'https://www.femebal.com/tournament-tracker/..%2Fsecret',
@@ -79,6 +80,16 @@ for (const badEvidence of [
   {
     kind: 'public_index',
     observedUrl: observedPublicIndexedRoute,
+    sourceUrl: 'https://www.google.com:444/search?q=femebal+tournament-tracker',
+  },
+  {
+    kind: 'public_index',
+    observedUrl: observedPublicIndexedRoute,
+    sourceUrl: 'https://www.bing.com:444/search?q=femebal+tournament-tracker',
+  },
+  {
+    kind: 'public_index',
+    observedUrl: observedPublicIndexedRoute,
     sourceUrl: 'https://www.google.com/search?q=femebal+tournament-tracker#fragment',
   },
   {
@@ -115,6 +126,11 @@ for (const badEvidence of [
     kind: 'explicit_public_link',
     observedUrl: observedPublicIndexedRoute,
     sourceUrl: 'https://evil.example/fixture-publico',
+  },
+  {
+    kind: 'explicit_public_link',
+    observedUrl: observedPublicIndexedRoute,
+    sourceUrl: 'https://www.femebal.com:444/fixture-publico',
   },
   {
     kind: 'explicit_public_link',
