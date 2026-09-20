@@ -22,6 +22,17 @@ assert.match(
   'Bootstrap: features.js debe cargarse con la misma versión visible'
 );
 
+assert.match(
+  pages,
+  /export function renderDashboardSummary/,
+  'Dashboard: debe permitir pintar el resumen global antes del dataset detallado'
+);
+assert.match(
+  script,
+  /loadGlobalSummaryFast\(\)/,
+  'Bootstrap: Inicio debe pedir el resumen global rápido durante la carga'
+);
+
 const dashboardMatch = pages.match(/function renderDashboard\(\) \{([\s\S]*?)\n\}\n\nfunction renderClubes/);
 assert.ok(dashboardMatch, 'pages.js: no se encontró renderDashboard');
 const dashboard = dashboardMatch[1];
