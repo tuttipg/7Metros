@@ -3,6 +3,8 @@ const PUBLIC_INDEX_HOSTS = new Set(['google.com', 'www.google.com', 'bing.com', 
 const MAX_ROUTE_TOKEN_LENGTH = 256;
 const INDEXED_ROUTE_PREFIX = '/tournament-tracker/';
 const PUBLIC_EVIDENCE_KINDS = new Set(['public_index', 'explicit_public_link']);
+const SENSITIVE_QUERY_NAMES = new Set(['auth', 'authorization', 'bearer', 'cookie', 'credential', 'credentials', 'csrf', 'jwt', 'key', 'password', 'secret', 'session', 'token', 'xsrf']);
+const SENSITIVE_QUERY_NAME_PARTS = ['apikey', 'accesskey', 'accesstoken', 'authtoken', 'clientkey', 'clientsecret', 'credential', 'privatekey', 'secretkey', 'sessionid', 'signingkey', 'token'];
 
 function rejectAmbiguousRawUrl(value, label) {
   const raw = String(value ?? '');
@@ -10,6 +12,20 @@ function rejectAmbiguousRawUrl(value, label) {
     throw new Error(`${label} contiene backslash o caracteres de control ambiguos`);
   }
   return raw;
+}
+
+function normalizeQueryName(name) {
+  return String(name ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function rejectSensitiveQueryNames(url, label) {
+  for (const name of url.searchParams.keys()) {
+    const normalized = normalizeQueryName(name);
+    if (!normalized) continue;
+    if (SENSITIVE_QUERY_NAMES.has(normalized) || SENSITIVE_QUERY_NAME_PARTS.some((part) => normalized.includes(part))) {
+      throw new Error(`${label} no admite nombres de query sensibles`);
+    }
+  }
 }
 
 function decodeSinglePathSegment(rawSegment) {
@@ -49,6 +65,7 @@ function validatePublicEvidence(targetCanonicalUrl, evidence) {
   if (sourceUrl.port && sourceUrl.port !== '443') throw new Error('La fuente de evidencia pública no admite puertos HTTPS no estándar');
   if (sourceUrl.username || sourceUrl.password) throw new Error('La fuente de evidencia pública no admite credenciales en URL');
   if (sourceUrl.hash) throw new Error('La fuente de evidencia pública no admite fragments');
+  rejectSensitiveQueryNames(sourceUrl, 'La fuente de evidencia pública');
 
   const sourceHost = sourceUrl.hostname.toLowerCase();
   if (kind === 'public_index') {
