@@ -4,7 +4,9 @@ import { fetchOfficialFemebalPdf } from './official-pdf-fetch-core.mjs';
 const CONTROL_PDF='https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf';
 function workItem(overrides={}) {
   const url=overrides.url??CONTROL_PDF;
-  return {kind:'femebal_official_pdf',method:'GET',allow_redirects:false,auth_used:false,write_enabled:false,url,source:{pdf_url:url,page_url:'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',source_type:'fecha_normal',phase:'apertura',round_number:1,document_type:'planilla_partido_pdf',provenance:'public_explicit_link'},...overrides};
+  const defaultSource={pdf_url:url,page_url:'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',source_type:'fecha_normal',phase:'apertura',round_number:1,document_type:'planilla_partido_pdf',provenance:'public_explicit_link'};
+  const {source:sourceOverrides={},...itemOverrides}=overrides;
+  return {kind:'femebal_official_pdf',method:'GET',allow_redirects:false,auth_used:false,write_enabled:false,url,source:{...defaultSource,...sourceOverrides},...itemOverrides};
 }
 const pdfBytes=new TextEncoder().encode('%PDF-1.7\nfixture');
 const headers=values=>({get(name){return Object.fromEntries(Object.entries(values).map(([k,v])=>[k.toLowerCase(),String(v)]))[String(name).toLowerCase()]??null;}});
