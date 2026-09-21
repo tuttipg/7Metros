@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { normalizeN8nPdfExtraction, normalizePdfProvenance, parseN8nExtractedPlanillaDryRun } from './pdf-extract-contract.mjs';
 
 const sourceUrl='https://femebal.com/wp-content/uploads/2026/03/control.pdf';
-const workItem={kind:'femebal_official_pdf',method:'GET',url:sourceUrl,allow_redirects:false,auth_used:false,write_enabled:false,source:{page_url:'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',page_title:'Programación Fecha 1',pdf_url:sourceUrl,anchor_text:'Sábado 21/3',source_type:'fecha_normal',phase:'apertura',round_number:1}};
+const workItem={kind:'femebal_official_pdf',method:'GET',url:sourceUrl,allow_redirects:false,auth_used:false,write_enabled:false,source:{page_url:'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',page_title:'Programación Fecha 1',pdf_url:sourceUrl,anchor_text:'Sábado 21/3',source_type:'fecha_normal',phase:'apertura',round_number:1,document_type:'planilla_partido_pdf',provenance:'public_explicit_link'}};
 const pdfArtifact={dry_run:true,write_enabled:false,auth_used:false,source_url:sourceUrl,content_type:'application/pdf',byte_length:12345,sha256:'f581fc87f30296eff11777c3ce1b9a8b7077071ad8abedfcba317fef0c807224'};
 const players=`Nº Local G TAm 2 TR TAz
 1 Perznianko, Alan Nahuel - - - - -
