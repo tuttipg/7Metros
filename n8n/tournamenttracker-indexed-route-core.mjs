@@ -39,12 +39,15 @@ function decodeSinglePathSegment(rawSegment) {
   return decoded;
 }
 
-function validatePublicIndexSource(sourceUrl) {
+function validatePublicIndexSource(sourceUrl, targetCanonicalUrl) {
   if (sourceUrl.pathname !== '/search') throw new Error('La evidencia public_index requiere una página de búsqueda explícita');
   const query = sourceUrl.searchParams.get('q');
   if (!query) throw new Error('La evidencia public_index requiere una consulta de búsqueda explícita');
   const normalizedQuery = query.toLowerCase();
   if (!normalizedQuery.includes('femebal') || !normalizedQuery.includes('tournament-tracker')) throw new Error('La consulta public_index debe referenciar FEMEBAL TournamentTracker');
+  const target = new URL(targetCanonicalUrl);
+  const exactRoute = target.pathname.toLowerCase();
+  if (!normalizedQuery.includes(exactRoute)) throw new Error('La consulta public_index debe vincular la ruta TournamentTracker exacta observada');
 }
 
 function validateExplicitPublicLinkSource(sourceUrl, targetCanonicalUrl) {
@@ -70,7 +73,7 @@ function validatePublicEvidence(targetCanonicalUrl, evidence) {
   const sourceHost = sourceUrl.hostname.toLowerCase();
   if (kind === 'public_index') {
     if (!PUBLIC_INDEX_HOSTS.has(sourceHost)) throw new Error('La evidencia public_index requiere una fuente de índice público permitida');
-    validatePublicIndexSource(sourceUrl);
+    validatePublicIndexSource(sourceUrl, targetCanonicalUrl);
   }
   if (kind === 'explicit_public_link') {
     if (!FEMEBAL_HOSTS.has(sourceHost)) throw new Error('La evidencia explicit_public_link requiere una fuente oficial FEMEBAL');
