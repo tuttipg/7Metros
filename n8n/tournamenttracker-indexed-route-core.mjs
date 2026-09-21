@@ -4,6 +4,14 @@ const MAX_ROUTE_TOKEN_LENGTH = 256;
 const INDEXED_ROUTE_PREFIX = '/tournament-tracker/';
 const PUBLIC_EVIDENCE_KINDS = new Set(['public_index', 'explicit_public_link']);
 
+function rejectAmbiguousRawUrl(value, label) {
+  const raw = String(value ?? '');
+  if (raw.includes('\\') || /[\u0000-\u001F\u007F]/.test(raw)) {
+    throw new Error(`${label} contiene backslash o caracteres de control ambiguos`);
+  }
+  return raw;
+}
+
 function decodeSinglePathSegment(rawSegment) {
   const raw = String(rawSegment ?? '');
   if (!raw || raw.length > MAX_ROUTE_TOKEN_LENGTH * 3) throw new Error('Token TournamentTracker vacío o demasiado largo');
@@ -35,7 +43,8 @@ function validatePublicEvidence(targetCanonicalUrl, evidence) {
   const observedUrl = canonicalizeIndexedTournamentTrackerRoute(evidence.observedUrl);
   if (observedUrl !== targetCanonicalUrl) throw new Error('La evidencia pública no corresponde a la ruta solicitada');
 
-  const sourceUrl = new URL(String(evidence.sourceUrl ?? ''));
+  const rawSourceUrl = rejectAmbiguousRawUrl(evidence.sourceUrl, 'La fuente de evidencia pública');
+  const sourceUrl = new URL(rawSourceUrl);
   if (sourceUrl.protocol !== 'https:') throw new Error('La fuente de evidencia pública requiere HTTPS');
   if (sourceUrl.port && sourceUrl.port !== '443') throw new Error('La fuente de evidencia pública no admite puertos HTTPS no estándar');
   if (sourceUrl.username || sourceUrl.password) throw new Error('La fuente de evidencia pública no admite credenciales en URL');
@@ -54,7 +63,8 @@ function validatePublicEvidence(targetCanonicalUrl, evidence) {
 }
 
 export function canonicalizeIndexedTournamentTrackerRoute(value) {
-  const url = new URL(String(value ?? ''));
+  const rawUrl = rejectAmbiguousRawUrl(value, 'Ruta TournamentTracker');
+  const url = new URL(rawUrl);
   if (url.protocol !== 'https:') throw new Error('Ruta indexada TournamentTracker requiere HTTPS');
   if (url.port && url.port !== '443') throw new Error('Ruta TournamentTracker no admite puertos HTTPS no estándar');
   if (!FEMEBAL_HOSTS.has(url.hostname.toLowerCase())) throw new Error('Host TournamentTracker no permitido');
