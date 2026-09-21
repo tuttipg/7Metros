@@ -10,7 +10,7 @@ const canonicalObservedRoute = 'https://www.femebal.com/tournament-tracker/RUdVX
 const publicEvidence = {
   kind: 'public_index',
   observedUrl: observedPublicIndexedRoute,
-  sourceUrl: 'https://www.google.com/search?q=site%3Afemebal.com%2Ftournament-tracker',
+  sourceUrl: 'https://www.google.com/search?q=site%3Afemebal.com%2Ftournament-tracker%2FRUdVX3VkfFc%3D',
 };
 
 assert.equal(canonicalizeIndexedTournamentTrackerRoute(observedPublicIndexedRoute), canonicalObservedRoute);
@@ -61,6 +61,8 @@ for (const badEvidence of [
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search' },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search?q=femebal' },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.bing.com/search?q=tournament-tracker' },
+  { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search?q=site%3Afemebal.com%2Ftournament-tracker' },
+  { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.bing.com/search?q=site%3Afemebal.com%2Ftournament-tracker%2FOTROTOKEN%3D' },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search?q=femebal+tournament-tracker&accessToken=redacted' },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.bing.com/search?q=femebal+tournament-tracker&session_id=redacted' },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search?q=femebal+tournament-tracker' },
@@ -89,7 +91,7 @@ assert.equal(reviewed.evidence.kind, 'public_index');
 assert.equal(reviewed.evidence.observedUrl, canonicalObservedRoute);
 assert.equal(reviewed.evidence.sourceUrl, publicEvidence.sourceUrl);
 
-const bingEvidence = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: { kind: 'public_index', observedUrl: canonicalObservedRoute, sourceUrl: 'https://www.bing.com/search?q=site%3Afemebal.com%2Ftournament-tracker' } });
+const bingEvidence = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: { kind: 'public_index', observedUrl: canonicalObservedRoute, sourceUrl: 'https://www.bing.com/search?q=site%3Afemebal.com%2Ftournament-tracker%2FRUdVX3VkfFc%3D' } });
 assert.equal(bingEvidence.state, 'reviewed_anonymous_get_only');
 
 const explicitLinkEvidence = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: { kind: 'explicit_public_link', observedUrl: canonicalObservedRoute, sourceUrl: 'https://www.femebal.com/fixture-publico?season=2026' } });
