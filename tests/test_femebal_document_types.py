@@ -46,6 +46,7 @@ class DocumentTypeContract(unittest.TestCase):
         forged = PdfSource(
             SOURCE.page_url, SOURCE.title, PROGRAMACION, 'forged',
             'unknown_pdf', SOURCE.source_type, SOURCE.phase, SOURCE.round_number,
+            'public_explicit_link',
         )
         with self.assertRaisesRegex(ValueError, 'Tipo documental inesperado'):
             _document_type_counts([forged])
