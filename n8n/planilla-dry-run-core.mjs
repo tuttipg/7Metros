@@ -13,6 +13,19 @@ export function validatePdfWorkItem(item) {
   if (!item.source || typeof item.source !== 'object' || Array.isArray(item.source)) throw new Error('Fuente del work item inválida');
   const sourcePdfUrl = canonicalizeOfficialFemebalUrl(item.source.pdf_url, { pdf: true });
   if (sourcePdfUrl !== sourceUrl) throw new Error('La fuente del work item no coincide con su URL');
+
+  // Revalidate provenance at the parser boundary instead of trusting that every caller
+  // passed through the discovery bridge. Forged/direct work items must fail closed.
+  if (item.source.provenance !== 'public_explicit_link') {
+    throw new Error('La planilla requiere provenance=public_explicit_link');
+  }
+  if (item.source.document_type !== 'planilla_partido_pdf') {
+    throw new Error('La fuente debe ser document_type=planilla_partido_pdf');
+  }
+  canonicalizeOfficialFemebalUrl(item.source.page_url);
+  if (!['fecha_normal', 'reprogramacion'].includes(item.source.source_type)) {
+    throw new Error('source_type de la planilla inválido');
+  }
   return sourceUrl;
 }
 
