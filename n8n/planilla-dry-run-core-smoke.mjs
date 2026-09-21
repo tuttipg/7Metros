@@ -3,7 +3,7 @@ import { parsePlanillaDryRun } from './planilla-dry-run-core.mjs';
 
 const sourceUrl='https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf';
 const explicit443='https://djfhz848yeeat.cloudfront.net:443/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf';
-const workItem={kind:'femebal_official_pdf',method:'GET',url:sourceUrl,allow_redirects:false,auth_used:false,write_enabled:false,source:{page_url:'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',page_title:'Programación Fecha 1',pdf_url:sourceUrl,anchor_text:'Sábado 21/3',source_type:'fecha_normal',phase:'apertura',round_number:1}};
+const workItem={kind:'femebal_official_pdf',method:'GET',url:sourceUrl,allow_redirects:false,auth_used:false,write_enabled:false,source:{page_url:'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',page_title:'Programación Fecha 1',pdf_url:sourceUrl,anchor_text:'Sábado 21/3',source_type:'fecha_normal',phase:'apertura',round_number:1,document_type:'planilla_partido_pdf',provenance:'public_explicit_link'}};
 const players=`Nº Local G TAm 2 TR TAz
 1 Perznianko, Alan Nahuel - - - - -
 2 Berardinelli, Mauro 2 - - - -
@@ -55,6 +55,8 @@ const result=parsePlanillaDryRun({workItem,extractedText,expected:{fecha:'2026-0
 assert.equal(result.dry_run,true); assert.equal(result.write_enabled,false); assert.equal(result.auth_used,false);
 assert.equal(result.source_url,sourceUrl);
 assert.equal(result.source.pdf_url,sourceUrl);
+assert.equal(result.source.provenance,'public_explicit_link');
+assert.equal(result.source.document_type,'planilla_partido_pdf');
 assert.equal(result.parsed.resumen.jugadores,32); assert.equal(result.parsed.resumen.goles,47);
 
 const canonicalized=parsePlanillaDryRun({workItem:{...workItem,url:explicit443,source:{...workItem.source,pdf_url:explicit443}},extractedText});
@@ -62,6 +64,11 @@ assert.equal(canonicalized.source_url,sourceUrl);
 assert.equal(canonicalized.source.pdf_url,sourceUrl);
 
 assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,method:'POST'},extractedText}),/GET/);
+assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,source:{...workItem.source,provenance:undefined}},extractedText}),/provenance/);
+assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,source:{...workItem.source,provenance:'public_index'}},extractedText}),/provenance/);
+assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,source:{...workItem.source,document_type:'programacion_pdf'}},extractedText}),/document_type/);
+assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,source:{...workItem.source,page_url:'https://evil.example/source'}},extractedText}));
+assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,source:{...workItem.source,source_type:'unknown'}},extractedText}),/source_type/);
 assert.throws(()=>parsePlanillaDryRun({workItem,extractedText,expected:{goles_visitante:26}}),/Marcador visitante inesperado/);
 for (const badUrl of [
   'https://evil.example/pdf_planillas/5/c/e/x.pdf',
@@ -73,4 +80,4 @@ for (const badUrl of [
 ]) {
   assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,url:badUrl,source:{...workItem.source,pdf_url:badUrl}},extractedText}));
 }
-console.log('✓ planilla-dry-run: contrato SAFE, canonicalización y partido control con URL oficial real validados');
+console.log('✓ planilla-dry-run: contrato SAFE, provenance fail-closed y partido control validados');
