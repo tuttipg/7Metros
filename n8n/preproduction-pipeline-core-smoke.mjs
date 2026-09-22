@@ -5,7 +5,13 @@ const sourceUrl = 'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce3
 const workItem = {
   kind: 'femebal_official_pdf', method: 'GET', url: sourceUrl,
   allow_redirects: false, auth_used: false, write_enabled: false,
-  source: { page_url: 'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/', pdf_url: sourceUrl },
+  source: {
+    page_url: 'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',
+    pdf_url: sourceUrl,
+    document_type: 'planilla_partido_pdf',
+    provenance: 'public_explicit_link',
+    source_type: 'fecha_normal',
+  },
 };
 const players = `Nº Local G TAm 2 TR TAz
 1 Uno, Local 20 - - - -
