@@ -1,3 +1,5 @@
+import { canonicalizeOfficialFemebalUrl } from './official-url-policy.mjs';
+
 function positiveId(value, label) {
   const id = Number(value);
   if (!Number.isInteger(id) || id <= 0) throw new Error(`${label} inválido`);
@@ -23,6 +25,15 @@ export function buildPreproductionPayload(candidate) {
   if (candidate.eligible_for_preproduction_payload !== true) throw new Error('Candidato no habilitado para preview de preproducción');
   if (candidate.evidence_scope !== 'official_planilla_validated_match_result') throw new Error('Evidence scope no soportado');
 
+  if (!candidate.source || typeof candidate.source !== 'object' || Array.isArray(candidate.source)) throw new Error('Evidencia de origen ausente');
+  if (candidate.source.provenance !== 'public_explicit_link') throw new Error('La planilla requiere provenance=public_explicit_link');
+  if (candidate.source.document_type !== 'planilla_partido_pdf') throw new Error('La fuente debe ser document_type=planilla_partido_pdf');
+  if (!['fecha_normal', 'reprogramacion'].includes(candidate.source.source_type)) throw new Error('source_type de la planilla inválido');
+  const pageUrl = canonicalizeOfficialFemebalUrl(candidate.source.page_url);
+  const sourceUrl = canonicalizeOfficialFemebalUrl(candidate.source_url, { pdf: true });
+  const sourcePdfUrl = canonicalizeOfficialFemebalUrl(candidate.source.pdf_url, { pdf: true });
+  if (sourceUrl !== sourcePdfUrl) throw new Error('La proveniencia PDF no coincide');
+
   const match = candidate.match;
   if (!match || typeof match !== 'object' || Array.isArray(match)) throw new Error('Partido validado ausente');
   const fecha = requiredText(match.fecha, 'fecha');
@@ -34,11 +45,11 @@ export function buildPreproductionPayload(candidate) {
   const golesLocal = Number(match.goles_local);
   const golesVisitante = Number(match.goles_visitante);
   if (!Number.isInteger(golesLocal) || golesLocal < 0 || !Number.isInteger(golesVisitante) || golesVisitante < 0) throw new Error('Marcador inválido');
-  const sourceUrl = requiredText(candidate.source_url, 'source_url');
 
   if (candidate.validation?.player_goal_totals_match_score !== true
     || candidate.validation?.expected_match_checked !== true
     || candidate.validation?.source_pdf_consistent !== true
+    || candidate.validation?.source_provenance_revalidated !== true
     || candidate.validation?.team_ids_resolved !== true) {
     throw new Error('Validaciones pre-Supabase incompletas');
   }
@@ -54,6 +65,13 @@ export function buildPreproductionPayload(candidate) {
     operation: 'preview_only',
     evidence_scope: candidate.evidence_scope,
     source_url: sourceUrl,
+    source: {
+      provenance: 'public_explicit_link',
+      document_type: 'planilla_partido_pdf',
+      page_url: pageUrl,
+      pdf_url: sourceUrl,
+      source_type: candidate.source.source_type,
+    },
     payload: {
       fecha,
       local_equipo_id: localId,
