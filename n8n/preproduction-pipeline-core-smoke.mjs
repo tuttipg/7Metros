@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import { buildPlanillaPreproductionPreview } from './preproduction-pipeline-core.mjs';
 
 const sourceUrl = 'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf';
+const pageUrl = 'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/';
 const workItem = {
   kind: 'femebal_official_pdf', method: 'GET', url: sourceUrl,
   allow_redirects: false, auth_used: false, write_enabled: false,
   source: {
-    page_url: 'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',
+    page_url: pageUrl,
     pdf_url: sourceUrl,
     document_type: 'planilla_partido_pdf',
     provenance: 'public_explicit_link',
@@ -42,6 +43,13 @@ assert.deepEqual(result.stages, { planilla_parsed: true, expected_match_validate
 assert.equal(result.preview.executable_request, false);
 assert.equal(result.preview.target, null);
 assert.equal(result.preview.operation, 'preview_only');
+assert.deepEqual(result.preview.source, {
+  provenance: 'public_explicit_link',
+  document_type: 'planilla_partido_pdf',
+  page_url: pageUrl,
+  pdf_url: sourceUrl,
+  source_type: 'fecha_normal',
+});
 assert.equal(result.preview.payload.fecha, '2026-03-21');
 assert.equal(result.preview.payload.local_equipo_id, 3);
 assert.equal(result.preview.payload.visitante_equipo_id, 1);
@@ -54,5 +62,14 @@ assert.throws(() => buildPlanillaPreproductionPreview({ workItem, extractedText,
 assert.throws(() => buildPlanillaPreproductionPreview({ workItem, extractedText, expected, mapping: { local_equipo_id: 3, visitante_equipo_id: 3 } }), /no pueden compartir equipo_id/);
 assert.throws(() => buildPlanillaPreproductionPreview({ workItem: { ...workItem, auth_used: true }, extractedText, expected, mapping }), /autenticación/);
 assert.throws(() => buildPlanillaPreproductionPreview({ workItem: { ...workItem, write_enabled: true }, extractedText, expected, mapping }), /escritura/);
+for (const source of [
+  { ...workItem.source, provenance: 'public_index' },
+  { ...workItem.source, document_type: 'programacion_pdf' },
+  { ...workItem.source, page_url: 'https://example.com/partidos' },
+  { ...workItem.source, pdf_url: 'https://www.femebal.com/otra.pdf' },
+  { ...workItem.source, source_type: 'unknown' },
+]) {
+  assert.throws(() => buildPlanillaPreproductionPreview({ workItem: { ...workItem, source }, extractedText, expected, mapping }));
+}
 
-console.log('✓ pipeline FEMEBAL -> validación -> preview pre-Supabase SAFE/DRY RUN validado');
+console.log('✓ pipeline FEMEBAL -> validación -> preview pre-Supabase SAFE/DRY RUN con provenance end-to-end validada');
