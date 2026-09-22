@@ -29,8 +29,24 @@ export function validatePreSupabaseCandidate({ dryRunResult, mapping }) {
     throw new Error('El partido debe estar contrastado contra una identidad esperada');
   }
 
+  // Revalidate discovery provenance at the final boundary before payload construction.
+  // Do not trust a caller merely because it presents a parser-shaped DRY RUN object.
+  if (!dryRunResult.source || typeof dryRunResult.source !== 'object' || Array.isArray(dryRunResult.source)) {
+    throw new Error('Fuente DRY RUN inválida');
+  }
+  if (dryRunResult.source.provenance !== 'public_explicit_link') {
+    throw new Error('La planilla requiere provenance=public_explicit_link');
+  }
+  if (dryRunResult.source.document_type !== 'planilla_partido_pdf') {
+    throw new Error('La fuente debe ser document_type=planilla_partido_pdf');
+  }
+  canonicalizeOfficialFemebalUrl(dryRunResult.source.page_url);
+  if (!['fecha_normal', 'reprogramacion'].includes(dryRunResult.source.source_type)) {
+    throw new Error('source_type de la planilla inválido');
+  }
+
   const sourceUrl = canonicalizeOfficialFemebalUrl(dryRunResult.source_url, { pdf: true });
-  const sourcePdfUrl = canonicalizeOfficialFemebalUrl(dryRunResult.source?.pdf_url, { pdf: true });
+  const sourcePdfUrl = canonicalizeOfficialFemebalUrl(dryRunResult.source.pdf_url, { pdf: true });
   if (sourceUrl !== sourcePdfUrl) throw new Error('La proveniencia PDF no coincide');
 
   const parsed = dryRunResult.parsed;
@@ -71,6 +87,7 @@ export function validatePreSupabaseCandidate({ dryRunResult, mapping }) {
       player_goal_totals_match_score: true,
       expected_match_checked: true,
       source_pdf_consistent: true,
+      source_provenance_revalidated: true,
       team_ids_resolved: true,
     },
   };
