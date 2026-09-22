@@ -7,7 +7,13 @@ const base = {
   write_enabled: false,
   auth_used: false,
   source_url: sourceUrl,
-  source: { pdf_url: sourceUrl },
+  source: {
+    page_url: 'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',
+    pdf_url: sourceUrl,
+    document_type: 'planilla_partido_pdf',
+    provenance: 'public_explicit_link',
+    source_type: 'fecha_normal',
+  },
   parsed: {
     fecha: '2026-03-21',
     local: { nombre: 'Argentinos Juniors', goles: 20 },
@@ -36,6 +42,7 @@ assert.deepEqual(result.validation, {
   player_goal_totals_match_score: true,
   expected_match_checked: true,
   source_pdf_consistent: true,
+  source_provenance_revalidated: true,
   team_ids_resolved: true,
 });
 
@@ -45,7 +52,11 @@ const mustFail = [
   [{ ...base, auth_used: true }, mapping],
   [{ ...base, validation: { ...base.validation, player_goal_totals_match_score: false } }, mapping],
   [{ ...base, validation: { ...base.validation, expected_match_checked: false } }, mapping],
-  [{ ...base, source: { pdf_url: 'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/other.pdf' } }, mapping],
+  [{ ...base, source: { ...base.source, provenance: 'public_index' } }, mapping],
+  [{ ...base, source: { ...base.source, document_type: 'programacion_pdf' } }, mapping],
+  [{ ...base, source: { ...base.source, page_url: 'https://example.com/programacion/' } }, mapping],
+  [{ ...base, source: { ...base.source, source_type: 'unknown' } }, mapping],
+  [{ ...base, source: { ...base.source, pdf_url: 'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/other.pdf' } }, mapping],
   [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: -1 } } }, mapping],
   [base, { local_equipo_id: null, visitante_equipo_id: 1 }],
   [base, { local_equipo_id: 1, visitante_equipo_id: 1 }],
@@ -54,4 +65,4 @@ for (const [dryRunResult, badMapping] of mustFail) {
   assert.throws(() => validatePreSupabaseCandidate({ dryRunResult, mapping: badMapping }));
 }
 
-console.log('✓ pre-Supabase gate: partido control validado; producción permanece bloqueada');
+console.log('✓ pre-Supabase gate: provenance pública revalidada; partido control validado; producción permanece bloqueada');
