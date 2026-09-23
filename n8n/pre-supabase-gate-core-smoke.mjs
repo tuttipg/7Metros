@@ -57,6 +57,9 @@ const mustFail = [
   [{ ...base, source: { ...base.source, page_url: 'https://example.com/programacion/' } }, mapping],
   [{ ...base, source: { ...base.source, source_type: 'unknown' } }, mapping],
   [{ ...base, source: { ...base.source, pdf_url: 'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/other.pdf' } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, fecha: '21/03/2026' } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, fecha: '2026-02-30' } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, fecha: '2026-13-01' } }, mapping],
   [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: -1 } } }, mapping],
   [base, { local_equipo_id: null, visitante_equipo_id: 1 }],
   [base, { local_equipo_id: 1, visitante_equipo_id: 1 }],
@@ -65,4 +68,4 @@ for (const [dryRunResult, badMapping] of mustFail) {
   assert.throws(() => validatePreSupabaseCandidate({ dryRunResult, mapping: badMapping }));
 }
 
-console.log('✓ pre-Supabase gate: provenance pública revalidada; partido control validado; producción permanece bloqueada');
+console.log('✓ pre-Supabase gate: provenance pública y fecha ISO/calendario revalidadas; partido control validado; producción permanece bloqueada');
