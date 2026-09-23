@@ -60,6 +60,11 @@ assert.equal(Object.hasOwn(preview, 'rpc'), false);
 assert.equal(Object.hasOwn(preview, 'url'), false);
 assert.equal(Object.hasOwn(preview, 'method'), false);
 
+// Canonical decimal strings remain accepted for compatibility, but ambiguous coercions fail closed.
+const stringScalars = buildPreproductionPayload({ ...candidate, match: { ...candidate.match, local_equipo_id: '3', visitante_equipo_id: '1', goles_local: '20', goles_visitante: '27' } });
+assert.equal(stringScalars.payload.local_equipo_id, 3);
+assert.equal(stringScalars.payload.goles_visitante, 27);
+
 for (const bad of [
   { ...candidate, safe: false },
   { ...candidate, dry_run: false },
@@ -77,6 +82,20 @@ for (const bad of [
   { ...candidate, validation: { ...candidate.validation, expected_match_checked: false } },
   { ...candidate, match: { ...candidate.match, visitante_equipo_id: 3 } },
   { ...candidate, match: { ...candidate.match, goles_local: -1 } },
+  { ...candidate, match: { ...candidate.match, local_equipo_id: true } },
+  { ...candidate, match: { ...candidate.match, local_equipo_id: '03' } },
+  { ...candidate, match: { ...candidate.match, local_equipo_id: '3.0' } },
+  { ...candidate, match: { ...candidate.match, local_equipo_id: ' 3 ' } },
+  { ...candidate, match: { ...candidate.match, local_equipo_id: '9007199254740992' } },
+  { ...candidate, match: { ...candidate.match, goles_local: true } },
+  { ...candidate, match: { ...candidate.match, goles_local: '020' } },
+  { ...candidate, match: { ...candidate.match, goles_local: '20.0' } },
+  { ...candidate, match: { ...candidate.match, goles_local: ' 20 ' } },
+  { ...candidate, match: { ...candidate.match, goles_local: '9007199254740992' } },
+  { ...candidate, match: { ...candidate.match, fecha: 20260321 } },
+  { ...candidate, match: { ...candidate.match, fecha: '2026-02-30' } },
+  { ...candidate, match: { ...candidate.match, local_nombre: true } },
+  { ...candidate, match: { ...candidate.match, visitante_nombre: { nombre: 'Ferro Carril Oeste' } } },
 ]) assert.throws(() => buildPreproductionPayload(bad));
 
-console.log('✓ preproduction payload: AAAJ 20-27 Ferro preview determinístico; provenance revalidada; sin request ni escritura');
+console.log('✓ preproduction payload: AAAJ 20-27 Ferro; escalares estrictos sin coerciones ambiguas; sin request ni escritura');
