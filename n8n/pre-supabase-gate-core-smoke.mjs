@@ -49,6 +49,12 @@ assert.deepEqual(result.validation, {
 const stringIdResult = validatePreSupabaseCandidate({ dryRunResult: base, mapping: { local_equipo_id: '3', visitante_equipo_id: '1' } });
 assert.equal(stringIdResult.match.local_equipo_id, 3);
 assert.equal(stringIdResult.match.visitante_equipo_id, 1);
+const stringScoreResult = validatePreSupabaseCandidate({
+  dryRunResult: { ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: '20' }, visitante: { ...base.parsed.visitante, goles: '27' } } },
+  mapping,
+});
+assert.equal(stringScoreResult.match.goles_local, 20);
+assert.equal(stringScoreResult.match.goles_visitante, 27);
 
 const mustFail = [
   [{ ...base, dry_run: false }, mapping],
@@ -65,6 +71,12 @@ const mustFail = [
   [{ ...base, parsed: { ...base.parsed, fecha: '2026-02-30' } }, mapping],
   [{ ...base, parsed: { ...base.parsed, fecha: '2026-13-01' } }, mapping],
   [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: -1 } } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: true } } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: '020' } } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: '20.0' } } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: ' 20 ' } } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: Number.MAX_SAFE_INTEGER + 1 } } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: String(Number.MAX_SAFE_INTEGER + 1) } } }, mapping],
   [base, { local_equipo_id: null, visitante_equipo_id: 1 }],
   [base, { local_equipo_id: 1, visitante_equipo_id: 1 }],
   [base, { local_equipo_id: true, visitante_equipo_id: 2 }],
@@ -78,4 +90,4 @@ for (const [dryRunResult, badMapping] of mustFail) {
   assert.throws(() => validatePreSupabaseCandidate({ dryRunResult, mapping: badMapping }));
 }
 
-console.log('✓ pre-Supabase gate: provenance, fecha e IDs estrictos revalidados; partido control validado; producción permanece bloqueada');
+console.log('✓ pre-Supabase gate: provenance, fecha, marcador e IDs estrictos revalidados; partido control validado; producción permanece bloqueada');
