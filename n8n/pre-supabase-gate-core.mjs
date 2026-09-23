@@ -6,6 +6,12 @@ function positiveId(value) {
   const id = Number(value);
   return Number.isSafeInteger(id) ? id : null;
 }
+function nonNegativeInteger(value) {
+  if (typeof value === 'number') return Number.isSafeInteger(value) && value >= 0 ? value : null;
+  if (typeof value !== 'string' || !/^(0|[1-9]\d*)$/.test(value)) return null;
+  const number = Number(value);
+  return Number.isSafeInteger(number) ? number : null;
+}
 function requiredText(value, label) {
   const text = String(value ?? '').trim();
   if (!text) throw new Error(`Falta ${label}`);
@@ -49,9 +55,9 @@ export function validatePreSupabaseCandidate({ dryRunResult, mapping }) {
   const fecha = strictIsoDate(parsed.fecha);
   const local = requiredText(parsed.local?.nombre, 'equipo local');
   const visitante = requiredText(parsed.visitante?.nombre, 'equipo visitante');
-  const golesLocal = Number(parsed.local?.goles);
-  const golesVisitante = Number(parsed.visitante?.goles);
-  if (!Number.isInteger(golesLocal) || golesLocal < 0 || !Number.isInteger(golesVisitante) || golesVisitante < 0) throw new Error('Marcador inválido');
+  const golesLocal = nonNegativeInteger(parsed.local?.goles);
+  const golesVisitante = nonNegativeInteger(parsed.visitante?.goles);
+  if (golesLocal === null || golesVisitante === null) throw new Error('Marcador inválido');
 
   if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) throw new Error('Mapping de equipos ausente');
   const localId = positiveId(mapping.local_equipo_id);
