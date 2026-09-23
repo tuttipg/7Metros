@@ -9,6 +9,19 @@ function requiredText(value, label) {
   if (!text) throw new Error(`Falta ${label}`);
   return text;
 }
+function strictIsoDate(value) {
+  const text = requiredText(value, 'fecha');
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (!match) throw new Error('Fecha inválida: se requiere YYYY-MM-DD');
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    throw new Error('Fecha calendario inválida');
+  }
+  return text;
+}
 
 /** Fail-closed boundary between parsed FEMEBAL evidence and any future Supabase payload. Never writes. */
 export function validatePreSupabaseCandidate({ dryRunResult, mapping }) {
@@ -31,7 +44,7 @@ export function validatePreSupabaseCandidate({ dryRunResult, mapping }) {
 
   const parsed = dryRunResult.parsed;
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Planilla parseada ausente');
-  const fecha = requiredText(parsed.fecha, 'fecha');
+  const fecha = strictIsoDate(parsed.fecha);
   const local = requiredText(parsed.local?.nombre, 'equipo local');
   const visitante = requiredText(parsed.visitante?.nombre, 'equipo visitante');
   const golesLocal = Number(parsed.local?.goles);
