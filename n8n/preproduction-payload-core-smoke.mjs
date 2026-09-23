@@ -30,9 +30,11 @@ const candidate = {
   validation: {
     player_goal_totals_match_score: true,
     expected_match_checked: true,
+    expected_match_evidence_revalidated: true,
     source_pdf_consistent: true,
     source_provenance_revalidated: true,
     team_ids_resolved: true,
+    team_mapping_identity_revalidated: true,
   },
 };
 
@@ -80,6 +82,10 @@ for (const bad of [
   { ...candidate, source: { ...candidate.source, source_type: 'unknown' } },
   { ...candidate, validation: { ...candidate.validation, source_provenance_revalidated: false } },
   { ...candidate, validation: { ...candidate.validation, expected_match_checked: false } },
+  { ...candidate, validation: { ...candidate.validation, expected_match_evidence_revalidated: false } },
+  { ...candidate, validation: { ...candidate.validation, team_mapping_identity_revalidated: false } },
+  { ...candidate, validation: { ...candidate.validation, expected_match_evidence_revalidated: undefined } },
+  { ...candidate, validation: { ...candidate.validation, team_mapping_identity_revalidated: undefined } },
   { ...candidate, match: { ...candidate.match, visitante_equipo_id: 3 } },
   { ...candidate, match: { ...candidate.match, goles_local: -1 } },
   { ...candidate, match: { ...candidate.match, local_equipo_id: true } },
@@ -98,4 +104,4 @@ for (const bad of [
   { ...candidate, match: { ...candidate.match, visitante_nombre: { nombre: 'Ferro Carril Oeste' } } },
 ]) assert.throws(() => buildPreproductionPayload(bad));
 
-console.log('✓ preproduction payload: AAAJ 20-27 Ferro; escalares estrictos sin coerciones ambiguas; sin request ni escritura');
+console.log('✓ preproduction payload: AAAJ 20-27 Ferro; exige evidencia revalidada de identidad/mapping; escalares estrictos; sin request ni escritura');
