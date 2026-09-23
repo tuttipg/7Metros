@@ -74,9 +74,11 @@ export function buildPreproductionPayload(candidate) {
 
   if (candidate.validation?.player_goal_totals_match_score !== true
     || candidate.validation?.expected_match_checked !== true
+    || candidate.validation?.expected_match_evidence_revalidated !== true
     || candidate.validation?.source_pdf_consistent !== true
     || candidate.validation?.source_provenance_revalidated !== true
-    || candidate.validation?.team_ids_resolved !== true) {
+    || candidate.validation?.team_ids_resolved !== true
+    || candidate.validation?.team_mapping_identity_revalidated !== true) {
     throw new Error('Validaciones pre-Supabase incompletas');
   }
 
