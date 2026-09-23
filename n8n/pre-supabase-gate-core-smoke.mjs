@@ -46,6 +46,10 @@ assert.deepEqual(result.validation, {
   team_ids_resolved: true,
 });
 
+const stringIdResult = validatePreSupabaseCandidate({ dryRunResult: base, mapping: { local_equipo_id: '3', visitante_equipo_id: '1' } });
+assert.equal(stringIdResult.match.local_equipo_id, 3);
+assert.equal(stringIdResult.match.visitante_equipo_id, 1);
+
 const mustFail = [
   [{ ...base, dry_run: false }, mapping],
   [{ ...base, write_enabled: true }, mapping],
@@ -63,9 +67,15 @@ const mustFail = [
   [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: -1 } } }, mapping],
   [base, { local_equipo_id: null, visitante_equipo_id: 1 }],
   [base, { local_equipo_id: 1, visitante_equipo_id: 1 }],
+  [base, { local_equipo_id: true, visitante_equipo_id: 2 }],
+  [base, { local_equipo_id: '01', visitante_equipo_id: 2 }],
+  [base, { local_equipo_id: '1.0', visitante_equipo_id: 2 }],
+  [base, { local_equipo_id: ' 1 ', visitante_equipo_id: 2 }],
+  [base, { local_equipo_id: Number.MAX_SAFE_INTEGER + 1, visitante_equipo_id: 2 }],
+  [base, { local_equipo_id: String(Number.MAX_SAFE_INTEGER + 1), visitante_equipo_id: 2 }],
 ];
 for (const [dryRunResult, badMapping] of mustFail) {
   assert.throws(() => validatePreSupabaseCandidate({ dryRunResult, mapping: badMapping }));
 }
 
-console.log('✓ pre-Supabase gate: provenance pública y fecha ISO/calendario revalidadas; partido control validado; producción permanece bloqueada');
+console.log('✓ pre-Supabase gate: provenance, fecha e IDs estrictos revalidados; partido control validado; producción permanece bloqueada');
