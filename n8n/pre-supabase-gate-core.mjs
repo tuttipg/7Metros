@@ -51,9 +51,17 @@ function revalidateExpectedMatch(validation, match) {
   const golesLocal = nonNegativeInteger(evidence.goles_local);
   const golesVisitante = nonNegativeInteger(evidence.goles_visitante);
   if (golesLocal === null || golesVisitante === null) throw new Error('Marcador esperado inválido');
-  if (fecha !== match.fecha || normalizeIdentity(local) !== normalizeIdentity(match.local) || normalizeIdentity(visitante) !== normalizeIdentity(match.visitante) || golesLocal !== match.golesLocal || golesVisitante !== match.golesVisitante) {
-    throw new Error('La evidencia de identidad esperada no coincide con la planilla parseada');
-  }
+  if (fecha !== match.fecha || normalizeIdentity(local) !== normalizeIdentity(match.local) || normalizeIdentity(visitante) !== normalizeIdentity(match.visitante) || golesLocal !== match.golesLocal || golesVisitante !== match.golesVisitante) throw new Error('La evidencia de identidad esperada no coincide con la planilla parseada');
+}
+function revalidateTeamMapping(mapping, match) {
+  if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) throw new Error('Mapping de equipos ausente');
+  const localId = positiveId(mapping.local_equipo_id); const visitanteId = positiveId(mapping.visitante_equipo_id);
+  if (!localId || !visitanteId) throw new Error('Ambos equipo_id deben estar resueltos');
+  if (localId === visitanteId) throw new Error('Local y visitante no pueden compartir equipo_id');
+  const localNombre = requiredText(mapping.local_nombre, 'nombre local del mapping');
+  const visitanteNombre = requiredText(mapping.visitante_nombre, 'nombre visitante del mapping');
+  if (normalizeIdentity(localNombre) !== normalizeIdentity(match.local) || normalizeIdentity(visitanteNombre) !== normalizeIdentity(match.visitante)) throw new Error('El mapping de equipos no coincide con la identidad parseada');
+  return { localId, visitanteId };
 }
 
 /** Fail-closed boundary between parsed FEMEBAL evidence and any future Supabase payload. Never writes. */
@@ -62,7 +70,6 @@ export function validatePreSupabaseCandidate({ dryRunResult, mapping }) {
   if (dryRunResult.dry_run !== true) throw new Error('Se requiere dry_run=true');
   if (dryRunResult.write_enabled !== false) throw new Error('write_enabled debe permanecer false');
   if (dryRunResult.auth_used !== false) throw new Error('auth_used debe permanecer false');
-
   if (!dryRunResult.source || typeof dryRunResult.source !== 'object' || Array.isArray(dryRunResult.source)) throw new Error('Fuente DRY RUN inválida');
   if (dryRunResult.source.provenance !== 'public_explicit_link') throw new Error('La planilla requiere provenance=public_explicit_link');
   if (dryRunResult.source.document_type !== 'planilla_partido_pdf') throw new Error('La fuente debe ser document_type=planilla_partido_pdf');
@@ -71,32 +78,24 @@ export function validatePreSupabaseCandidate({ dryRunResult, mapping }) {
   const sourceUrl = canonicalizeOfficialFemebalUrl(dryRunResult.source_url, { pdf: true });
   const sourcePdfUrl = canonicalizeOfficialFemebalUrl(dryRunResult.source.pdf_url, { pdf: true });
   if (sourceUrl !== sourcePdfUrl) throw new Error('La proveniencia PDF no coincide');
-
   const parsed = dryRunResult.parsed;
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Planilla parseada ausente');
   const fecha = strictIsoDate(parsed.fecha);
   const local = requiredText(parsed.local?.nombre, 'equipo local');
   const visitante = requiredText(parsed.visitante?.nombre, 'equipo visitante');
-  const golesLocal = nonNegativeInteger(parsed.local?.goles);
-  const golesVisitante = nonNegativeInteger(parsed.visitante?.goles);
+  const golesLocal = nonNegativeInteger(parsed.local?.goles); const golesVisitante = nonNegativeInteger(parsed.visitante?.goles);
   if (golesLocal === null || golesVisitante === null) throw new Error('Marcador inválido');
-  const golesLocalJugadores = sumPlayerGoals(parsed.jugadores_local, 'locales');
-  const golesVisitanteJugadores = sumPlayerGoals(parsed.jugadores_visitante, 'visitantes');
+  const golesLocalJugadores = sumPlayerGoals(parsed.jugadores_local, 'locales'); const golesVisitanteJugadores = sumPlayerGoals(parsed.jugadores_visitante, 'visitantes');
   if (golesLocalJugadores !== golesLocal) throw new Error(`Goles local no cierran en boundary: marcador=${golesLocal}, jugadores=${golesLocalJugadores}`);
   if (golesVisitanteJugadores !== golesVisitante) throw new Error(`Goles visitante no cierran en boundary: marcador=${golesVisitante}, jugadores=${golesVisitanteJugadores}`);
   revalidateExpectedMatch(dryRunResult.validation, { fecha, local, visitante, golesLocal, golesVisitante });
-
-  if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) throw new Error('Mapping de equipos ausente');
-  const localId = positiveId(mapping.local_equipo_id); const visitanteId = positiveId(mapping.visitante_equipo_id);
-  if (!localId || !visitanteId) throw new Error('Ambos equipo_id deben estar resueltos');
-  if (localId === visitanteId) throw new Error('Local y visitante no pueden compartir equipo_id');
-
+  const { localId, visitanteId } = revalidateTeamMapping(mapping, { local, visitante });
   return {
     safe: true, dry_run: true, write_enabled: false, production_write_allowed: false, eligible_for_preproduction_payload: true,
     source_url: sourceUrl,
     source: { provenance: 'public_explicit_link', document_type: 'planilla_partido_pdf', page_url: pageUrl, pdf_url: sourceUrl, source_type: dryRunResult.source.source_type },
     evidence_scope: 'official_planilla_validated_match_result',
     match: { fecha, local_equipo_id: localId, visitante_equipo_id: visitanteId, local_nombre: local, visitante_nombre: visitante, goles_local: golesLocal, goles_visitante: golesVisitante },
-    validation: { player_goal_totals_match_score: true, expected_match_checked: true, expected_match_evidence_revalidated: true, source_pdf_consistent: true, source_provenance_revalidated: true, team_ids_resolved: true },
+    validation: { player_goal_totals_match_score: true, expected_match_checked: true, expected_match_evidence_revalidated: true, source_pdf_consistent: true, source_provenance_revalidated: true, team_ids_resolved: true, team_mapping_identity_revalidated: true },
   };
 }
