@@ -13,7 +13,8 @@ function nonNegativeInteger(value) {
   return Number.isSafeInteger(number) ? number : null;
 }
 function requiredText(value, label) {
-  const text = String(value ?? '').trim();
+  if (typeof value !== 'string') throw new Error(`${label} debe ser texto`);
+  const text = value.trim();
   if (!text) throw new Error(`Falta ${label}`);
   return text;
 }
