@@ -18,6 +18,8 @@ const base = {
     fecha: '2026-03-21',
     local: { nombre: 'Argentinos Juniors', goles: 20 },
     visitante: { nombre: 'Ferro Carril Oeste', goles: 27 },
+    jugadores_local: [{ goles: 12 }, { goles: 8 }],
+    jugadores_visitante: [{ goles: 19 }, { goles: 8 }],
   },
   validation: {
     player_goal_totals_match_score: true,
@@ -56,11 +58,14 @@ const stringScoreResult = validatePreSupabaseCandidate({
 assert.equal(stringScoreResult.match.goles_local, 20);
 assert.equal(stringScoreResult.match.goles_visitante, 27);
 
+// The boundary must recompute player totals itself; a forged/stale upstream true flag is insufficient.
+const forgedFlag = { ...base, parsed: { ...base.parsed, jugadores_local: [{ goles: 19 }] }, validation: { ...base.validation, player_goal_totals_match_score: true } };
+assert.throws(() => validatePreSupabaseCandidate({ dryRunResult: forgedFlag, mapping }), /Goles local no cierran en boundary/);
+
 const mustFail = [
   [{ ...base, dry_run: false }, mapping],
   [{ ...base, write_enabled: true }, mapping],
   [{ ...base, auth_used: true }, mapping],
-  [{ ...base, validation: { ...base.validation, player_goal_totals_match_score: false } }, mapping],
   [{ ...base, validation: { ...base.validation, expected_match_checked: false } }, mapping],
   [{ ...base, source: { ...base.source, provenance: 'public_index' } }, mapping],
   [{ ...base, source: { ...base.source, document_type: 'programacion_pdf' } }, mapping],
@@ -83,6 +88,10 @@ const mustFail = [
   [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: ' 20 ' } } }, mapping],
   [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: Number.MAX_SAFE_INTEGER + 1 } } }, mapping],
   [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: String(Number.MAX_SAFE_INTEGER + 1) } } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, jugadores_local: [] } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, jugadores_visitante: null } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, jugadores_local: [{ goles: true }, { goles: 20 }] } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, jugadores_visitante: [{ goles: '027' }] } }, mapping],
   [base, { local_equipo_id: null, visitante_equipo_id: 1 }],
   [base, { local_equipo_id: 1, visitante_equipo_id: 1 }],
   [base, { local_equipo_id: true, visitante_equipo_id: 2 }],
@@ -96,4 +105,4 @@ for (const [dryRunResult, badMapping] of mustFail) {
   assert.throws(() => validatePreSupabaseCandidate({ dryRunResult, mapping: badMapping }));
 }
 
-console.log('✓ pre-Supabase gate: provenance, fecha/texto, marcador e IDs estrictos revalidados; partido control validado; producción permanece bloqueada');
+console.log('✓ pre-Supabase gate: proveniencia, fecha/texto, marcador, cierre independiente de goles e IDs revalidados; partido control validado; producción permanece bloqueada');
