@@ -31,6 +31,17 @@ function strictIsoDate(value) {
   }
   return text;
 }
+function sumPlayerGoals(players, label) {
+  if (!Array.isArray(players) || players.length === 0) throw new Error(`Jugadores ${label} ausentes`);
+  return players.reduce((total, player, index) => {
+    if (!player || typeof player !== 'object' || Array.isArray(player)) throw new Error(`Jugador ${label} ${index + 1} inválido`);
+    const goals = nonNegativeInteger(player.goles);
+    if (goals === null) throw new Error(`Goles de jugador ${label} ${index + 1} inválidos`);
+    const next = total + goals;
+    if (!Number.isSafeInteger(next)) throw new Error(`Total de goles ${label} fuera de rango seguro`);
+    return next;
+  }, 0);
+}
 
 /** Fail-closed boundary between parsed FEMEBAL evidence and any future Supabase payload. Never writes. */
 export function validatePreSupabaseCandidate({ dryRunResult, mapping }) {
@@ -38,7 +49,6 @@ export function validatePreSupabaseCandidate({ dryRunResult, mapping }) {
   if (dryRunResult.dry_run !== true) throw new Error('Se requiere dry_run=true');
   if (dryRunResult.write_enabled !== false) throw new Error('write_enabled debe permanecer false');
   if (dryRunResult.auth_used !== false) throw new Error('auth_used debe permanecer false');
-  if (dryRunResult.validation?.player_goal_totals_match_score !== true) throw new Error('No está validado el cierre de goles de jugadores contra marcador');
   if (dryRunResult.validation?.expected_match_checked !== true) throw new Error('El partido debe estar contrastado contra una identidad esperada');
 
   if (!dryRunResult.source || typeof dryRunResult.source !== 'object' || Array.isArray(dryRunResult.source)) throw new Error('Fuente DRY RUN inválida');
@@ -59,6 +69,10 @@ export function validatePreSupabaseCandidate({ dryRunResult, mapping }) {
   const golesLocal = nonNegativeInteger(parsed.local?.goles);
   const golesVisitante = nonNegativeInteger(parsed.visitante?.goles);
   if (golesLocal === null || golesVisitante === null) throw new Error('Marcador inválido');
+  const golesLocalJugadores = sumPlayerGoals(parsed.jugadores_local, 'locales');
+  const golesVisitanteJugadores = sumPlayerGoals(parsed.jugadores_visitante, 'visitantes');
+  if (golesLocalJugadores !== golesLocal) throw new Error(`Goles local no cierran en boundary: marcador=${golesLocal}, jugadores=${golesLocalJugadores}`);
+  if (golesVisitanteJugadores !== golesVisitante) throw new Error(`Goles visitante no cierran en boundary: marcador=${golesVisitante}, jugadores=${golesVisitanteJugadores}`);
 
   if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) throw new Error('Mapping de equipos ausente');
   const localId = positiveId(mapping.local_equipo_id);
