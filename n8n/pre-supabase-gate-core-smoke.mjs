@@ -70,6 +70,12 @@ const mustFail = [
   [{ ...base, parsed: { ...base.parsed, fecha: '21/03/2026' } }, mapping],
   [{ ...base, parsed: { ...base.parsed, fecha: '2026-02-30' } }, mapping],
   [{ ...base, parsed: { ...base.parsed, fecha: '2026-13-01' } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, fecha: 20260321 } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, fecha: true } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, nombre: true } } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, nombre: 123 } } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, nombre: ['Argentinos Juniors'] } } }, mapping],
+  [{ ...base, parsed: { ...base.parsed, visitante: { ...base.parsed.visitante, nombre: { club: 'Ferro Carril Oeste' } } } }, mapping],
   [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: -1 } } }, mapping],
   [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: true } } }, mapping],
   [{ ...base, parsed: { ...base.parsed, local: { ...base.parsed.local, goles: '020' } } }, mapping],
@@ -90,4 +96,4 @@ for (const [dryRunResult, badMapping] of mustFail) {
   assert.throws(() => validatePreSupabaseCandidate({ dryRunResult, mapping: badMapping }));
 }
 
-console.log('✓ pre-Supabase gate: provenance, fecha, marcador e IDs estrictos revalidados; partido control validado; producción permanece bloqueada');
+console.log('✓ pre-Supabase gate: provenance, fecha/texto, marcador e IDs estrictos revalidados; partido control validado; producción permanece bloqueada');
