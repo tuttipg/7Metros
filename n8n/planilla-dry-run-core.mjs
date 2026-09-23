@@ -13,19 +13,10 @@ export function validatePdfWorkItem(item) {
   if (!item.source || typeof item.source !== 'object' || Array.isArray(item.source)) throw new Error('Fuente del work item inválida');
   const sourcePdfUrl = canonicalizeOfficialFemebalUrl(item.source.pdf_url, { pdf: true });
   if (sourcePdfUrl !== sourceUrl) throw new Error('La fuente del work item no coincide con su URL');
-
-  // Revalidate provenance at the parser boundary instead of trusting that every caller
-  // passed through the discovery bridge. Forged/direct work items must fail closed.
-  if (item.source.provenance !== 'public_explicit_link') {
-    throw new Error('La planilla requiere provenance=public_explicit_link');
-  }
-  if (item.source.document_type !== 'planilla_partido_pdf') {
-    throw new Error('La fuente debe ser document_type=planilla_partido_pdf');
-  }
+  if (item.source.provenance !== 'public_explicit_link') throw new Error('La planilla requiere provenance=public_explicit_link');
+  if (item.source.document_type !== 'planilla_partido_pdf') throw new Error('La fuente debe ser document_type=planilla_partido_pdf');
   canonicalizeOfficialFemebalUrl(item.source.page_url);
-  if (!['fecha_normal', 'reprogramacion'].includes(item.source.source_type)) {
-    throw new Error('source_type de la planilla inválido');
-  }
+  if (!['fecha_normal', 'reprogramacion'].includes(item.source.source_type)) throw new Error('source_type de la planilla inválido');
   return sourceUrl;
 }
 
@@ -36,7 +27,6 @@ function normalizeIdentity(value) {
 function assertExpectedMatch(parsed, expected) {
   if (expected === null || expected === undefined) return false;
   if (typeof expected !== 'object' || Array.isArray(expected)) throw new Error('Identidad esperada inválida');
-
   if (expected.fecha !== undefined) {
     if (typeof expected.fecha !== 'string') throw new Error('Fecha esperada inválida');
     if (parsed.fecha !== expected.fecha) throw new Error(`Fecha inesperada: ${parsed.fecha}`);
@@ -57,7 +47,6 @@ function assertExpectedMatch(parsed, expected) {
     if (!Number.isSafeInteger(expected.goles_visitante) || expected.goles_visitante < 0) throw new Error('Marcador visitante esperado inválido');
     if (parsed.visitante.goles !== expected.goles_visitante) throw new Error(`Marcador visitante inesperado: ${parsed.visitante.goles}`);
   }
-
   return typeof expected.fecha === 'string' && expected.fecha.length > 0
     && typeof expected.local === 'string' && expected.local.trim().length > 0
     && typeof expected.visitante === 'string' && expected.visitante.trim().length > 0
@@ -70,6 +59,13 @@ export function parsePlanillaDryRun({ workItem, extractedText, expected = null }
   if (typeof extractedText !== 'string' || !extractedText.trim()) throw new Error('Texto extraído de planilla vacío');
   const parsed = parseOfficialFemebalSheet(extractedText);
   const expectedMatchChecked = assertExpectedMatch(parsed, expected);
+  const expectedMatchEvidence = expectedMatchChecked ? {
+    fecha: expected.fecha,
+    local: expected.local.trim(),
+    visitante: expected.visitante.trim(),
+    goles_local: expected.goles_local,
+    goles_visitante: expected.goles_visitante,
+  } : null;
   return {
     dry_run: true,
     write_enabled: false,
@@ -77,6 +73,10 @@ export function parsePlanillaDryRun({ workItem, extractedText, expected = null }
     source_url: sourceUrl,
     source: { ...workItem.source, pdf_url: sourceUrl },
     parsed,
-    validation: { player_goal_totals_match_score: true, expected_match_checked: expectedMatchChecked },
+    validation: {
+      player_goal_totals_match_score: true,
+      expected_match_checked: expectedMatchChecked,
+      expected_match_evidence: expectedMatchEvidence,
+    },
   };
 }
