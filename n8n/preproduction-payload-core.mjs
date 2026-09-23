@@ -1,14 +1,41 @@
 import { canonicalizeOfficialFemebalUrl } from './official-url-policy.mjs';
 
 function positiveId(value, label) {
+  if (typeof value === 'number') {
+    if (!Number.isSafeInteger(value) || value <= 0) throw new Error(`${label} inválido`);
+    return value;
+  }
+  if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) throw new Error(`${label} inválido`);
   const id = Number(value);
-  if (!Number.isInteger(id) || id <= 0) throw new Error(`${label} inválido`);
+  if (!Number.isSafeInteger(id)) throw new Error(`${label} inválido`);
   return id;
 }
 
+function nonNegativeInteger(value, label) {
+  if (typeof value === 'number') {
+    if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${label} inválido`);
+    return value;
+  }
+  if (typeof value !== 'string' || !/^(0|[1-9]\d*)$/.test(value)) throw new Error(`${label} inválido`);
+  const number = Number(value);
+  if (!Number.isSafeInteger(number)) throw new Error(`${label} inválido`);
+  return number;
+}
+
 function requiredText(value, label) {
-  const text = String(value ?? '').trim();
+  if (typeof value !== 'string') throw new Error(`${label} debe ser texto`);
+  const text = value.trim();
   if (!text) throw new Error(`Falta ${label}`);
+  return text;
+}
+
+function strictIsoDate(value) {
+  const text = requiredText(value, 'fecha');
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (!match) throw new Error('Fecha inválida: se requiere YYYY-MM-DD');
+  const year = Number(match[1]); const month = Number(match[2]); const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) throw new Error('Fecha calendario inválida');
   return text;
 }
 
@@ -36,15 +63,14 @@ export function buildPreproductionPayload(candidate) {
 
   const match = candidate.match;
   if (!match || typeof match !== 'object' || Array.isArray(match)) throw new Error('Partido validado ausente');
-  const fecha = requiredText(match.fecha, 'fecha');
+  const fecha = strictIsoDate(match.fecha);
   const localId = positiveId(match.local_equipo_id, 'local_equipo_id');
   const visitanteId = positiveId(match.visitante_equipo_id, 'visitante_equipo_id');
   if (localId === visitanteId) throw new Error('Local y visitante no pueden compartir equipo_id');
   const localNombre = requiredText(match.local_nombre, 'local_nombre');
   const visitanteNombre = requiredText(match.visitante_nombre, 'visitante_nombre');
-  const golesLocal = Number(match.goles_local);
-  const golesVisitante = Number(match.goles_visitante);
-  if (!Number.isInteger(golesLocal) || golesLocal < 0 || !Number.isInteger(golesVisitante) || golesVisitante < 0) throw new Error('Marcador inválido');
+  const golesLocal = nonNegativeInteger(match.goles_local, 'goles_local');
+  const golesVisitante = nonNegativeInteger(match.goles_visitante, 'goles_visitante');
 
   if (candidate.validation?.player_goal_totals_match_score !== true
     || candidate.validation?.expected_match_checked !== true
