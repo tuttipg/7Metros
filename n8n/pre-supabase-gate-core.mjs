@@ -1,8 +1,10 @@
 import { canonicalizeOfficialFemebalUrl } from './official-url-policy.mjs';
 
 function positiveId(value) {
+  if (typeof value === 'number') return Number.isSafeInteger(value) && value > 0 ? value : null;
+  if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) return null;
   const id = Number(value);
-  return Number.isInteger(id) && id > 0 ? id : null;
+  return Number.isSafeInteger(id) ? id : null;
 }
 function requiredText(value, label) {
   const text = String(value ?? '').trim();
