@@ -7,6 +7,7 @@ Estado: **SAFE / documentación solamente / sin probing de endpoints inferidos**
 - Página pública oficial FEMEBAL: https://femebal.com/programacion-sabado-13-y-domingo-14-de-junio/
 - Publicada: 2026-06-10.
 - La página enlaza explícitamente dos descargas: `Fecha 8 (Sabado con Árbitros)` y `Fecha 12 (Domingo con Árbitros)`.
+- PDF oficial Fecha 8: https://femebal.com/wp-content/uploads/2026/06/Fecha-8-Sabado-con-Arbitros.pdf
 
 ## Hallazgo
 
@@ -19,16 +20,27 @@ En particular, una única publicación agrupa:
 
 Por lo tanto, el descubrimiento histórico **no debe construir ni probar automáticamente slugs de fechas faltantes**. Debe partir de enlaces públicos explícitos/indexados y conservar la página que aporta la evidencia.
 
+## Identidades LHC verificadas en Fecha 8
+
+La descarga oficial explícitamente enlazada para el sábado 13/06/2026 permite verificar, sin inferir resultados ni planillas, dos identidades relevantes para el alcance inicial de 7Metros:
+
+- `Mayores / LHC Hipotecario Seguros / M / 18:00`: **Estudiantes de La Plata — Ferro Carril Oeste**.
+- `Mayores / LHC Hipotecario Seguros / M / 20:15`: **S.A.G. Polvorines — S.A.G. Villa Ballester**.
+
+Estas filas se consideran exclusivamente evidencia de **identidad programada del partido**. No acreditan que el partido se haya disputado, ni su marcador, ni una planilla digital concreta, ni estadísticas de jugadores.
+
+El mismo PDF contiene otras apariciones de Ferro y Villa Ballester en categorías/divisiones diferentes. Eso refuerza que una coincidencia por club+fecha no es suficiente: para este frente debe conservarse el filtro compuesto `Mayores + LHC Hipotecario Seguros + M`.
+
 ## Límites de la evidencia
 
-Esta página demuestra la existencia y fecha de las programaciones enlazadas. Por sí sola no demuestra:
+La página de publicación demuestra la existencia y fecha de las programaciones enlazadas. El PDF oficial de Fecha 8 agrega las dos identidades programadas anteriores. Ninguna de esas fuentes, por sí sola, demuestra:
 
-- participantes de un partido concreto;
-- marcador;
+- marcador o resultado final;
+- que el encuentro efectivamente se haya disputado;
 - estadísticas individuales;
-- identidad de una planilla de partido.
+- identidad de una planilla digital de partido.
 
-Esos datos requieren inspeccionar la descarga oficial explícitamente enlazada o una fuente oficial independiente, manteniendo separadas las afirmaciones por procedencia.
+Esos datos requieren una fuente oficial independiente apropiada, manteniendo separadas las afirmaciones por procedencia.
 
 ## Implicación SAFE
 
