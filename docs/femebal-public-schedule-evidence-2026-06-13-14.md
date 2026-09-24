@@ -8,6 +8,7 @@ Estado: **SAFE / documentación solamente / sin probing de endpoints inferidos**
 - Publicada: 2026-06-10.
 - La página enlaza explícitamente dos descargas: `Fecha 8 (Sabado con Árbitros)` y `Fecha 12 (Domingo con Árbitros)`.
 - PDF oficial Fecha 8: https://femebal.com/wp-content/uploads/2026/06/Fecha-8-Sabado-con-Arbitros.pdf
+- PDF oficial Fecha 12: https://femebal.com/wp-content/uploads/2026/06/Fecha-12-Domingo-con-Arbitros.pdf
 
 ## Hallazgo
 
@@ -31,14 +32,29 @@ Estas filas se consideran exclusivamente evidencia de **identidad programada del
 
 El mismo PDF contiene otras apariciones de Ferro y Villa Ballester en categorías/divisiones diferentes. Eso refuerza que una coincidencia por club+fecha no es suficiente: para este frente debe conservarse el filtro compuesto `Mayores + LHC Hipotecario Seguros + M`.
 
+## Fecha 12 — clasificación fail-closed
+
+La descarga oficial explícitamente enlazada para el domingo 14/06/2026 fue revisada como programación completa de esa fecha. En el texto publicado no aparece la división `LHC Hipotecario Seguros`.
+
+Sí aparecen Ferro Carril Oeste y S.A.G. Villa Ballester en otras divisiones, por ejemplo:
+
+- `Mayores / Liga de Honor Plata / M / 18:00`: **Club Comunicaciones — Ferro Carril Oeste**.
+- `Mayores / 1º Division / M / 18:30`: **C.A. Platense — Ferro Carril Oeste**.
+- `Mayores / 3º Division / M / 18:00`: **Palermo Handball — S.A.G. Villa Ballester**.
+- `Mayores / 2º Division / M / 19:45`: **C.D.S. Juventud Unida — S.A.G. Villa Ballester**.
+- `Mayores / Liga de Honor Plata / M / 18:00`: **S.A.G. Villa Ballester — UBA**.
+
+Por eso Fecha 12 queda clasificada únicamente como **`not_found_in_official_schedule` para el filtro `Mayores + LHC Hipotecario Seguros + M` de Ferro/Ballester**. Esta clasificación describe la evidencia observada en ese PDF; **no equivale** a `bye`, suspensión, reprogramación ni inexistencia del partido.
+
 ## Límites de la evidencia
 
-La página de publicación demuestra la existencia y fecha de las programaciones enlazadas. El PDF oficial de Fecha 8 agrega las dos identidades programadas anteriores. Ninguna de esas fuentes, por sí sola, demuestra:
+La página de publicación demuestra la existencia y fecha de las programaciones enlazadas. El PDF oficial de Fecha 8 agrega las dos identidades programadas anteriores. El PDF oficial de Fecha 12 permite afirmar solamente que no se localizó una fila que supere el filtro LHC definido en esa programación. Ninguna de esas fuentes, por sí sola, demuestra:
 
 - marcador o resultado final;
-- que el encuentro efectivamente se haya disputado;
+- que un encuentro programado efectivamente se haya disputado;
 - estadísticas individuales;
-- identidad de una planilla digital de partido.
+- identidad de una planilla digital de partido;
+- que una ausencia en la programación implique bye, suspensión o reprogramación.
 
 Esos datos requieren una fuente oficial independiente apropiada, manteniendo separadas las afirmaciones por procedencia.
 
