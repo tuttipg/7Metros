@@ -19,6 +19,8 @@ DEFAULT_TIMEOUT_SECONDS=20
 MAX_TIMEOUT_SECONDS=30
 ALLOWED_HTML_MEDIA_TYPES={"text/html","application/xhtml+xml"}
 TRACKING_QUERY_KEYS={"fbclid","gclid","dclid","msclkid","mc_cid","mc_eid"}
+SENSITIVE_QUERY_KEYS={"auth","authorization","bearer","cookie","credential","credentials","csrf","xsrf","jwt","key","password","secret","session","token"}
+SENSITIVE_QUERY_SUFFIXES=("apikey","authkey","credential","credentials","password","secret","sessionid","token")
 AMBIGUOUS_RAW_URL_CHARS=re.compile(r'[\\\x00-\x1f\x7f]')
 STRICT_DECIMAL=re.compile(r'^\d+$')
 DOCUMENT_TYPES=('programacion_pdf','planilla_partido_pdf')
@@ -57,10 +59,17 @@ def _has_tracking_query(query:str)->bool:
         if normalized.startswith('utm_') or normalized in TRACKING_QUERY_KEYS: return True
     return False
 
+def _has_sensitive_query(query:str)->bool:
+    for key,_ in parse_qsl(query,keep_blank_values=True):
+        normalized=re.sub(r'[^a-z0-9]','',key.lower())
+        if normalized in SENSITIVE_QUERY_KEYS or any(normalized.endswith(suffix) for suffix in SENSITIVE_QUERY_SUFFIXES): return True
+    return False
+
 def _canonical_official_page_url(url:str)->str:
     _assert_allowed(url); p=urlparse(url)
     if p.fragment: raise ValueError(f"URL FEMEBAL con fragmento rechazada: {url}")
     if _has_tracking_query(p.query): raise ValueError(f"URL FEMEBAL con tracking query rechazada: {url}")
+    if _has_sensitive_query(p.query): raise ValueError(f"URL FEMEBAL con query sensible rechazada: {url}")
     path=p.path or '/'; query=f"?{p.query}" if p.query else ''
     return f"https://{p.hostname}{path}{query}"
 
