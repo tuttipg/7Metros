@@ -20,7 +20,7 @@ MAX_TIMEOUT_SECONDS=30
 ALLOWED_HTML_MEDIA_TYPES={"text/html","application/xhtml+xml"}
 TRACKING_QUERY_KEYS={"fbclid","gclid","dclid","msclkid","mc_cid","mc_eid"}
 SENSITIVE_QUERY_KEYS={"auth","authorization","bearer","cookie","credential","credentials","csrf","xsrf","jwt","key","password","secret","session","token"}
-SENSITIVE_QUERY_SUFFIXES=("apikey","authkey","credential","credentials","password","secret","sessionid","token")
+SENSITIVE_QUERY_SUFFIXES=("apikey","authkey","credential","credentials","password","privatekey","secret","sessionid","token")
 AMBIGUOUS_RAW_URL_CHARS=re.compile(r'[\\\x00-\x1f\x7f]')
 STRICT_DECIMAL=re.compile(r'^\d+$')
 DOCUMENT_TYPES=('programacion_pdf','planilla_partido_pdf')
@@ -128,104 +128,55 @@ def classify_page(url:str,title:str)->Source|None:
     text=f"{title} {url}".lower()
     if 'reprogram' in text: return Source(url,title,'reprogramacion',None,None)
     if 'programacion' not in text and 'programación' not in text: return None
-    if 'metropolitano' not in text: return None
-    phase='apertura' if 'apertura' in text else 'clausura' if 'clausura' in text else None
-    m=re.search(r'fecha[-\s]+(\d{1,2})',text); rnd=int(m.group(1)) if m else None
-    return Source(url,title,'fecha_normal',phase,rnd)
+    phase='apertura' if 'apertura' in text else ('clausura' if 'clausura' in text else None)
+    m=re.search(r'(?:fecha|jornada|f)[\s_-]*(\d{1,2})',text); rnd=int(m.group(1)) if m else None
+    return Source(url,title,'programacion',phase,rnd)
 
-def discover_pages(index_html:str,base=PROGRAMACIONES_URL):
-    out={}
-    for href,text in links_from_html(index_html):
-        raw_url=urljoin(base,href)
-        try: url=_canonical_official_page_url(raw_url)
+def discover_sources(index_url:str=PROGRAMACIONES_URL)->list[Source]:
+    index_url=_canonical_official_page_url(index_url); html_text=get_text(index_url); out=[]
+    for href,text in links_from_html(html_text):
+        u=urljoin(index_url,href)
+        try: canonical=_canonical_official_page_url(u)
         except ValueError: continue
-        src=classify_page(url,text)
-        if src: out[url]=src
-    return sorted(out.values(),key=lambda x:x.page_url)
+        s=classify_page(canonical,text)
+        if s: out.append(s)
+    return out
 
-def load_page_seeds(path:Path|str|None=DEFAULT_SEEDS_FILE)->list[Source]:
-    if path is None: return []
-    path=Path(path)
-    if not path.exists(): raise FileNotFoundError(f'Archivo de seeds FEMEBAL solicitado no existe: {path}')
-    if not path.is_file(): raise ValueError(f'Ruta de seeds FEMEBAL no es un archivo: {path}')
+def discover_pdfs(source:Source)->list[PdfSource]:
+    html_text=get_text(source.page_url); out=[]
+    for href,text in links_from_html(html_text):
+        u=urljoin(source.page_url,href); document_type=_document_type_for_official_pdf(u)
+        if document_type:
+            canonical=_canonical_official_pdf_url(u)
+            out.append(PdfSource(source.page_url,source.title,canonical,text,document_type,source.source_type,source.phase,source.round_number,PUBLIC_EXPLICIT_LINK_PROVENANCE))
+    return out
+
+def _load_seed_sources(path:Path=DEFAULT_SEEDS_FILE)->list[Source]:
+    if not path.is_file(): raise ValueError(f"Archivo de seeds inexistente/no regular: {path}")
     payload=json.loads(path.read_text(encoding='utf-8'))
-    if not isinstance(payload,dict) or payload.get('schema_version')!=SEEDS_SCHEMA_VERSION: raise ValueError('Archivo de seeds FEMEBAL inválido')
-    if payload.get('safe') is not True or payload.get('auth_used') is not False or payload.get('write_enabled') is not False: raise ValueError('Seeds FEMEBAL sin contrato SAFE')
-    pages=payload.get('pages')
-    if not isinstance(pages,list): raise ValueError('Seeds FEMEBAL sin pages[]')
-    out={}
-    for raw in pages:
-        if not isinstance(raw,str): raise ValueError('Seed FEMEBAL no textual')
-        url=_canonical_official_page_url(raw); src=classify_page(url,url)
-        if src is None: raise ValueError(f'Seed FEMEBAL fuera del scope de programación metropolitana: {url}')
-        out[url]=src
-    return sorted(out.values(),key=lambda x:x.page_url)
+    if payload.get('schema_version') != SEEDS_SCHEMA_VERSION: raise ValueError('schema_version de seeds no soportado')
+    out=[]
+    for item in payload.get('sources',[]):
+        page_url=_canonical_official_page_url(item['page_url'])
+        out.append(Source(page_url,item['title'],item['source_type'],item.get('phase'),item.get('round_number')))
+    return out
 
-def merge_pages(index_pages:list[Source],seed_pages:list[Source])->list[Source]:
-    out={x.page_url:x for x in index_pages}
-    for seed in seed_pages:
-        previous=out.get(seed.page_url)
-        if previous is None: out[seed.page_url]=seed
-        elif (previous.source_type,previous.phase,previous.round_number)!=(seed.source_type,seed.phase,seed.round_number): raise ValueError(f'Conflicto de metadata para seed FEMEBAL: {seed.page_url}')
-    return sorted(out.values(),key=lambda x:x.page_url)
-
-def discover_pdfs(page_html:str,source:Source):
-    out={}
-    for href,text in links_from_html(page_html):
-        raw_url=urljoin(source.page_url,href)
-        try: url=_canonical_official_pdf_url(raw_url)
-        except ValueError: continue
-        document_type=_document_type_for_official_pdf(url)
-        if document_type is None: continue
-        out[url]=PdfSource(source.page_url,source.title,url,text,document_type,source.source_type,source.phase,source.round_number,PUBLIC_EXPLICIT_LINK_PROVENANCE)
-    return sorted(out.values(),key=lambda x:x.pdf_url)
-
-def _pdf_source_identity(source:PdfSource): return (source.page_url,source.document_type,source.source_type,source.phase,source.round_number,source.provenance)
-
-def _dedupe_manifest_pdfs(pdfs:list[PdfSource]):
-    by_url={}; conflicted=set(); errors=[]
-    for source in pdfs:
-        url=source.pdf_url
-        if url in conflicted: continue
-        previous=by_url.get(url)
-        if previous is None: by_url[url]=source; continue
-        if _pdf_source_identity(previous)==_pdf_source_identity(source): continue
-        conflicted.add(url); del by_url[url]
-        errors.append({"stage":"metadata_conflict","url":url,"error":"contradictory_pdf_provenance","sources":[{"page_url":previous.page_url,"document_type":previous.document_type,"source_type":previous.source_type,"phase":previous.phase,"round_number":previous.round_number,"provenance":previous.provenance},{"page_url":source.page_url,"document_type":source.document_type,"source_type":source.source_type,"phase":source.phase,"round_number":source.round_number,"provenance":source.provenance}]})
-    return sorted(by_url.values(),key=lambda x:x.pdf_url),errors
-
-def _document_type_counts(pdfs:list[PdfSource])->dict[str,int]:
-    counts={document_type:0 for document_type in DOCUMENT_TYPES}
-    for source in pdfs:
-        if source.document_type not in counts: raise ValueError(f'Tipo documental inesperado en manifest: {source.document_type}')
-        counts[source.document_type]+=1
-    return counts
-
-def build_manifest(index_html:str,page_html_by_url:dict[str,str],fetch_errors:list[dict]|None=None, *, seed_pages:list[Source]|None=None):
-    pages=merge_pages(discover_pages(index_html),seed_pages or []); discovered=[]
-    for page in pages:
-        if page.page_url in page_html_by_url: discovered.extend(discover_pdfs(page_html_by_url[page.page_url],page))
-    pdfs,metadata_errors=_dedupe_manifest_pdfs(discovered); errors=list(fetch_errors or [])+metadata_errors
-    return {"schema_version":MANIFEST_SCHEMA_VERSION,"safe":True,"write_enabled":False,"auth_used":False,"complete":len(errors)==0,"pages":[asdict(x) for x in pages],"pdfs":[asdict(x) for x in pdfs],"fetch_errors":errors}
+def build_manifest(sources:list[Source])->dict:
+    pdfs=[]; failures=[]
+    for source in sources:
+        try: pdfs.extend(discover_pdfs(source))
+        except Exception as exc: failures.append({'page_url':source.page_url,'error':str(exc)})
+    by_url={}
+    for item in pdfs:
+        existing=by_url.get(item.pdf_url)
+        if existing and existing != item: raise ValueError(f"Proveniencia contradictoria para PDF: {item.pdf_url}")
+        by_url[item.pdf_url]=item
+    items=sorted(by_url.values(),key=lambda x:(x.document_type,x.pdf_url))
+    counts={doc_type:sum(1 for item in items if item.document_type==doc_type) for doc_type in DOCUMENT_TYPES}
+    return {'schema_version':MANIFEST_SCHEMA_VERSION,'safe':True,'dry_run':True,'write_enabled':False,'complete':not failures,'fetch_failures':failures,'document_type_counts':counts,'items':[asdict(x) for x in items]}
 
 def main():
-    ap=argparse.ArgumentParser(); ap.add_argument('--index-html'); ap.add_argument('--pages-dir'); ap.add_argument('--seeds-file',default=str(DEFAULT_SEEDS_FILE)); ap.add_argument('--no-seeds',action='store_true'); ap.add_argument('--output',required=True); args=ap.parse_args()
-    idx=Path(args.index_html).read_text(encoding='utf-8') if args.index_html else get_text(PROGRAMACIONES_URL)
-    seed_pages=[] if args.no_seeds else load_page_seeds(args.seeds_file)
-    pages=merge_pages(discover_pages(idx),seed_pages); mapping={}; fetch_errors=[]
-    if args.pages_dir:
-        d=Path(args.pages_dir)
-        for p in pages:
-            f=d/(re.sub(r'[^a-zA-Z0-9]+','_',p.page_url).strip('_')+'.html')
-            if f.exists(): mapping[p.page_url]=f.read_text(encoding='utf-8')
-            else: fetch_errors.append({"stage":"fixture_file","url":p.page_url,"error":"missing_fixture_html"})
-    else:
-        for p in pages:
-            try: mapping[p.page_url]=get_text(p.page_url)
-            except Exception as e: fetch_errors.append({"stage":"fetch_page","url":p.page_url,"error":type(e).__name__})
-    manifest=build_manifest(idx,mapping,fetch_errors,seed_pages=seed_pages)
-    Path(args.output).write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
-    counts=_document_type_counts([PdfSource(**row) for row in manifest['pdfs']])
-    print(json.dumps({"pages":len(manifest['pages']),"seed_pages":len(seed_pages),"pdfs":len(manifest['pdfs']),"programacion_pdfs":counts['programacion_pdf'],"planilla_partido_pdfs":counts['planilla_partido_pdf'],"fetch_errors":len(manifest['fetch_errors']),"complete":manifest['complete'],"write_enabled":False},ensure_ascii=False))
+    parser=argparse.ArgumentParser(); parser.add_argument('--seeds',type=Path,default=DEFAULT_SEEDS_FILE); args=parser.parse_args()
+    sources=_load_seed_sources(args.seeds); print(json.dumps(build_manifest(sources),ensure_ascii=False,indent=2))
 
 if __name__=='__main__': main()
