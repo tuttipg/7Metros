@@ -24,7 +24,21 @@ for (const node of workflow.nodes) {
 }
 
 const serialized = JSON.stringify(workflow).toLowerCase();
-for (const secretMarker of ['authorization', 'bearer ', 'cookie', 'api_key', 'apikey', 'access_token', 'service_role']) {
+const secretMarkers = [
+  'authorization',
+  'bearer ',
+  'cookie',
+  'api_key',
+  'apikey',
+  'access_token',
+  'refresh_token',
+  'id_token',
+  'service_role',
+  'client_secret',
+  'private_key',
+  'password',
+];
+for (const secretMarker of secretMarkers) {
   assert.ok(!serialized.includes(secretMarker), `El workflow contiene marcador sensible/prohibido: ${secretMarker}`);
 }
 
