@@ -50,6 +50,8 @@ The current seed inventory contains only official pages independently observed t
 
 A fresh ordinary public-index search on 2026-09-22 did not surface a new explicit public TournamentTracker data endpoint or a control-match planilla link. This negative result is **not** evidence that such a source does not exist; it only means no new source was verified in this pass. Keep static candidates fail-closed and `automaticProbeAllowed=false`. Do not infer API authorization from the JavaScript shell, opaque indexed route tokens, bundle strings, authenticated Community behavior, or from the programming PDF above.
 
+On 2026-09-25 a stronger but still non-API public-navigation signal was verified: FEMEBAL's official article `https://femebal.com/fixtures-disponibles-para-la-liga-hipotecario-seguros-y-la-liga-plata/`, published 2026-02-24, contains an explicit link labelled `Fixture de la Liga de Honor Hipotecario Seguros Caballeros` whose destination is a public FEMEBAL `/tournament-tracker/…` route. The route itself only exposes the JavaScript application shell in the anonymous research environment. The opaque route suffix is deliberately not copied into this inventory because it is unnecessary for the finding. This evidence establishes that TournamentTracker is an official public navigation surface for the 2026 LHC fixture; it does **not** establish any public data endpoint, API contract, planilla destination, authentication permission, or permission to enumerate/probe routes. `automaticProbeAllowed=false` remains unchanged.
+
 ## Safety
 
 No credentials, cookies, tokens, Authorization headers, authenticated endpoints, Supabase writes, or production mutations are required by this inventory.
