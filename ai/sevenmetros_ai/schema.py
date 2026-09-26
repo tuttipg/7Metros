@@ -21,6 +21,8 @@ def frame_payload(*, frame_index: int, timestamp_ms: float, width: int, height: 
             "velocity_xy": [round(track.velocity_x, 3), round(track.velocity_y, 3)],
             "team": det.team,
         })
+        if det.role_candidate is not None:
+            objects[-1]['role_candidate'] = det.role_candidate
     return {
         "schema": SCHEMA_VERSION,
         "frame_index": int(frame_index),

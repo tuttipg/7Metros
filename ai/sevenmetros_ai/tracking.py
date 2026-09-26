@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from collections import Counter, deque
 from math import hypot
 from typing import Iterable, Optional
 
@@ -14,6 +15,7 @@ class Detection:
     confidence: float = 1.0
     label: str = "player"
     team: Optional[str] = None
+    role_candidate: Optional[str] = None
 
     @property
     def cx(self) -> float:
@@ -32,6 +34,7 @@ class Track:
     missed: int = 0
     velocity_x: float = 0.0
     velocity_y: float = 0.0
+    association_team: Optional[str] = None
 
     @property
     def predicted_cx(self) -> float:
@@ -69,7 +72,7 @@ def _compatible(track: Track, detection: Detection) -> bool:
     """
     if track.detection.label != detection.label:
         return False
-    old_team = track.detection.team
+    old_team = track.association_team or track.detection.team
     new_team = detection.team
     return old_team is None or new_team is None or old_team == new_team
 
@@ -88,6 +91,8 @@ class CentroidTracker:
         max_distance: float = 80.0,
         max_missed: int = 8,
         iou_weight: float = 0.25,
+        temporal_teams: bool = False,
+        velocity_alpha: float = 1.0,
     ) -> None:
         if max_distance <= 0:
             raise ValueError("max_distance must be > 0")
@@ -96,8 +101,15 @@ class CentroidTracker:
         if not 0.0 <= iou_weight <= 1.0:
             raise ValueError("iou_weight must be between 0 and 1")
         self.max_distance = float(max_distance)
+        if not 0 < velocity_alpha <= 1:
+            raise ValueError('velocity_alpha must be in (0, 1]')
+        self.velocity_alpha = float(velocity_alpha)
         self.max_missed = int(max_missed)
         self.iou_weight = float(iou_weight)
+        self.temporal_teams = temporal_teams
+        self._team_history = {}
+        self._role_history = {}
+        self._roles = {}
         self._next_id = 1
         self._tracks: dict[int, Track] = {}
 
@@ -110,7 +122,9 @@ class CentroidTracker:
 
         for track_id, track in self._tracks.items():
             for idx, detection in enumerate(detections):
-                if not _compatible(track, detection):
+                if track.detection.label != detection.label:
+                    continue
+                if not self.temporal_teams and not _compatible(track, detection):
                     continue
                 distance = hypot(
                     track.predicted_cx - detection.cx,
@@ -125,6 +139,9 @@ class CentroidTracker:
                         * self.iou_weight
                     )
                     candidates.append((cost, track_id, idx))
+                    if (self.temporal_teams and track.association_team is not None
+                            and detection.team is not None and track.association_team != detection.team):
+                        candidates[-1] = (cost + self.max_distance * .5, track_id, idx)
 
         for _, track_id, idx in sorted(candidates):
             if track_id not in unmatched_track_ids or idx not in unmatched_detection_indexes:
@@ -132,9 +149,15 @@ class CentroidTracker:
             track = self._tracks[track_id]
             previous_cx = track.detection.cx
             previous_cy = track.detection.cy
+            elapsed_frames = track.missed + 1
             track.detection = detections[idx]
-            track.velocity_x = track.detection.cx - previous_cx
-            track.velocity_y = track.detection.cy - previous_cy
+            alpha = self.velocity_alpha if track.age > 1 else 1.0
+            track.velocity_x = (1-alpha)*track.velocity_x + alpha*(track.detection.cx - previous_cx)/elapsed_frames
+            track.velocity_y = (1-alpha)*track.velocity_y + alpha*(track.detection.cy - previous_cy)/elapsed_frames
+            if self.temporal_teams:
+                self._observe_team(track)
+            elif track.detection.team is not None:
+                track.association_team = track.detection.team
             track.age += 1
             track.missed = 0
             unmatched_track_ids.remove(track_id)
@@ -145,23 +168,55 @@ class CentroidTracker:
             track.missed += 1
             if track.missed > self.max_missed:
                 del self._tracks[track_id]
+                self._team_history.pop(track_id, None)
+                self._role_history.pop(track_id, None)
+                self._roles.pop(track_id, None)
 
         for idx in sorted(unmatched_detection_indexes):
             self._tracks[self._next_id] = Track(
                 track_id=self._next_id,
                 detection=detections[idx],
+                association_team=None if self.temporal_teams else detections[idx].team,
             )
+            if self.temporal_teams:
+                self._observe_team(self._tracks[self._next_id])
             self._next_id += 1
 
         return [
             Track(
                 track_id=t.track_id,
-                detection=t.detection,
+                detection=replace(t.detection, team=None if self._roles.get(t.track_id) else t.association_team,
+                                  role_candidate=self._roles.get(t.track_id)) if self.temporal_teams else t.detection,
                 age=t.age,
                 missed=t.missed,
                 velocity_x=t.velocity_x,
                 velocity_y=t.velocity_y,
+                association_team=t.association_team,
             )
             for t in sorted(self._tracks.values(), key=lambda item: item.track_id)
             if t.missed == 0
         ]
+
+    def _observe_team(self, track):
+        history = self._team_history.setdefault(track.track_id, deque(maxlen=12))
+        history.append(track.detection.team)
+        roles = self._role_history.setdefault(track.track_id, deque(maxlen=12))
+        roles.append(track.detection.role_candidate)
+        votes = Counter(r for r in roles if r is not None)
+        if votes:
+            role, count = votes.most_common(1)[0]
+            if count >= 3 and count / len(roles) >= .75:
+                self._roles[track.track_id] = role
+            elif self._roles.get(track.track_id) not in votes:
+                self._roles.pop(track.track_id, None)
+        else:
+            self._roles.pop(track.track_id, None)
+        votes = Counter(t for t in history if t is not None)
+        if not votes:
+            track.association_team = None
+            return
+        team, count = votes.most_common(1)[0]
+        if count >= 3 and count / len(history) >= .75:
+            track.association_team = team
+        elif track.association_team not in votes:
+            track.association_team = None

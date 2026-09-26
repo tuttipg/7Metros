@@ -1,0 +1,17 @@
+{
+  "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+  "width": 936,
+  "height": 524,
+  "method": "Assistant visual review of source frames; sparse torso points, not bounding-box ground truth. No independent human verification.",
+  "scope": "Two players at seconds 0, 1, 2, 3. Not a benchmark for crossings, occlusion or the full match.",
+  "points": [
+    {"frame":0,"person":"white_foreground","xy":[196,436]},
+    {"frame":0,"person":"blue_left","xy":[170,270]},
+    {"frame":30,"person":"white_foreground","xy":[170,470]},
+    {"frame":30,"person":"blue_left","xy":[120,280]},
+    {"frame":60,"person":"white_foreground","xy":[208,440]},
+    {"frame":60,"person":"blue_left","xy":[120,280]},
+    {"frame":90,"person":"white_foreground","xy":[276,380]},
+    {"frame":90,"person":"blue_left","xy":[132,270]}
+  ]
+}

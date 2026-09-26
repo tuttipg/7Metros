@@ -126,6 +126,21 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(state["writer"].size, (640, 360))
             self.assertTrue(state["capture"].released)
             self.assertTrue(state["writer"].released)
+            self.assertEqual(summary['detections_by_team'], {'home': 3})
+            self.assertEqual(summary['detections_by_role'], {'player': 3})
+            self.assertIsNone(summary['identity_switches'])
+            self.assertGreater(summary['processing_fps'], 0)
+            self.assertAlmostEqual(summary['tracking_metrics']['mean_track_span_seconds'], .12)
+
+    def test_path_collision_is_rejected_before_opening_video(self):
+        with patch.dict(sys.modules, {'cv2': types.SimpleNamespace()}):
+            with self.assertRaisesRegex(ValueError, 'distinct'):
+                analyze_video('match.mp4', _Detector(), output_jsonl='match.mp4')
+
+    def test_invalid_limit_is_rejected(self):
+        with patch.dict(sys.modules, {'cv2': types.SimpleNamespace()}):
+            with self.assertRaisesRegex(ValueError, 'positive'):
+                analyze_video('match.mp4', _Detector(), output_jsonl='out.jsonl', max_frames=0)
 
 
 if __name__ == "__main__":
