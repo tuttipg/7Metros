@@ -22,6 +22,9 @@ import {
   assert(plan.some(item => item.path === '/news/list'));
   assert(plan.some(item => item.path.startsWith('/matches?')));
   assert(plan.every(item => item.url.startsWith(COMMUNITY_API_BASE)));
+  assert(plan.every(item => item.method === 'GET'));
+  assert(plan.every(item => !('Authorization' in item.headers)));
+  assert(plan.every(item => !('Cookie' in item.headers)));
 }
 
 assert.equal(classifyCommunityResponse({
@@ -29,15 +32,44 @@ assert.equal(classifyCommunityResponse({
   body: '[{"id":"100","name":"Mayores"}]'
 }).state, 'public_json');
 
+// Palabras relacionadas con auth dentro de un 2xx público no deben convertirlo
+// en ruta protegida: el status HTTP es la señal autoritativa.
+assert.equal(classifyCommunityResponse({
+  statusCode: 200,
+  body: '{"title":"Cómo renovar tu access token","body":"JWT informativo"}'
+}).state, 'public_json');
+
+assert.equal(classifyCommunityResponse({
+  statusCode: 200,
+  body: '<html>JWT token informativo</html>'
+}).state, 'public_non_json');
+
 assert.equal(classifyCommunityResponse({
   statusCode: 401,
   body: '{"error":"Unauthorized","message":"Missing authorization header"}'
 }).state, 'auth_required');
 
 assert.equal(classifyCommunityResponse({
+  statusCode: 403,
+  body: '{"message":"Forbidden"}'
+}).state, 'auth_required');
+
+assert.equal(classifyCommunityResponse({
+  statusCode: 400,
+  body: '{"message":"Missing token"}'
+}).state, 'auth_required');
+
+assert.equal(classifyCommunityResponse({
   statusCode: 404,
   body: '<pre>Cannot GET /top-scorers</pre>'
 }).state, 'not_found');
+
+// Un error de servidor que casualmente menciona token no se presenta como
+// evidencia de auth: queda en error de transporte/servidor y no dispara auth discovery.
+assert.equal(classifyCommunityResponse({
+  statusCode: 500,
+  body: '{"message":"token service temporarily unavailable"}'
+}).state, 'transport_or_server_error');
 
 assert.equal(classifyCommunityResponse({
   statusCode: 200,
@@ -52,21 +84,36 @@ assert.equal(classifyCommunityResponse({
     { key: 'top_scorers', path: '/top-scorers', statusCode: 404, body: 'Cannot GET /top-scorers' }
   ]);
 
-  assert.equal(summary.nextStep, 'reverse_engineer_app_auth_flow');
+  assert.equal(summary.nextStep, 'skip_protected_matches_expand_public_routes');
   assert.equal(summary.constraints.publicEndpointDoesNotImplyMatchesArePublic, true);
+  assert.equal(summary.constraints.authDiscoveryEnabled, false);
   assert.equal(summary.constraints.firebaseAuthValidated, false);
+  assert.deepEqual(summary.constraints.protectedRoutesOutOfScope, ['/matches?offset=0']);
   assert.deepEqual(summary.authRequired, ['/matches?offset=0']);
   assert.deepEqual(summary.notFound, ['/top-scorers']);
 }
 
-// Una respuesta externa de configuración NO valida Firebase Auth ni cambia el próximo paso.
+// Una respuesta externa de configuración NO valida Firebase Auth ni habilita investigar auth.
 {
   const summary = summarizeCommunityDiscovery([
     { key: 'matches', path: '/matches', statusCode: 401, body: '{"error":"Unauthorized","message":"Missing authorization header"}' },
     { key: 'auth_probe', path: '/external-auth', statusCode: 400, body: '{"message":"CONFIGURATION_NOT_FOUND"}' }
   ]);
-  assert.equal(summary.nextStep, 'reverse_engineer_app_auth_flow');
+  assert.equal(summary.nextStep, 'skip_protected_matches_expand_public_routes');
+  assert.equal(summary.constraints.authDiscoveryEnabled, false);
   assert.equal(summary.constraints.firebaseAuthValidated, false);
+  assert.deepEqual(summary.constraints.protectedRoutesOutOfScope, ['/matches']);
 }
 
-console.log('✓ community-api-core: rutas públicas/protegidas y fail-closed de auth OK');
+// Incluso si otra ruta requiere auth, el siguiente paso permanece limitado a discovery público.
+{
+  const summary = summarizeCommunityDiscovery([
+    { key: 'team_categories', path: '/teams/categories', statusCode: 200, body: '[]' },
+    { key: 'private_stats', path: '/private-stats', statusCode: 403, body: '{"message":"Forbidden"}' }
+  ]);
+  assert.equal(summary.nextStep, 'skip_protected_routes_expand_public_routes');
+  assert.equal(summary.constraints.authDiscoveryEnabled, false);
+  assert.deepEqual(summary.constraints.protectedRoutesOutOfScope, ['/private-stats']);
+}
+
+console.log('✓ community-api-core: rutas públicas/protegidas y stop fail-closed de auth OK');
