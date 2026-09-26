@@ -14,6 +14,7 @@ export function canonicalizeFemebalTournamentTrackerUrl(value) {
   const url = new URL(String(value ?? ''));
   if (url.protocol !== 'https:') throw new Error('TournamentTracker requiere HTTPS');
   if (!ALLOWED_HOSTS.has(url.hostname.toLowerCase())) throw new Error('Host TournamentTracker no permitido');
+  if (url.port) throw new Error('TournamentTracker no admite puertos HTTPS no estándar');
   if (url.username || url.password) throw new Error('TournamentTracker no admite credenciales en URL');
   if (url.hash) throw new Error('TournamentTracker no admite fragments');
   if (url.pathname !== '/tournament-tracker/' && url.pathname !== '/tournament-tracker') {
@@ -44,6 +45,7 @@ export function canonicalizeTournamentTrackerStaticAssetUrl(value, baseUrl = FEM
 
   if (url.protocol !== 'https:') throw new Error('Asset TournamentTracker requiere HTTPS');
   if (!ALLOWED_HOSTS.has(url.hostname.toLowerCase())) throw new Error('Host de asset TournamentTracker no permitido');
+  if (url.port) throw new Error('Asset TournamentTracker no admite puertos HTTPS no estándar');
   if (url.username || url.password) throw new Error('Asset TournamentTracker no admite credenciales en URL');
   if (url.hash) throw new Error('Asset TournamentTracker no admite fragments');
   if (url.search) throw new Error('Asset TournamentTracker no admite query strings');
@@ -194,94 +196,37 @@ export function classifyTournamentTrackerStaticAssetResponse({
   }
 
   if (status === 401 || status === 403) {
-    return {
-      state: 'auth_required',
-      statusCode: status,
-      analyzableStaticJavascript: false,
-      canonicalFinalUrl,
-      bodyBytes,
-      maxBytes: byteLimit,
-    };
+    return { state: 'auth_required', statusCode: status, analyzableStaticJavascript: false, canonicalFinalUrl, bodyBytes, maxBytes: byteLimit };
   }
   if (status === 404) {
-    return {
-      state: 'not_found',
-      statusCode: status,
-      analyzableStaticJavascript: false,
-      canonicalFinalUrl,
-      bodyBytes,
-      maxBytes: byteLimit,
-    };
+    return { state: 'not_found', statusCode: status, analyzableStaticJavascript: false, canonicalFinalUrl, bodyBytes, maxBytes: byteLimit };
   }
   if (status == null || status < 200 || status >= 300) {
-    return {
-      state: 'transport_or_server_error',
-      statusCode: status,
-      analyzableStaticJavascript: false,
-      canonicalFinalUrl,
-      bodyBytes,
-      maxBytes: byteLimit,
-    };
+    return { state: 'transport_or_server_error', statusCode: status, analyzableStaticJavascript: false, canonicalFinalUrl, bodyBytes, maxBytes: byteLimit };
   }
   if (bodyBytes === 0) {
-    return {
-      state: 'empty_body',
-      statusCode: status,
-      analyzableStaticJavascript: false,
-      canonicalFinalUrl,
-      bodyBytes,
-      maxBytes: byteLimit,
-    };
+    return { state: 'empty_body', statusCode: status, analyzableStaticJavascript: false, canonicalFinalUrl, bodyBytes, maxBytes: byteLimit };
   }
   if (bodyBytes > byteLimit) {
-    return {
-      state: 'body_too_large',
-      statusCode: status,
-      analyzableStaticJavascript: false,
-      canonicalFinalUrl,
-      bodyBytes,
-      maxBytes: byteLimit,
-    };
+    return { state: 'body_too_large', statusCode: status, analyzableStaticJavascript: false, canonicalFinalUrl, bodyBytes, maxBytes: byteLimit };
   }
 
-  const normalizedContentType = String(contentType ?? '')
-    .split(';', 1)[0]
-    .trim()
-    .toLowerCase();
+  const normalizedContentType = String(contentType ?? '').split(';', 1)[0].trim().toLowerCase();
   if (!STATIC_JAVASCRIPT_CONTENT_TYPES.has(normalizedContentType)) {
-    return {
-      state: 'unexpected_content_type',
-      statusCode: status,
-      analyzableStaticJavascript: false,
-      canonicalFinalUrl,
-      contentType: normalizedContentType || null,
-      bodyBytes,
-      maxBytes: byteLimit,
-    };
+    return { state: 'unexpected_content_type', statusCode: status, analyzableStaticJavascript: false, canonicalFinalUrl, contentType: normalizedContentType || null, bodyBytes, maxBytes: byteLimit };
   }
 
   return {
-    state: 'public_static_javascript',
-    statusCode: status,
-    analyzableStaticJavascript: true,
-    canonicalFinalUrl,
-    contentType: normalizedContentType,
-    bodyBytes,
-    bodySha256,
-    maxBytes: byteLimit,
-    executionAllowed: false,
-    analysisMode: 'static_text_only',
+    state: 'public_static_javascript', statusCode: status, analyzableStaticJavascript: true,
+    canonicalFinalUrl, contentType: normalizedContentType, bodyBytes, bodySha256, maxBytes: byteLimit,
+    executionAllowed: false, analysisMode: 'static_text_only',
   };
 }
 
 export function buildTournamentTrackerPublicProbePlan() {
   return [{
-    key: 'femebal_tournament_tracker_shell',
-    method: 'GET',
-    url: FEMEBAL_TOURNAMENTTRACKER_URL,
-    headers: { Accept: 'text/html,application/xhtml+xml' },
-    auth: false,
-    writes: false,
+    key: 'femebal_tournament_tracker_shell', method: 'GET', url: FEMEBAL_TOURNAMENTTRACKER_URL,
+    headers: { Accept: 'text/html,application/xhtml+xml' }, auth: false, writes: false,
   }];
 }
 
@@ -291,12 +236,7 @@ export function classifyTournamentTrackerPublicResponse({ statusCode, body, fina
   try {
     canonicalFinalUrl = canonicalizeFemebalTournamentTrackerUrl(finalUrl);
   } catch {
-    return {
-      state: 'unsafe_redirect_or_url',
-      statusCode: status,
-      publicSpaShell: false,
-      canonicalFinalUrl: null,
-    };
+    return { state: 'unsafe_redirect_or_url', statusCode: status, publicSpaShell: false, canonicalFinalUrl: null };
   }
 
   const text = String(body ?? '');
@@ -310,35 +250,19 @@ export function classifyTournamentTrackerPublicResponse({ statusCode, body, fina
   else if (status != null && status >= 200 && status < 300 && spaShell) state = 'public_spa_shell';
   else if (status != null && status >= 200 && status < 300) state = 'public_html_unclassified';
 
-  return {
-    state,
-    statusCode: status,
-    publicSpaShell: state === 'public_spa_shell',
-    canonicalFinalUrl,
-    bodySize: text.length,
-    sample: text.slice(0, 1000),
-  };
+  return { state, statusCode: status, publicSpaShell: state === 'public_spa_shell', canonicalFinalUrl, bodySize: text.length, sample: text.slice(0, 1000) };
 }
 
 export function summarizeTournamentTrackerPublicDiscovery(response) {
   const classified = classifyTournamentTrackerPublicResponse(response);
   return {
-    safe: true,
-    dry_run: true,
-    write_enabled: false,
-    auth_used: false,
-    surface: classified,
+    safe: true, dry_run: true, write_enabled: false, auth_used: false, surface: classified,
     next_step: classified.state === 'public_spa_shell'
       ? 'static_asset_analysis_only'
-      : classified.state === 'auth_required'
-        ? 'stop_protected_surface'
-        : 'revalidate_public_surface',
+      : classified.state === 'auth_required' ? 'stop_protected_surface' : 'revalidate_public_surface',
     constraints: {
-      credentialsAllowed: false,
-      cookiesAllowed: false,
-      authorizationAllowed: false,
-      productionWritesAllowed: false,
-      staticAssetsOnlyUntilPublicEndpointsVerified: true,
+      credentialsAllowed: false, cookiesAllowed: false, authorizationAllowed: false,
+      productionWritesAllowed: false, staticAssetsOnlyUntilPublicEndpointsVerified: true,
     },
   };
 }
