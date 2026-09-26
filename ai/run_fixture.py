@@ -39,6 +39,7 @@ def main():
     p.add_argument('--temporal-teams', action='store_true')
     p.add_argument('--fixture-kits', action='store_true')
     p.add_argument('--velocity-alpha', type=float, default=1.0)
+    p.add_argument('--max-missed', type=int, default=8)
     a = p.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -64,7 +65,8 @@ def main():
     try:
         result = analyze_video(a.video, detector, output_jsonl=out/'tracks.jsonl',
                                output_video=out/'annotated.mp4', team_classifier=classifier,
-                               temporal_teams=a.temporal_teams, velocity_alpha=a.velocity_alpha)
+                               temporal_teams=a.temporal_teams, velocity_alpha=a.velocity_alpha,
+                               max_missed=a.max_missed)
     finally:
         detector.stream.close()
     if not detector.replay:
@@ -72,6 +74,7 @@ def main():
     result.update(expected)
     result['cache_replay'] = detector.replay
     result['fixture_kits'] = a.fixture_kits
+    result['max_missed'] = a.max_missed
     result['wall_seconds'] = time.perf_counter()-started
     (out/'metrics.json').write_text(json.dumps(result, indent=2))
     print(json.dumps(result, indent=2))

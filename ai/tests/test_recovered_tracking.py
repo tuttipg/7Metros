@@ -4,6 +4,21 @@ from sevenmetros_ai.fixture_kits import classify_kit
 
 
 class RecoveredTests(unittest.TestCase):
+    def test_extended_memory_recovers_after_twenty_missing_frames(self):
+        short=CentroidTracker(max_missed=8)
+        long=CentroidTracker(max_missed=30)
+        for tracker in (short,long):
+            self.obs(tracker,team='a')
+            for _ in range(20):tracker.update([])
+        self.assertEqual(self.obs(short,team='a').track_id,2)
+        self.assertEqual(self.obs(long,team='a').track_id,1)
+
+    def test_extended_memory_still_expires(self):
+        tracker=CentroidTracker(max_missed=30)
+        self.obs(tracker)
+        for _ in range(31):tracker.update([])
+        self.assertEqual(self.obs(tracker).track_id,2)
+
     def obs(self, t, team=None, role=None, x=0):
         return t.update([Detection(x, 0, x+20, 40, team=team, role_candidate=role)])[0]
 
