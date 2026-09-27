@@ -17,7 +17,8 @@ def load_window(path, start, end):
     return rows
 
 
-def render(video, before, after, output, start=3, seconds=5, slowdown=2):
+def render(video, before, after, output, start=3, seconds=5, slowdown=2,
+           before_label='ANTES: memoria 8 frames', after_label='EXPERIMENTO: memoria 30 frames'):
     import cv2
     import numpy as np
     if start<0 or seconds<=0 or slowdown<=0:raise ValueError('Invalid time range')
@@ -38,7 +39,7 @@ def render(video, before, after, output, start=3, seconds=5, slowdown=2):
             ok,frame=cap.read()
             if not ok:raise ValueError('Video truncated')
             panels=[]
-            for rows,title in [(a,'ANTES: memoria 8 frames'),(b,'EXPERIMENTO: memoria 30 frames')]:
+            for rows,title in [(a,before_label),(b,after_label)]:
                 row=rows[index]
                 if row['image']!={'width':w,'height':h}:raise ValueError('Dimension mismatch')
                 if abs(row['timestamp_ms']-index*1000/fps)>1:raise ValueError('Timestamp mismatch')
@@ -62,4 +63,6 @@ if __name__=='__main__':
     for name in ['video','before','after','output']:p.add_argument('--'+name,required=True)
     p.add_argument('--start',type=float,default=3);p.add_argument('--seconds',type=float,default=5)
     p.add_argument('--slowdown',type=float,default=2)
+    p.add_argument('--before-label',default='ANTES: memoria 8 frames')
+    p.add_argument('--after-label',default='EXPERIMENTO: memoria 30 frames')
     print(json.dumps({'frames_rendered':render(**vars(p.parse_args()))}))

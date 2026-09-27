@@ -9,6 +9,7 @@ description = "Offline computer-vision baseline and integration contract for 7Me
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
+tracking = ["scipy>=1.10"]
 vision = [
   "opencv-python>=4.8",
   "ultralytics>=8.3",

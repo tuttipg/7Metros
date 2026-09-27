@@ -93,6 +93,7 @@ class CentroidTracker:
         iou_weight: float = 0.25,
         temporal_teams: bool = False,
         velocity_alpha: float = 1.0,
+        assignment: str = 'greedy',
     ) -> None:
         if max_distance <= 0:
             raise ValueError("max_distance must be > 0")
@@ -101,6 +102,9 @@ class CentroidTracker:
         if not 0.0 <= iou_weight <= 1.0:
             raise ValueError("iou_weight must be between 0 and 1")
         self.max_distance = float(max_distance)
+        if assignment not in ('greedy', 'global'):
+            raise ValueError('assignment must be greedy or global')
+        self.assignment = assignment
         if not 0 < velocity_alpha <= 1:
             raise ValueError('velocity_alpha must be in (0, 1]')
         self.velocity_alpha = float(velocity_alpha)
@@ -143,7 +147,10 @@ class CentroidTracker:
                             and detection.team is not None and track.association_team != detection.team):
                         candidates[-1] = (cost + self.max_distance * .5, track_id, idx)
 
-        for _, track_id, idx in sorted(candidates):
+        associations = sorted(candidates)
+        if self.assignment == 'global' and candidates:
+            associations = self._global_associations(candidates, len(detections))
+        for _, track_id, idx in associations:
             if track_id not in unmatched_track_ids or idx not in unmatched_detection_indexes:
                 continue
             track = self._tracks[track_id]
@@ -196,6 +203,24 @@ class CentroidTracker:
             for t in sorted(self._tracks.values(), key=lambda item: item.track_id)
             if t.missed == 0
         ]
+
+    def _global_associations(self, candidates, detection_count):
+        """Minimum-cost one-to-one assignment with explicit unmatched tracks.
+
+        Geometric/team gates still apply. This is not appearance ReID.
+        SciPy is optional and only imported for the experimental global mode.
+        """
+        import numpy as np
+        from scipy.optimize import linear_sum_assignment
+        ids=sorted(self._tracks)
+        row_by_id={tid:i for i,tid in enumerate(ids)}
+        unmatched=self.max_distance*2
+        costs=np.full((len(ids),detection_count+len(ids)),unmatched)
+        costs[:,:detection_count]=np.inf
+        for cost,tid,idx in candidates:costs[row_by_id[tid],idx]=cost
+        rows,cols=linear_sum_assignment(costs)
+        return [(float(costs[row,col]),ids[row],int(col)) for row,col in zip(rows,cols)
+                if col<detection_count and np.isfinite(costs[row,col])]
 
     def _observe_team(self, track):
         history = self._team_history.setdefault(track.track_id, deque(maxlen=12))

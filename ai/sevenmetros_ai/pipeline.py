@@ -24,6 +24,7 @@ def analyze_video(
     max_frames: int | None = None,
     temporal_teams: bool = False,
     velocity_alpha: float = 1.0,
+    assignment: str = 'greedy',
 ) -> dict:
     try:
         import cv2
@@ -40,7 +41,7 @@ def analyze_video(
         paths.append(output_video_path.resolve())
     if len(set(paths)) != len(paths):
         raise ValueError('Input, JSONL and annotated video paths must be distinct')
-    tracker = CentroidTracker(max_distance=max_distance, max_missed=max_missed, temporal_teams=temporal_teams, velocity_alpha=velocity_alpha)
+    tracker = CentroidTracker(max_distance=max_distance, max_missed=max_missed, temporal_teams=temporal_teams, velocity_alpha=velocity_alpha, assignment=assignment)
     if not input_path.is_file():
         raise FileNotFoundError(input_path)
 
@@ -135,6 +136,7 @@ def analyze_video(
         "role_candidate_observations": dict(role_candidates),
         "temporal_teams": temporal_teams,
         "velocity_alpha": velocity_alpha,
+        "assignment": assignment,
         "identity_switches": None,
         "accuracy_status": "not_evaluated_no_ground_truth",
     }
