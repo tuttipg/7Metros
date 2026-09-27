@@ -53,6 +53,8 @@ def diagnose(cache, tracks, references=()):
     cache=Path(cache);tracks=Path(tracks)
     meta=json.loads(cache.with_suffix('.meta.json').read_text())
     run=json.loads((tracks.parent/'metrics.json').read_text())
+    if run.get('two_stage'):
+        raise ValueError('Two-stage can discard unmatched weak detections; court-only attribution is invalid')
     for key in ('video_sha256','model','confidence'):
         if not meta.get(key) or meta[key]!=run.get(key):raise ValueError('Provenance mismatch: '+key)
     if not run.get('fixture_kits'):raise ValueError('Expected recorded fixture_kits run')

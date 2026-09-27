@@ -12,10 +12,10 @@ from sevenmetros_ai.tracking import Detection
 
 
 class CachedDetector:
-    def __init__(self, path, model):
+    def __init__(self, path, model, confidence=.25):
         self.replay = path.exists()
         self.stream = path.open('r' if self.replay else 'w')
-        self.detector = None if self.replay else UltralyticsPersonDetector(model, device='cpu')
+        self.detector = None if self.replay else UltralyticsPersonDetector(model, confidence=confidence, device='cpu')
 
     def detect(self, frame):
         if self.replay:
@@ -41,20 +41,26 @@ def main():
     p.add_argument('--velocity-alpha', type=float, default=1.0)
     p.add_argument('--max-missed', type=int, default=8)
     p.add_argument('--assignment', choices=['greedy','global'], default='greedy')
+    p.add_argument('--two-stage', action='store_true')
+    p.add_argument('--detector-confidence', type=float, default=.25)
     a = p.parse_args()
+    if not 0 <= a.detector_confidence <= 1:
+        p.error('detector-confidence must be in [0,1]')
+    if a.two_stage and a.detector_confidence > .10:
+        p.error('two-stage requires --detector-confidence 0.10 or lower and a matching new cache')
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     with open(a.video, 'rb') as source:
         digest = hashlib.file_digest(source, 'sha256').hexdigest()
     cache = Path(a.cache)
     meta_path = cache.with_suffix('.meta.json')
-    expected = {'video_sha256': digest, 'model': a.model, 'confidence': .25}
+    expected = {'video_sha256': digest, 'model': a.model, 'confidence': a.detector_confidence}
     if cache.exists() and (not meta_path.exists() or json.loads(meta_path.read_text()) != expected):
         raise ValueError('Cache source/model mismatch')
     if not cache.exists():
         import torch
         torch.set_num_threads(2)
-    detector = CachedDetector(cache, a.model)
+    detector = CachedDetector(cache, a.model, a.detector_confidence)
     classifier = None
     if a.refine:
         from sevenmetros_ai.fixture_filter import BlueCourtClassifier
@@ -67,7 +73,7 @@ def main():
         result = analyze_video(a.video, detector, output_jsonl=out/'tracks.jsonl',
                                output_video=out/'annotated.mp4', team_classifier=classifier,
                                temporal_teams=a.temporal_teams, velocity_alpha=a.velocity_alpha,
-                               max_missed=a.max_missed, assignment=a.assignment)
+                               max_missed=a.max_missed, assignment=a.assignment, two_stage=a.two_stage)
     finally:
         detector.stream.close()
     if not detector.replay:

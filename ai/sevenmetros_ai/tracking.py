@@ -94,6 +94,10 @@ class CentroidTracker:
         temporal_teams: bool = False,
         velocity_alpha: float = 1.0,
         assignment: str = 'greedy',
+        two_stage: bool = False,
+        high_threshold: float = .25,
+        low_threshold: float = .10,
+        weak_iou: float = .20,
     ) -> None:
         if max_distance <= 0:
             raise ValueError("max_distance must be > 0")
@@ -105,6 +109,14 @@ class CentroidTracker:
         if assignment not in ('greedy', 'global'):
             raise ValueError('assignment must be greedy or global')
         self.assignment = assignment
+        if not 0 <= low_threshold < high_threshold <= 1:
+            raise ValueError('Require 0 <= low_threshold < high_threshold <= 1')
+        if not 0 < weak_iou <= 1:
+            raise ValueError('weak_iou must be in (0,1]')
+        self.two_stage = two_stage
+        self.high_threshold = high_threshold
+        self.low_threshold = low_threshold
+        self.weak_iou = weak_iou
         if not 0 < velocity_alpha <= 1:
             raise ValueError('velocity_alpha must be in (0, 1]')
         self.velocity_alpha = float(velocity_alpha)
@@ -123,9 +135,19 @@ class CentroidTracker:
         unmatched_track_ids = set(self._tracks)
         unmatched_detection_indexes = set(range(len(detections)))
         candidates: list[tuple[float, int, int]] = []
+        weak_candidates: list[tuple[float, int, int]] = []
 
         for track_id, track in self._tracks.items():
             for idx, detection in enumerate(detections):
+                if self.two_stage and detection.confidence < self.high_threshold:
+                    # Conservative second stage: only maintain currently active
+                    # tracks, never resurrect old identities on weak evidence.
+                    overlap = bbox_iou(track.detection, detection)
+                    if (detection.confidence >= self.low_threshold and track.missed == 0
+                            and _compatible(track, detection) and overlap >= self.weak_iou
+                            and hypot(track.predicted_cx-detection.cx, track.predicted_cy-detection.cy) <= self.max_distance):
+                        weak_candidates.append((1-overlap, track_id, idx))
+                    continue
                 if track.detection.label != detection.label:
                     continue
                 if not self.temporal_teams and not _compatible(track, detection):
@@ -150,6 +172,7 @@ class CentroidTracker:
         associations = sorted(candidates)
         if self.assignment == 'global' and candidates:
             associations = self._global_associations(candidates, len(detections))
+        associations += sorted(weak_candidates)
         for _, track_id, idx in associations:
             if track_id not in unmatched_track_ids or idx not in unmatched_detection_indexes:
                 continue
@@ -161,9 +184,10 @@ class CentroidTracker:
             alpha = self.velocity_alpha if track.age > 1 else 1.0
             track.velocity_x = (1-alpha)*track.velocity_x + alpha*(track.detection.cx - previous_cx)/elapsed_frames
             track.velocity_y = (1-alpha)*track.velocity_y + alpha*(track.detection.cy - previous_cy)/elapsed_frames
-            if self.temporal_teams:
+            weak = self.two_stage and track.detection.confidence < self.high_threshold
+            if self.temporal_teams and not weak:
                 self._observe_team(track)
-            elif track.detection.team is not None:
+            elif not weak and track.detection.team is not None:
                 track.association_team = track.detection.team
             track.age += 1
             track.missed = 0
@@ -180,6 +204,8 @@ class CentroidTracker:
                 self._roles.pop(track_id, None)
 
         for idx in sorted(unmatched_detection_indexes):
+            if self.two_stage and detections[idx].confidence < self.high_threshold:
+                continue
             self._tracks[self._next_id] = Track(
                 track_id=self._next_id,
                 detection=detections[idx],

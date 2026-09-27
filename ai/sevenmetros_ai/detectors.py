@@ -7,6 +7,8 @@ class UltralyticsPersonDetector:
     """Optional YOLO adapter loaded only when used."""
 
     def __init__(self, model: str = "yolo11n.pt", confidence: float = 0.25, device: str | None = None) -> None:
+        if not 0 <= confidence <= 1:
+            raise ValueError('confidence must be in [0,1]')
         try:
             from ultralytics import YOLO
         except ImportError as exc:
