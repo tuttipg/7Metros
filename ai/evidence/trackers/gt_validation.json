@@ -1,0 +1,33 @@
+{
+  "status": "HUMAN_GT_STRUCTURALLY_VALIDATED",
+  "sequence": "ferro_lujan_contact",
+  "frames": 105,
+  "fps": 30.0,
+  "width": 936,
+  "height": 524,
+  "annotations": 1359,
+  "unique_ids": 13,
+  "duplicate_ids_within_frame": 0,
+  "invalid_boxes": 0,
+  "gt_sha256": "6cbee6046118d3f25cc3ae028b1aaa24b75e42859f0bc2541eaab9cfdcd1b615",
+  "source_progress_sha256": "a2d3314b1cc36b3f15041ee67f8af7aa241cba3e94e0f2708376cbaeea3829ab",
+  "human_review": {
+    "reviewed_frames": 105,
+    "reviewed_by": "Tomás",
+    "note": "User confirmed frame-by-frame review. One stale UI reviewed flag on task frame 29 was overridden after structural validation; that frame contains a human_added annotation."
+  },
+  "historical_sanity_check": {
+    "official_trackeval": false,
+    "used_for_pipeline_selection": false,
+    "iou_threshold": 0.5,
+    "smooth_id_switches": 13,
+    "memory30_id_switches": 8,
+    "global30_id_switches": 8
+  },
+  "trackeval_status": "PENDING_EXACT_CURRENT_TRACKER_JSONL",
+  "missing_current_outputs": [
+    "baseline_high_only",
+    "two_stage",
+    "bytetrack_standard"
+  ]
+}
