@@ -139,6 +139,7 @@ def fuse_resolution_regions(
     removal_coverage: float = .50,
     candidate_coverage: float = .20,
     min_candidate_confidence: float = .10,
+    min_replacements: int = 2,
 ) -> list[Detection]:
     """Keep baseline boxes outside contact regions and replace only local boxes."""
     detections, _ = fuse_resolution_regions_with_spawn_mask(
@@ -148,6 +149,7 @@ def fuse_resolution_regions(
         removal_coverage=removal_coverage,
         candidate_coverage=candidate_coverage,
         min_candidate_confidence=min_candidate_confidence,
+        min_replacements=min_replacements,
     )
     return detections
 
@@ -160,8 +162,14 @@ def fuse_resolution_regions_with_spawn_mask(
     removal_coverage: float = .50,
     candidate_coverage: float = .20,
     min_candidate_confidence: float = .10,
+    min_replacements: int = 2,
 ) -> tuple[list[Detection], list[bool]]:
-    """Return local fusion plus a mask that forbids replacements spawning IDs."""
+    """Return conservative local fusion and its track-spawn mask.
+
+    A contact trigger represents at least two tracks.  Keeping the baseline is
+    safer than deleting its merged observation when high-resolution inference
+    supplies fewer than ``min_replacements`` local boxes.
+    """
     for name, value in (
         ('removal_coverage', removal_coverage),
         ('candidate_coverage', candidate_coverage),
@@ -170,6 +178,8 @@ def fuse_resolution_regions_with_spawn_mask(
             raise ValueError(f'{name} must be in (0,1]')
     if not 0 <= min_candidate_confidence <= 1:
         raise ValueError('min_candidate_confidence must be in [0,1]')
+    if min_replacements < 1:
+        raise ValueError('min_replacements must be >= 1')
     if not regions:
         return list(baseline), [True] * len(baseline)
 
@@ -189,4 +199,6 @@ def fuse_resolution_regions_with_spawn_mask(
         if detection.confidence >= min_candidate_confidence
         and covered(detection, candidate_coverage)
     ]
+    if len(replacements) < min_replacements:
+        return list(baseline), [True] * len(baseline)
     return kept + replacements, [True] * len(kept) + [False] * len(replacements)

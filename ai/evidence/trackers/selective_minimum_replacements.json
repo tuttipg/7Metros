@@ -1,0 +1,74 @@
+{
+  "scope": "fresh_validation_inference_and_tracker_replay_of_conservative_selective_fusion",
+  "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+  "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+  "confidence": 0.1,
+  "policy": {
+    "minimum_local_replacements": 2,
+    "fallback": "retain the complete 640 frame detections",
+    "selective_replacements_may_spawn_tracks": false
+  },
+  "development_replay": {
+    "range_end_exclusive": [2100, 2400],
+    "frames": 300,
+    "fallback_frames": 14,
+    "baseline_640": {
+      "unique_tracks": 29,
+      "mean_continuous_run_frames": 57.397,
+      "track_observations": 3329,
+      "reappearances_same_id": 29
+    },
+    "selective_previous": {
+      "unique_tracks": 29,
+      "mean_continuous_run_frames": 52.312,
+      "track_observations": 3348,
+      "reappearances_same_id": 35
+    },
+    "selective_minimum_two": {
+      "unique_tracks": 28,
+      "mean_continuous_run_frames": 54.097,
+      "track_observations": 3354,
+      "reappearances_same_id": 34
+    }
+  },
+  "held_out_fresh_inference": {
+    "range_end_exclusive": [2400, 2700],
+    "frames": 300,
+    "triggered_1280_frames": 128,
+    "fallback_frames": 27,
+    "runtime_seconds_excluding_model_load_and_warmup": 21.212015649998648,
+    "effective_fps": 14.142927525136873,
+    "baseline_cache_sha256": "f832185e7ae7451af8496a0cf943a0b9c59ee532f90ab2598a6ccacedac3057a",
+    "candidate_selected_cache_sha256": "ee642138da8a16c71cdaf98c7274fffae2e934304711bc96a377e8fbcfa4cdca",
+    "selective_cache_sha256": "bf7fec3b2280c9495256fe4cd8e25545a6e38de4c4df8867e3379f2c16e9e29b",
+    "baseline_640": {
+      "unique_tracks": 32,
+      "mean_continuous_run_frames": 68.276,
+      "track_observations": 3960,
+      "reappearances_same_id": 26
+    },
+    "selective_previous": {
+      "unique_tracks": 28,
+      "mean_continuous_run_frames": 66.881,
+      "track_observations": 3946,
+      "reappearances_same_id": 31
+    },
+    "selective_minimum_two": {
+      "unique_tracks": 28,
+      "mean_continuous_run_frames": 67.017,
+      "track_observations": 3954,
+      "reappearances_same_id": 31
+    },
+    "comparison_sha256": "7cdf6400ec90d18c6c6af37ea4c3aac4d613178d812f075976fa37371f3e4937",
+    "selective_tracks_sha256": "6ba73d934802851bf4c50cea510ab64337527adf205be179ad708867f297ec33",
+    "birth_audit_sha256": "5003d3bd8249dc3ca6b9f1565febd17c075b348456f0bb378136c9b698460d15"
+  },
+  "tests": {
+    "full_runtime_passed": 104,
+    "minimal_runtime_passed": 104,
+    "minimal_runtime_skipped_optional": 8
+  },
+  "decision": "keep_conservative_guard_but_do_not_promote_selective_pipeline",
+  "accuracy_status": "not_evaluated_no_independently_reviewed_ground_truth",
+  "limitation": "Continuity and track-count differences are replay health indicators, not identity accuracy, IDF1, HOTA, or detection accuracy."
+}

@@ -84,6 +84,19 @@ class SelectiveResolutionTests(unittest.TestCase):
         self.assertEqual(result, [outside, split_a, split_b])
         self.assertEqual(spawnable, [True, False, False])
 
+    def test_single_replacement_keeps_baseline_contact_observation(self):
+        merged = box(0, 0, 20, 20)
+        outside = box(50, 0, 60, 20)
+        result, spawnable = fuse_resolution_regions_with_spawn_mask(
+            [merged, outside], [box(0, 0, 9, 20)], [merged],
+        )
+        self.assertEqual(result, [merged, outside])
+        self.assertEqual(spawnable, [True, True])
+
+    def test_minimum_replacements_is_validated(self):
+        with self.assertRaisesRegex(ValueError, 'min_replacements'):
+            fuse_resolution_regions([], [], [], min_replacements=0)
+
 
 if __name__ == '__main__':
     unittest.main()

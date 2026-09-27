@@ -237,6 +237,7 @@ def run(video, model, output, ranges, references=None, confidence=.10,
         )
         hybrid = {}
         hybrid_spawnable = {}
+        insufficient_replacement_frames = []
         for frame, detections in baseline.items():
             fused, spawnable = fuse_resolution_regions_with_spawn_mask(
                 detections,
@@ -245,6 +246,8 @@ def run(video, model, output, ranges, references=None, confidence=.10,
             )
             hybrid[frame] = fused
             hybrid_spawnable[frame] = spawnable
+            if regions.get(frame) and all(spawnable):
+                insufficient_replacement_frames.append(frame)
         total_seconds = time.perf_counter() - total_started
     finally:
         capture.release()
@@ -308,6 +311,9 @@ def run(video, model, output, ranges, references=None, confidence=.10,
             'selected_frames': sorted(triggered),
             'selected_count': len(triggered),
             'selected_fraction': len(triggered) / len(baseline),
+            'minimum_local_replacements': 2,
+            'baseline_fallback_frames': insufficient_replacement_frames,
+            'baseline_fallback_count': len(insufficient_replacement_frames),
             'seconds_measured': trigger_seconds,
         },
         'runtime_measured_excluding_model_load_and_warmup': {
