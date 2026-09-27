@@ -7,11 +7,15 @@ from unittest.mock import patch
 import benchmark_trackers
 from sevenmetros_ai.tracking import Detection
 
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
+
+@unittest.skipIf(np is None, 'optional benchmark dependencies not installed')
 class DetectionResultsTests(unittest.TestCase):
     def test_boolean_selection_preserves_rows(self):
-        import numpy as np
-
         results = benchmark_trackers.DetectionResults([
             Detection(0, 0, 10, 20, .9),
             Detection(20, 10, 40, 50, .15),
@@ -22,8 +26,6 @@ class DetectionResultsTests(unittest.TestCase):
         self.assertAlmostEqual(float(selected.conf[0]), .15)
 
     def test_empty_selection_has_two_dimensional_boxes(self):
-        import numpy as np
-
         selected = benchmark_trackers.DetectionResults([])[np.asarray([], dtype=bool)]
         self.assertEqual(selected.xywh.shape, (0, 4))
 

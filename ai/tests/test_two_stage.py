@@ -51,7 +51,15 @@ class TwoStageTests(unittest.TestCase):
         self.assertEqual(len(tracker._team_history[1]), 3)
 
     def test_high_only_equivalent_with_both_assignment_modes(self):
-        for assignment in ['greedy', 'global']:
+        assignments = ['greedy']
+        try:
+            import numpy  # noqa: F401
+            import scipy  # noqa: F401
+        except ImportError:
+            pass
+        else:
+            assignments.append('global')
+        for assignment in assignments:
             old = CentroidTracker(assignment=assignment)
             new = CentroidTracker(assignment=assignment, two_stage=True)
             for x in range(10):
