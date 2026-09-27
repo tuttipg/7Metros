@@ -2,7 +2,7 @@ import json
 import unittest
 
 from sevenmetros_ai.schema import frame_payload
-from sevenmetros_ai.tracking import CentroidTracker, Detection, bbox_iou
+from sevenmetros_ai.tracking import CentroidTracker, Detection, Track, bbox_iou
 
 
 class TrackingTests(unittest.TestCase):
@@ -93,6 +93,21 @@ class TrackingTests(unittest.TestCase):
         self.assertEqual(payload["objects"][0]["kind"], "player")
         self.assertEqual(payload["objects"][0]["velocity_xy"], [3.0, 0.0])
         json.dumps(payload)
+
+    def test_frame_payload_clips_boxes_to_image_bounds(self):
+        tracks = [Track(1, Detection(-2, 4, 12, 22, confidence=.8))]
+        payload = frame_payload(
+            frame_index=0, timestamp_ms=0, width=10, height=20, tracks=tracks,
+        )
+        self.assertEqual(payload['objects'][0]['bbox_xyxy'], [0.0, 4.0, 10.0, 20.0])
+        self.assertEqual(payload['objects'][0]['center_xy'], [5.0, 12.0])
+
+    def test_frame_payload_drops_fully_outside_boxes(self):
+        tracks = [Track(1, Detection(12, 4, 14, 8, confidence=.8))]
+        payload = frame_payload(
+            frame_index=0, timestamp_ms=0, width=10, height=20, tracks=tracks,
+        )
+        self.assertEqual(payload['objects'], [])
 
 
 if __name__ == "__main__":

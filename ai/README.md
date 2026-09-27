@@ -133,6 +133,20 @@ La carpeta incluye los frames, `seqinfo.ini`, el mapeo al video fuente y
 marca como no verificado y nunca crea `gt/gt.txt`. Las métricas MOT quedan
 prohibidas hasta corregir cajas, ausencias e identidades en todos los frames.
 
+Para empezar la revisión por los cuadros donde los trackers más difieren, sin
+confundir consenso automático con ground truth:
+
+```bash
+python prepare_mot_review_queue.py --task /ruta/tarea_contacto \
+  --tracks baseline=/ruta/baseline_high_only.jsonl \
+  --tracks two_stage=/ruta/two_stage.jsonl \
+  --tracks bytetrack=/ruta/bytetrack_standard.jsonl \
+  --output /ruta/review_queue.json
+```
+
+También genera `review_queue.csv`. La cola sólo ordena el trabajo: los cuadros
+con puntaje cero siguen requiriendo revisión humana completa.
+
 Después de una revisión humana completa y registrada en `gt/review.json`, el
 bundle común para TrackEval se construye así:
 

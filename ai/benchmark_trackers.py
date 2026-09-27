@@ -16,7 +16,7 @@ from types import SimpleNamespace
 
 from sevenmetros_ai.fixture_kits import FerroLujanKits
 from sevenmetros_ai.metrics import TrackingMetrics
-from sevenmetros_ai.schema import frame_payload
+from sevenmetros_ai.schema import clipped_bbox, frame_payload
 from sevenmetros_ai.tracking import CentroidTracker, Detection, Track
 
 
@@ -129,6 +129,8 @@ def compare(video, cache, output_dir, max_frames=None):
     }
     observations = {name: 0 for name in trackers}
     weak_observations = {name: 0 for name in trackers}
+    clipped_output_boxes = {name: 0 for name in trackers}
+    dropped_outside_boxes = {name: 0 for name in trackers}
     classifier = FerroLujanKits()
     frames = raw_detections = filtered_detections = 0
 
@@ -151,6 +153,15 @@ def compare(video, cache, output_dir, max_frames=None):
                 }
                 for name, tracker in trackers.items():
                     tracks = tracker.update(inputs[name])
+                    for track in tracks:
+                        clipped = clipped_bbox(track.detection, width, height)
+                        if clipped is None:
+                            dropped_outside_boxes[name] += 1
+                        elif clipped != (
+                            track.detection.x1, track.detection.y1,
+                            track.detection.x2, track.detection.y2,
+                        ):
+                            clipped_output_boxes[name] += 1
                     metrics[name].observe(frames, tracks)
                     observations[name] += len(tracks)
                     weak_observations[name] += sum(
@@ -193,6 +204,8 @@ def compare(video, cache, output_dir, max_frames=None):
         result['trackers'][name] = {
             'track_observations': observations[name],
             'weak_track_observations': weak_observations[name],
+            'clipped_output_boxes': clipped_output_boxes[name],
+            'dropped_fully_outside_boxes': dropped_outside_boxes[name],
             'metrics': summary,
             'output_jsonl': str(output_dir / f'{name}.jsonl'),
         }
