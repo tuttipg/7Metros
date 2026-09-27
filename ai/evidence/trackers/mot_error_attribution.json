@@ -1,0 +1,54 @@
+{
+  "status": "DIAGNOSTIC_MATCHING_NOT_A_REPLACEMENT_FOR_TRACKEVAL",
+  "scope": "persisted_tracker_replay_against_human_reviewed_gt",
+  "frames": 105,
+  "iou_threshold": 0.5,
+  "matching": "maximum-cardinality Hungarian; IoU tie-break",
+  "trackeval_count_verification": "MATCH",
+  "gt_sha256": "6cbee6046118d3f25cc3ae028b1aaa24b75e42859f0bc2541eaab9cfdcd1b615",
+  "audit_output_sha256": "ea7c928a3b0411978c06be3ce33baaad769aa6b9a491a1414aba66d86424a5bb",
+  "trackers": {
+    "baseline_high_only": {
+      "TP": 1154,
+      "FN": 205,
+      "FP": 113,
+      "frames_without_FN": 0,
+      "mean_matched_iou": 0.990603,
+      "persistent_false_positive": {"tracker_id": 2, "frames": 105},
+      "difficult_gt_recall_percent": {"13": 58.095238, "14": 75.0, "20": 16.190476}
+    },
+    "two_stage": {
+      "TP": 1224,
+      "FN": 135,
+      "FP": 120,
+      "frames_without_FN": 17,
+      "mean_matched_iou": 0.972545,
+      "persistent_false_positive": {"tracker_id": 2, "frames": 105},
+      "difficult_gt_recall_percent": {"13": 78.095238, "14": 100.0, "20": 36.190476}
+    },
+    "bytetrack_standard": {
+      "TP": 1206,
+      "FN": 153,
+      "FP": 110,
+      "frames_without_FN": 13,
+      "mean_matched_iou": 0.876482,
+      "persistent_false_positive": {"tracker_id": 2, "frames": 105},
+      "fragmented_gt_id_mappings": {
+        "3": {"58": 48, "3": 42},
+        "9": {"9": 79, "63": 17, "62": 2},
+        "17": {"3": 63, "41": 31}
+      }
+    }
+  },
+  "two_stage_delta_vs_baseline": {
+    "TP": 70,
+    "FN": -70,
+    "FP": 7,
+    "frames_without_FN": 17
+  },
+  "visual_spot_check": {
+    "task_frames": [1, 53, 105],
+    "finding": "Persistent tracker ID 2 corresponds to a black-clad official/referee at the right sideline, excluded from player GT."
+  },
+  "decision": "Keep two_stage as candidate; do not add an edge or referee filter from this single interval. Add role-aware filtering only after validating it on an independent reviewed segment."
+}
