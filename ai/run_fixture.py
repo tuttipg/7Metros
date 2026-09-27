@@ -12,10 +12,12 @@ from sevenmetros_ai.tracking import Detection
 
 
 class CachedDetector:
-    def __init__(self, path, model, confidence=.25):
+    def __init__(self, path, model, confidence=.25, image_size=None):
         self.replay = path.exists()
         self.stream = path.open('r' if self.replay else 'w')
-        self.detector = None if self.replay else UltralyticsPersonDetector(model, confidence=confidence, device='cpu')
+        self.detector = None if self.replay else UltralyticsPersonDetector(
+            model, confidence=confidence, device='cpu', image_size=image_size,
+        )
 
     def detect(self, frame):
         if self.replay:
@@ -43,11 +45,14 @@ def main():
     p.add_argument('--assignment', choices=['greedy','global'], default='greedy')
     p.add_argument('--two-stage', action='store_true')
     p.add_argument('--detector-confidence', type=float, default=.25)
+    p.add_argument('--detector-image-size', type=int)
     a = p.parse_args()
     if not 0 <= a.detector_confidence <= 1:
         p.error('detector-confidence must be in [0,1]')
     if a.two_stage and a.detector_confidence > .10:
         p.error('two-stage requires --detector-confidence 0.10 or lower and a matching new cache')
+    if a.detector_image_size is not None and a.detector_image_size <= 0:
+        p.error('detector-image-size must be positive')
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     with open(a.video, 'rb') as source:
@@ -55,12 +60,16 @@ def main():
     cache = Path(a.cache)
     meta_path = cache.with_suffix('.meta.json')
     expected = {'video_sha256': digest, 'model': a.model, 'confidence': a.detector_confidence}
+    if a.detector_image_size is not None:
+        expected['image_size'] = a.detector_image_size
     if cache.exists() and (not meta_path.exists() or json.loads(meta_path.read_text()) != expected):
         raise ValueError('Cache source/model mismatch')
     if not cache.exists():
         import torch
         torch.set_num_threads(2)
-    detector = CachedDetector(cache, a.model, a.detector_confidence)
+    detector = CachedDetector(
+        cache, a.model, a.detector_confidence, a.detector_image_size,
+    )
     classifier = None
     if a.refine:
         from sevenmetros_ai.fixture_filter import BlueCourtClassifier

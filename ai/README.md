@@ -92,6 +92,23 @@ El resultado guarda `comparison.json` y un JSONL por tracker. Todos incluyen
 el hash del video y la configuración. Sin ground truth completo, las métricas
 de continuidad y fragmentación no equivalen a IDF1, HOTA o accuracy.
 
+El tamaño de entrada del detector queda explícito y forma parte de la identidad
+de caché cuando se usa, por ejemplo, `--detector-image-size 1280` en
+`run_fixture.py`. El default histórico no cambia. Para medir costo y cobertura
+en contactos con inferencia nueva en ambas configuraciones:
+
+```bash
+python benchmark_detector_resolution.py --video /ruta/fixture120.mp4 \
+  --model /ruta/yolo11n.pt --output /ruta/benchmark_resolucion \
+  --range 105:210 --range 1065:1155 \
+  --reference fixtures/ferro_lujan_crossing_points.json \
+  --reference fixtures/ferro_lujan_second_contact.json \
+  --baseline-size 640 --candidate-size 1280
+```
+
+Los puntos dispersos sólo diagnostican cajas compartidas o duplicadas; no son
+ground truth ni permiten calcular precisión o recall.
+
 Para auditar visualmente un episodio, se pueden superponer de dos a cuatro
 salidas sincronizadas sobre los mismos frames y reproducirlas en cámara lenta:
 

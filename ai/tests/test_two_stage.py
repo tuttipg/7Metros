@@ -86,6 +86,12 @@ class ConfidenceConfigTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 UltralyticsPersonDetector(confidence=value)
 
+    def test_detector_rejects_invalid_image_size_before_import(self):
+        from sevenmetros_ai.detectors import UltralyticsPersonDetector
+        for value in [0, -1, 640.0, '640', True]:
+            with self.assertRaises(ValueError):
+                UltralyticsPersonDetector(image_size=value)
+
     def test_existing_high_confidence_cache_rejected_for_low_threshold(self):
         import hashlib
         import json
@@ -104,6 +110,33 @@ class ConfidenceConfigTests(unittest.TestCase):
                 'model': 'yolo11n.pt', 'confidence': .25}))
             args = ['run_fixture', '--video', str(video), '--cache', str(cache),
                     '--out', str(root/'out'), '--two-stage', '--detector-confidence', '.1']
+            with patch('sys.argv', args), patch('run_fixture.CachedDetector') as detector:
+                with self.assertRaisesRegex(ValueError, 'Cache source/model mismatch'):
+                    run_fixture.main()
+                detector.assert_not_called()
+
+    def test_cache_rejected_when_explicit_image_size_differs(self):
+        import hashlib
+        import json
+        from pathlib import Path
+        import tempfile
+        from unittest.mock import patch
+        import run_fixture
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            video = root / 'fixture.mp4'
+            video.write_bytes(b'fixture sentinel')
+            cache = root / 'detections.jsonl'
+            cache.write_text('[]\n')
+            cache.with_suffix('.meta.json').write_text(json.dumps({
+                'video_sha256': hashlib.sha256(video.read_bytes()).hexdigest(),
+                'model': 'yolo11n.pt', 'confidence': .1, 'image_size': 640,
+            }))
+            args = [
+                'run_fixture', '--video', str(video), '--cache', str(cache),
+                '--out', str(root / 'out'), '--detector-confidence', '.1',
+                '--detector-image-size', '1280',
+            ]
             with patch('sys.argv', args), patch('run_fixture.CachedDetector') as detector:
                 with self.assertRaisesRegex(ValueError, 'Cache source/model mismatch'):
                     run_fixture.main()
