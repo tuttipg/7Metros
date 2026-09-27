@@ -103,6 +103,19 @@ python compare_trackers_video.py --video /ruta/fixture120.mp4 \
   --output /ruta/contacto.mp4 --start 3.5 --seconds 3.5 --slowdown 2
 ```
 
+Para preparar una tarea de anotación completa del mismo episodio:
+
+```bash
+python prepare_mot_annotation.py --video /ruta/fixture120.mp4 \
+  --tracks /ruta/two_stage.jsonl --output /ruta/tarea_contacto \
+  --start 3.5 --seconds 3.5
+```
+
+La carpeta incluye los frames, `seqinfo.ini`, el mapeo al video fuente y
+`seed/seed.txt`. El seed es sólo una propuesta automática: el exportador lo
+marca como no verificado y nunca crea `gt/gt.txt`. Las métricas MOT quedan
+prohibidas hasta corregir cajas, ausencias e identidades en todos los frames.
+
 Los tests verifican persistencia de ID, recuperación tras frames perdidos, continuidad con movimiento rápido, cruces con bloqueo semántico, serialización estable, métricas de tracking, visualización y clasificación de equipos. La calibración automática tiene regresiones para dos familias de camiseta bajo cambios fuertes de brillo, reproducibilidad al invertir el orden de entrada y rechazo de una única familia de color.
 
 Estos tests forman parte de `.github/workflows/validate.yml`, por lo que el PR falla si se rompe el baseline o su contrato.
