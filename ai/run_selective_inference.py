@@ -27,7 +27,10 @@ from sevenmetros_ai.fixture_filter import suppress_duplicates
 from sevenmetros_ai.fixture_kits import FerroLujanKits
 from sevenmetros_ai.metrics import TrackingMetrics
 from sevenmetros_ai.schema import frame_payload
-from sevenmetros_ai.selective_resolution import contact_regions, fuse_resolution_regions
+from sevenmetros_ai.selective_resolution import (
+    contact_regions,
+    fuse_resolution_regions_with_spawn_mask,
+)
 from sevenmetros_ai.tracking import CentroidTracker
 
 
@@ -91,8 +94,15 @@ def find_contact_regions(video, ranges, detections_by_frame):
     return result, time.perf_counter() - started
 
 
+def detection_key(detection):
+    return (
+        detection.x1, detection.y1, detection.x2, detection.y2,
+        detection.confidence, detection.label,
+    )
+
+
 def replay_two_stage(video, ranges, detections_by_frame, output, references, fps,
-                     width, height):
+                     width, height, spawnable_by_frame=None):
     import cv2
 
     capture = cv2.VideoCapture(str(video))
@@ -113,7 +123,20 @@ def replay_two_stage(video, ranges, detections_by_frame, output, references, fps
                 if not ok:
                     raise ValueError(f'Video truncated at frame {source_frame}')
                 filtered = classifier.classify(frame, detections_by_frame[source_frame])
-                tracks = tracker.update(filtered)
+                spawnable = None
+                if spawnable_by_frame is not None:
+                    raw = detections_by_frame[source_frame]
+                    raw_spawnable = spawnable_by_frame[source_frame]
+                    non_spawnable = {
+                        detection_key(detection)
+                        for detection, allowed in zip(raw, raw_spawnable)
+                        if not allowed
+                    }
+                    spawnable = [
+                        detection_key(detection) not in non_spawnable
+                        for detection in filtered
+                    ]
+                tracks = tracker.update(filtered, spawnable=spawnable)
                 metrics.observe(source_frame - start, tracks)
                 weak_observations += sum(
                     track.detection.confidence < .25 for track in tracks
@@ -201,14 +224,16 @@ def run(video, model, output, ranges, references, confidence=.10,
         candidate_selected, candidate_timing = infer_pass(
             capture, candidate_detector, ranges, triggered,
         )
-        hybrid = {
-            frame: fuse_resolution_regions(
+        hybrid = {}
+        hybrid_spawnable = {}
+        for frame, detections in baseline.items():
+            fused, spawnable = fuse_resolution_regions_with_spawn_mask(
                 detections,
                 candidate_selected.get(frame, []),
                 regions.get(frame, []),
             )
-            for frame, detections in baseline.items()
-        }
+            hybrid[frame] = fused
+            hybrid_spawnable[frame] = spawnable
         total_seconds = time.perf_counter() - total_started
     finally:
         capture.release()
@@ -240,8 +265,11 @@ def run(video, model, output, ranges, references, confidence=.10,
                 video, ranges, detections,
                 output / f'{name}_two_stage_tracks.jsonl',
                 references, fps, width, height,
+                hybrid_spawnable if name == 'selective_640_1280' else None,
             ),
         }
+        if name == 'selective_640_1280':
+            configurations[name]['selective_replacements_may_spawn_tracks'] = False
 
     result = {
         'scope': 'fresh neural inference: full 640 pass plus triggered 1280 pass',

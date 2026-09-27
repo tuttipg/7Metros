@@ -141,6 +141,27 @@ def fuse_resolution_regions(
     min_candidate_confidence: float = .10,
 ) -> list[Detection]:
     """Keep baseline boxes outside contact regions and replace only local boxes."""
+    detections, _ = fuse_resolution_regions_with_spawn_mask(
+        baseline,
+        candidate,
+        regions,
+        removal_coverage=removal_coverage,
+        candidate_coverage=candidate_coverage,
+        min_candidate_confidence=min_candidate_confidence,
+    )
+    return detections
+
+
+def fuse_resolution_regions_with_spawn_mask(
+    baseline: list[Detection],
+    candidate: list[Detection],
+    regions: list[Detection],
+    *,
+    removal_coverage: float = .50,
+    candidate_coverage: float = .20,
+    min_candidate_confidence: float = .10,
+) -> tuple[list[Detection], list[bool]]:
+    """Return local fusion plus a mask that forbids replacements spawning IDs."""
     for name, value in (
         ('removal_coverage', removal_coverage),
         ('candidate_coverage', candidate_coverage),
@@ -150,7 +171,7 @@ def fuse_resolution_regions(
     if not 0 <= min_candidate_confidence <= 1:
         raise ValueError('min_candidate_confidence must be in [0,1]')
     if not regions:
-        return list(baseline)
+        return list(baseline), [True] * len(baseline)
 
     def covered(detection, threshold):
         detection_area = _area(detection)
@@ -168,4 +189,4 @@ def fuse_resolution_regions(
         if detection.confidence >= min_candidate_confidence
         and covered(detection, candidate_coverage)
     ]
-    return kept + replacements
+    return kept + replacements, [True] * len(kept) + [False] * len(replacements)

@@ -134,8 +134,18 @@ class CentroidTracker:
         """Snapshot of live tracks for diagnostics and contact triggers."""
         return tuple(self._tracks.values())
 
-    def update(self, detections: Iterable[Detection]) -> list[Track]:
+    def update(
+        self,
+        detections: Iterable[Detection],
+        spawnable: Iterable[bool] | None = None,
+    ) -> list[Track]:
         detections = list(detections)
+        if spawnable is None:
+            spawnable = [True] * len(detections)
+        else:
+            spawnable = list(spawnable)
+            if len(spawnable) != len(detections):
+                raise ValueError('spawnable must have one value per detection')
 
         unmatched_track_ids = set(self._tracks)
         unmatched_detection_indexes = set(range(len(detections)))
@@ -210,6 +220,8 @@ class CentroidTracker:
 
         for idx in sorted(unmatched_detection_indexes):
             if self.two_stage and detections[idx].confidence < self.high_threshold:
+                continue
+            if not spawnable[idx]:
                 continue
             self._tracks[self._next_id] = Track(
                 track_id=self._next_id,

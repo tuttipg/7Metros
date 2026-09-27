@@ -71,6 +71,19 @@ class TwoStageTests(unittest.TestCase):
         tracker.update([box(), box(x=5)])
         self.assertEqual(len(tracker.update([box(x=2, confidence=.15)])), 1)
 
+    def test_non_spawnable_detection_can_maintain_but_not_create_track(self):
+        tracker = CentroidTracker(two_stage=True)
+        self.assertEqual(tracker.update([box()], spawnable=[False]), [])
+        self.assertEqual([track.track_id for track in tracker.update([box()])], [1])
+        maintained = tracker.update([box(x=2), box(x=200)], spawnable=[False, False])
+        self.assertEqual([track.track_id for track in maintained], [1])
+        self.assertEqual(maintained[0].detection.cx, 12)
+
+    def test_spawnable_length_must_match_detections(self):
+        tracker = CentroidTracker()
+        with self.assertRaisesRegex(ValueError, 'one value per detection'):
+            tracker.update([box()], spawnable=[])
+
     def test_invalid_thresholds(self):
         for options in [dict(low_threshold=.5), dict(high_threshold=1.1),
                         dict(weak_iou=0), dict(low_threshold=float('nan'))]:

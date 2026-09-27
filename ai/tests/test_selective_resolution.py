@@ -4,6 +4,7 @@ from benchmark_selective_resolution import validate_prior_run
 from sevenmetros_ai.selective_resolution import (
     contact_regions,
     fuse_resolution_regions,
+    fuse_resolution_regions_with_spawn_mask,
     merged_box_frames,
     select_resolution,
 )
@@ -76,6 +77,12 @@ class SelectiveResolutionTests(unittest.TestCase):
             [merged, outside], [split_a, split_b, box(70, 0, 80, 20)], [merged],
         )
         self.assertEqual(result, [outside, split_a, split_b])
+
+        result, spawnable = fuse_resolution_regions_with_spawn_mask(
+            [merged, outside], [split_a, split_b], [merged],
+        )
+        self.assertEqual(result, [outside, split_a, split_b])
+        self.assertEqual(spawnable, [True, False, False])
 
 
 if __name__ == '__main__':
