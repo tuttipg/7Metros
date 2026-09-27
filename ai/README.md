@@ -116,6 +116,23 @@ La carpeta incluye los frames, `seqinfo.ini`, el mapeo al video fuente y
 marca como no verificado y nunca crea `gt/gt.txt`. Las métricas MOT quedan
 prohibidas hasta corregir cajas, ausencias e identidades en todos los frames.
 
+Después de una revisión humana completa y registrada en `gt/review.json`, el
+bundle común para TrackEval se construye así:
+
+```bash
+python prepare_trackeval_bundle.py --task /ruta/tarea_contacto \
+  --tracks Baseline=/ruta/baseline_high_only.jsonl \
+  --tracks TwoStage=/ruta/two_stage.jsonl \
+  --tracks ByteTrack=/ruta/bytetrack_standard.jsonl \
+  --output /ruta/trackeval_bundle
+```
+
+El comando rechaza automáticamente el seed sin revisar, hashes de revisión
+obsoletos, frames faltantes, cajas inválidas e IDs duplicados. La estructura y
+el comando oficial de TrackEval están documentados en
+`TRACKEVAL_BUNDLE_2026-09-27.md`. La validación estructural no demuestra que la
+revisión humana sea correcta.
+
 Los tests verifican persistencia de ID, recuperación tras frames perdidos, continuidad con movimiento rápido, cruces con bloqueo semántico, serialización estable, métricas de tracking, visualización y clasificación de equipos. La calibración automática tiene regresiones para dos familias de camiseta bajo cambios fuertes de brillo, reproducibilidad al invertir el orden de entrada y rechazo de una única familia de color.
 
 Estos tests forman parte de `.github/workflows/validate.yml`, por lo que el PR falla si se rompe el baseline o su contrato.
