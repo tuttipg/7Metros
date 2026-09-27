@@ -14,6 +14,11 @@ vision = [
   "opencv-python>=4.8",
   "ultralytics>=8.3",
 ]
+benchmark = [
+  "opencv-python>=4.8",
+  "ultralytics>=8.3",
+  "lap>=0.5.12",
+]
 
 [project.scripts]
 7metros-ai = "sevenmetros_ai.cli:main"

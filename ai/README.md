@@ -73,6 +73,25 @@ cd ai
 python -m unittest discover -s tests -v
 ```
 
+## Comparación reproducible de trackers
+
+Con una caché creada a confianza `0.10`, el comparador reproduce exactamente
+las mismas cajas y el mismo filtro del fixture para: baseline sólo fuerte
+(`>=0.25`), baseline experimental de dos etapas y ByteTrack estándar de
+Ultralytics. Es replay de caché, no inferencia nueva ni medición de precisión.
+
+```bash
+pip install -e '.[benchmark]'
+python benchmark_trackers.py \
+  --video /ruta/fixture120.mp4 \
+  --cache /ruta/detections_010.jsonl \
+  --out /ruta/comparison
+```
+
+El resultado guarda `comparison.json` y un JSONL por tracker. Todos incluyen
+el hash del video y la configuración. Sin ground truth completo, las métricas
+de continuidad y fragmentación no equivalen a IDF1, HOTA o accuracy.
+
 Los tests verifican persistencia de ID, recuperación tras frames perdidos, continuidad con movimiento rápido, cruces con bloqueo semántico, serialización estable, métricas de tracking, visualización y clasificación de equipos. La calibración automática tiene regresiones para dos familias de camiseta bajo cambios fuertes de brillo, reproducibilidad al invertir el orden de entrada y rechazo de una única familia de color.
 
 Estos tests forman parte de `.github/workflows/validate.yml`, por lo que el PR falla si se rompe el baseline o su contrato.
