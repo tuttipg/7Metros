@@ -1,0 +1,27 @@
+{
+  "status": "HUMAN_REVIEW_PENDING",
+  "selection": "hard_reentry_after_baseline_gap_audit",
+  "sequence": "ferro_lujan_hard_reentry",
+  "source_fixture_frames": [2915, 3004],
+  "fixture_seconds": [97.1666666667, 100.1666666667],
+  "original_video_seconds": [127.1666666667, 130.1666666667],
+  "frames": 90,
+  "fps": 30.0,
+  "width": 936,
+  "height": 524,
+  "seed_tracker": "baseline_high_only_memory30",
+  "seed_boxes": 1088,
+  "seed_ids": 18,
+  "seed_is_selected_tracker": false,
+  "hard_event": {
+    "track_id": 222,
+    "last_pre_gap_frame": 2938,
+    "first_post_gap_frame": 2960,
+    "missing_frames": 21,
+    "context": "crowded contact/fall with overlapping players and referee present"
+  },
+  "manifest_sha256": "384ce079ec837f72fd5aaaef2e7a61b071b0f2d69bf937f4edf08b0d0d18260f",
+  "local_reviewer_zip_sha256": "9f72e60afbd96ccd350e76a55c9b50123ddda9d6aa34254e4e96cb108e840a7e",
+  "metrics_allowed_before_human_review": false,
+  "next_step": "complete independent human review, then replay the same three trackers and run TrackEval 1.3.0"
+}
