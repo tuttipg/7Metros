@@ -92,6 +92,17 @@ El resultado guarda `comparison.json` y un JSONL por tracker. Todos incluyen
 el hash del video y la configuración. Sin ground truth completo, las métricas
 de continuidad y fragmentación no equivalen a IDF1, HOTA o accuracy.
 
+Para auditar visualmente un episodio, se pueden superponer de dos a cuatro
+salidas sincronizadas sobre los mismos frames y reproducirlas en cámara lenta:
+
+```bash
+python compare_trackers_video.py --video /ruta/fixture120.mp4 \
+  --tracks 'Baseline=/ruta/baseline_high_only.jsonl' \
+  --tracks 'Dos etapas=/ruta/two_stage.jsonl' \
+  --tracks 'ByteTrack=/ruta/bytetrack_standard.jsonl' \
+  --output /ruta/contacto.mp4 --start 3.5 --seconds 3.5 --slowdown 2
+```
+
 Los tests verifican persistencia de ID, recuperación tras frames perdidos, continuidad con movimiento rápido, cruces con bloqueo semántico, serialización estable, métricas de tracking, visualización y clasificación de equipos. La calibración automática tiene regresiones para dos familias de camiseta bajo cambios fuertes de brillo, reproducibilidad al invertir el orden de entrada y rechazo de una única familia de color.
 
 Estos tests forman parte de `.github/workflows/validate.yml`, por lo que el PR falla si se rompe el baseline o su contrato.
