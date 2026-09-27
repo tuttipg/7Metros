@@ -8,6 +8,7 @@ using the following frame introduces one frame of look-ahead.
 from __future__ import annotations
 
 from itertools import combinations
+from math import hypot
 
 from .fixture_filter import suppress_duplicates
 from .tracking import Detection, bbox_iou
@@ -91,3 +92,80 @@ def select_resolution(
         frame: candidate[frame] if frame in selected_frames else detections
         for frame, detections in baseline.items()
     }
+
+
+def contact_regions(
+    detections: list[Detection],
+    tracks,
+    *,
+    max_track_missed: int = 6,
+    min_separation_ratio: float = .20,
+) -> list[Detection]:
+    """Find boxes containing two sufficiently separated predicted track centers."""
+    if max_track_missed < 0:
+        raise ValueError('max_track_missed must be >= 0')
+    if not 0 < min_separation_ratio <= 1:
+        raise ValueError('min_separation_ratio must be in (0,1]')
+    tracks = list(tracks)
+    result = []
+    for detection in detections:
+        diagonal = hypot(
+            detection.x2 - detection.x1,
+            detection.y2 - detection.y1,
+        )
+        if diagonal <= 0:
+            continue
+        centers = [
+            (track.predicted_cx, track.predicted_cy)
+            for track in tracks
+            if track.missed <= max_track_missed
+            and detection.x1 <= track.predicted_cx <= detection.x2
+            and detection.y1 <= track.predicted_cy <= detection.y2
+        ]
+        if any(
+            hypot(first[0] - second[0], first[1] - second[1])
+            >= min_separation_ratio * diagonal
+            for first, second in combinations(centers, 2)
+        ):
+            result.append(detection)
+    return result
+
+
+def fuse_resolution_regions(
+    baseline: list[Detection],
+    candidate: list[Detection],
+    regions: list[Detection],
+    *,
+    removal_coverage: float = .50,
+    candidate_coverage: float = .20,
+    min_candidate_confidence: float = .10,
+) -> list[Detection]:
+    """Keep baseline boxes outside contact regions and replace only local boxes."""
+    for name, value in (
+        ('removal_coverage', removal_coverage),
+        ('candidate_coverage', candidate_coverage),
+    ):
+        if not 0 < value <= 1:
+            raise ValueError(f'{name} must be in (0,1]')
+    if not 0 <= min_candidate_confidence <= 1:
+        raise ValueError('min_candidate_confidence must be in [0,1]')
+    if not regions:
+        return list(baseline)
+
+    def covered(detection, threshold):
+        detection_area = _area(detection)
+        return detection_area > 0 and any(
+            _intersection(detection, region) / detection_area >= threshold
+            for region in regions
+        )
+
+    kept = [
+        detection for detection in baseline
+        if not covered(detection, removal_coverage)
+    ]
+    replacements = [
+        detection for detection in candidate
+        if detection.confidence >= min_candidate_confidence
+        and covered(detection, candidate_coverage)
+    ]
+    return kept + replacements

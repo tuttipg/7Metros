@@ -44,3 +44,13 @@ default. La próxima prueba debe ejecutar la política realmente sobre una
 secuencia más larga, medir su runtime end-to-end y evaluar HOTA/IDF1 sólo cuando
 exista GT MOT revisado. También conviene calibrar los umbrales en una secuencia
 separada para evitar sobreajuste a estos contactos.
+
+## Corrección posterior
+
+La ejecución end-to-end posterior mostró que los frames 150 y 1105 habían sido
+seleccionados por cajas fusionadas en otras regiones del mismo cuadro, no por
+las cajas de los contactos auditados. Sustituir el cuadro completo mejoró los
+puntos de forma incidental y elevó el churn del tracker. Por lo tanto, esta
+primera señal temporal no debe promoverse. Se reemplazó en el experimento
+siguiente por un disparador basado en dos tracks dentro de la misma caja y una
+fusión local que conserva las detecciones 640 fuera del contacto.

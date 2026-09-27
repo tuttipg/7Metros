@@ -129,6 +129,11 @@ class CentroidTracker:
         self._next_id = 1
         self._tracks: dict[int, Track] = {}
 
+    @property
+    def active_tracks(self) -> tuple[Track, ...]:
+        """Snapshot of live tracks for diagnostics and contact triggers."""
+        return tuple(self._tracks.values())
+
     def update(self, detections: Iterable[Detection]) -> list[Track]:
         detections = list(detections)
 

@@ -6,6 +6,13 @@ from sevenmetros_ai.tracking import CentroidTracker, Detection, bbox_iou
 
 
 class TrackingTests(unittest.TestCase):
+    def test_active_tracks_is_a_snapshot(self):
+        tracker = CentroidTracker()
+        tracker.update([Detection(0, 0, 10, 10)])
+        snapshot = tracker.active_tracks
+        self.assertIsInstance(snapshot, tuple)
+        self.assertEqual([track.track_id for track in snapshot], [1])
+
     def test_id_persists_for_small_motion(self):
         tracker = CentroidTracker(max_distance=30, max_missed=1)
         first = tracker.update([Detection(0, 0, 20, 40)])

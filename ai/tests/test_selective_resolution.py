@@ -1,8 +1,13 @@
 import unittest
 
 from benchmark_selective_resolution import validate_prior_run
-from sevenmetros_ai.selective_resolution import merged_box_frames, select_resolution
-from sevenmetros_ai.tracking import Detection
+from sevenmetros_ai.selective_resolution import (
+    contact_regions,
+    fuse_resolution_regions,
+    merged_box_frames,
+    select_resolution,
+)
+from sevenmetros_ai.tracking import Detection, Track
 
 
 def box(x1, y1, x2, y2, confidence=.8):
@@ -51,6 +56,26 @@ class SelectiveResolutionTests(unittest.TestCase):
             validate_prior_run(prior, 'wrong', 'candidate', 2)
         with self.assertRaisesRegex(ValueError, 'frame count'):
             validate_prior_run(prior, 'base', 'candidate', 3)
+
+    def test_contact_region_requires_two_separated_live_tracks(self):
+        region = box(0, 0, 20, 20)
+        tracks = [
+            Track(1, box(2, 2, 6, 10)),
+            Track(2, box(14, 2, 18, 10)),
+        ]
+        self.assertEqual(contact_regions([region], tracks), [region])
+        tracks[1].missed = 7
+        self.assertEqual(contact_regions([region], tracks), [])
+
+    def test_local_fusion_preserves_boxes_outside_contact(self):
+        outside = box(50, 0, 60, 20)
+        merged = box(0, 0, 20, 20)
+        split_a = box(0, 0, 9, 20)
+        split_b = box(11, 0, 20, 20)
+        result = fuse_resolution_regions(
+            [merged, outside], [split_a, split_b, box(70, 0, 80, 20)], [merged],
+        )
+        self.assertEqual(result, [outside, split_a, split_b])
 
 
 if __name__ == '__main__':
