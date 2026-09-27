@@ -116,6 +116,8 @@ def analyze_video(
     elapsed_seconds = perf_counter() - started
     metrics = tracking_metrics.summary()
     metrics['mean_track_span_seconds'] = metrics['mean_track_span_frames'] / fps
+    metrics['mean_continuous_run_seconds'] = metrics['mean_continuous_run_frames'] / fps
+    metrics['median_continuous_run_seconds'] = metrics['median_continuous_run_frames'] / fps
     return {
         "frames_processed": frames,
         "detections_total": detections_total,
