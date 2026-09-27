@@ -1,0 +1,102 @@
+{
+  "status": "OFFICIAL_TRACKEVAL_ON_HUMAN_REVIEWED_GT",
+  "scope": {
+    "source": "persisted_inference_cache_tracker_replay",
+    "fresh_inference": false,
+    "frames": 105,
+    "source_fixture_frames": [105, 209],
+    "sequence": "ferro_lujan_contact",
+    "iou_threshold": 0.5,
+    "preprocessing": false
+  },
+  "trackeval_version": "1.3.0",
+  "input_zip_sha256": "0e929d527cf524f4215522f9bb20b4fddeac037c432b3aea0104cea3e6791de0",
+  "bundle_manifest_sha256": "bc744cb2e18952f86ef93d4552cb299904180c0725fe2e79f41b7fe791775276",
+  "gt_sha256": "6cbee6046118d3f25cc3ae028b1aaa24b75e42859f0bc2541eaab9cfdcd1b615",
+  "gt": {
+    "reviewed_frames": 105,
+    "annotations": 1359,
+    "unique_ids": 13,
+    "duplicate_ids_within_frame": 0,
+    "invalid_boxes": 0
+  },
+  "tracker_source_sha256": {
+    "baseline_high_only": "807eced0f886dfdc16591443c7ed3d9579f1da30a7e602aabb708bab8d76b89d",
+    "two_stage": "3b937ea3d18b05d58ddddb4dd0a457b3d98cc2de1946d1cc1857cda5be0d833c",
+    "bytetrack_standard": "cb91c71b04e8caf26d80b79fcf63f610d356d4e8e779ba5e5ee2741be44ab6bf"
+  },
+  "metrics_percent_except_counts": {
+    "baseline_high_only": {
+      "HOTA": 82.844331,
+      "DetA": 76.85008,
+      "AssA": 89.306366,
+      "LocA": 99.330534,
+      "MOTA": 76.011773,
+      "recall": 84.915379,
+      "precision": 91.081294,
+      "IDF1": 87.052551,
+      "IDSW": 8,
+      "fragments": 19,
+      "TP": 1154,
+      "FN": 205,
+      "FP": 113
+    },
+    "two_stage": {
+      "HOTA": 84.340666,
+      "DetA": 78.821533,
+      "AssA": 90.262986,
+      "LocA": 98.033303,
+      "MOTA": 80.647535,
+      "recall": 90.066225,
+      "precision": 91.071429,
+      "IDF1": 89.752127,
+      "IDSW": 8,
+      "fragments": 12,
+      "TP": 1224,
+      "FN": 135,
+      "FP": 120
+    },
+    "bytetrack_standard": {
+      "HOTA": 72.101724,
+      "DetA": 70.608666,
+      "AssA": 73.806688,
+      "LocA": 89.295927,
+      "MOTA": 80.279617,
+      "recall": 88.741722,
+      "precision": 91.641337,
+      "IDF1": 83.28972,
+      "IDSW": 5,
+      "fragments": 16,
+      "TP": 1206,
+      "FN": 153,
+      "FP": 110
+    }
+  },
+  "delta_vs_baseline_percentage_points_except_counts": {
+    "two_stage": {
+      "HOTA": 1.496335,
+      "IDF1": 2.699576,
+      "MOTA": 4.635762,
+      "recall": 5.150846,
+      "precision": -0.009865,
+      "IDSW": 0,
+      "fragments": -7
+    },
+    "bytetrack_standard": {
+      "HOTA": -10.742607,
+      "IDF1": -3.762831,
+      "MOTA": 4.267844,
+      "recall": 3.826343,
+      "precision": 0.560043,
+      "IDSW": -3,
+      "fragments": -3
+    }
+  },
+  "selection": "two_stage",
+  "selection_reason": "Best HOTA, IDF1 and MOTA on the reviewed 105-frame contact window; ByteTrack's lower IDSW did not offset substantially worse association and localization metrics.",
+  "limits": [
+    "This is tracker replay over persisted detections, not fresh neural inference.",
+    "The reviewed window is 105 frames from one contact in one match, not a held-out season-level benchmark.",
+    "The human review began from a tracker proposal, so anchoring bias remains possible despite frame-by-frame correction."
+  ]
+}
