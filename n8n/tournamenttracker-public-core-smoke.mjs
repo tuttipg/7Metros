@@ -23,6 +23,7 @@ assert.equal(
 
 for (const unsafe of [
   'http://www.femebal.com/tournament-tracker/?noAdv=0',
+  'https://www.femebal.com:444/tournament-tracker/?noAdv=0',
   'https://evil.example/tournament-tracker/?noAdv=0',
   'https://user:pass@www.femebal.com/tournament-tracker/?noAdv=0',
   'https://www.femebal.com/tournament-tracker/?token=secret',
@@ -45,6 +46,7 @@ assert.equal(
 );
 for (const unsafeAsset of [
   'http://www.femebal.com/tournament-tracker/static/js/main.js',
+  'https://www.femebal.com:444/tournament-tracker/static/js/main.js',
   'https://evil.example/tournament-tracker/static/js/main.js',
   'https://www.femebal.com/static/js/main.js',
   'https://www.femebal.com/tournament-tracker/static/js/main.js?token=x',
