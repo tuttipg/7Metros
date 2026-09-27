@@ -3,7 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from run_selective_inference import write_cache
+from run_selective_inference import summarize_optional_points, write_cache
 from sevenmetros_ai.tracking import Detection
 
 
@@ -20,6 +20,9 @@ class SelectiveInferenceTests(unittest.TestCase):
         self.assertEqual(rows[0]['objects'], [])
         self.assertEqual(rows[1]['objects'][0]['confidence'], .2)
 
+    def test_no_reference_points_produces_no_accuracy_diagnostic(self):
+        detections = {3: [Detection(1, 2, 3, 4, confidence=.2)]}
+        self.assertIsNone(summarize_optional_points(detections, {}))
 
 if __name__ == '__main__':
     unittest.main()

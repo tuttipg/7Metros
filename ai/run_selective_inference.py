@@ -66,6 +66,13 @@ def write_cache(path, detections_by_frame):
             }) + '\n')
 
 
+def summarize_optional_points(detections_by_frame, reference_points):
+    """Return point counts only when an explicit diagnostic set was supplied."""
+    if not reference_points:
+        return None
+    return summarize_points(detections_by_frame, reference_points)['counts']
+
+
 def find_contact_regions(video, ranges, detections_by_frame):
     """Replay fixture filtering/tracking to locate boxes hiding two live tracks."""
     import cv2
@@ -174,7 +181,7 @@ def replay_two_stage(video, ranges, detections_by_frame, output, references, fps
     }
 
 
-def run(video, model, output, ranges, references, confidence=.10,
+def run(video, model, output, ranges, references=None, confidence=.10,
         baseline_size=640, candidate_size=1280):
     import cv2
     import torch
@@ -199,9 +206,13 @@ def run(video, model, output, ranges, references, confidence=.10,
             raise ValueError('Selected range exceeds video length')
 
         video_sha = sha256_file(video)
-        reference_points, reference_sources = load_references(
-            references, video_sha, width, height, selected_source_frames,
-        )
+        references = references or []
+        if references:
+            reference_points, reference_sources = load_references(
+                references, video_sha, width, height, selected_source_frames,
+            )
+        else:
+            reference_points, reference_sources = {}, []
         torch.set_num_threads(2)
         baseline_detector = UltralyticsPersonDetector(
             str(model), confidence=confidence, device='cpu', image_size=baseline_size,
@@ -256,10 +267,12 @@ def run(video, model, output, ranges, references, confidence=.10,
         configurations[name] = {
             'raw_detections': sum(map(len, detections.values())),
             'deduplicated_detections': sum(map(len, deduplicated.values())),
-            'raw_sparse_point_status': summarize_points(detections, reference_points)['counts'],
-            'deduplicated_sparse_point_status': summarize_points(
+            'raw_sparse_point_status': summarize_optional_points(
+                detections, reference_points,
+            ),
+            'deduplicated_sparse_point_status': summarize_optional_points(
                 deduplicated, reference_points,
-            )['counts'],
+            ),
             'cache_sha256': sha256_file(cache_paths[name]),
             'tracking_health': replay_two_stage(
                 video, ranges, detections,
@@ -283,6 +296,10 @@ def run(video, model, output, ranges, references, confidence=.10,
         'ranges_end_exclusive': ranges,
         'frames': len(baseline),
         'reference_sources': reference_sources,
+        'reference_status': (
+            'diagnostic_points_supplied' if reference_sources
+            else 'no_points_supplied_unbiased_tracker_health_only'
+        ),
         'trigger': {
             'criterion': (
                 'one 640 box contains two predicted track centers separated by at least '
@@ -306,8 +323,12 @@ def run(video, model, output, ranges, references, confidence=.10,
         'standard_detection_metrics': None,
         'standard_tracking_metrics': None,
         'limitation': (
-            'Sparse assistant-selected points and tracker-health metrics are not '
-            'independently reviewed ground truth; thresholds were explored on these ranges.'
+            'Tracker-health metrics are not independently reviewed ground truth. '
+            + (
+                'Sparse supplied points are diagnostics only.'
+                if reference_sources else
+                'No point-level accuracy diagnostic was run.'
+            )
         ),
     }
     comparison = output / 'comparison.json'
@@ -321,7 +342,7 @@ def main():
     parser.add_argument('--model', required=True)
     parser.add_argument('--output', required=True)
     parser.add_argument('--range', dest='ranges', action='append', type=parse_range, required=True)
-    parser.add_argument('--reference', dest='references', action='append', required=True)
+    parser.add_argument('--reference', dest='references', action='append')
     parser.add_argument('--confidence', type=float, default=.10)
     parser.add_argument('--baseline-size', type=int, default=640)
     parser.add_argument('--candidate-size', type=int, default=1280)
