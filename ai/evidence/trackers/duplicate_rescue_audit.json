@@ -1,0 +1,28 @@
+{
+  "status": "CANDIDATES_TESTED_AND_DISCARDED",
+  "baseline_duplicate_iou_threshold": 0.55,
+  "stage_attribution": {
+    "gt_215": {"visible": 90, "raw_matches": 16, "after_dedup_matches": 16, "output_matches": 16},
+    "gt_205": {"visible": 89, "raw_matches": 51, "after_dedup_matches": 51, "output_matches": 51},
+    "gt_217": {"visible": 89, "raw_matches": 64, "after_dedup_matches": 64, "output_box_matches": 64},
+    "gt_222": {"visible": 90, "raw_matches": 66, "after_dedup_matches": 62, "output_box_matches": 62, "duplicate_loss_frames": [2937, 2956, 2957, 2958]}
+  },
+  "global_threshold_replay": {
+    "gt1": {
+      "0.55": {"TP":1154,"FN":205,"FP":113,"recall":0.849154,"precision":0.910813},
+      "0.60": {"TP":1155,"FN":204,"FP":115,"recall":0.849890,"precision":0.909449},
+      "0.65": {"TP":1156,"FN":203,"FP":122,"recall":0.850625,"precision":0.904538},
+      "0.70": {"TP":1158,"FN":201,"FP":138,"recall":0.852097,"precision":0.893519}
+    },
+    "gt2": {
+      "0.55": {"TP":917,"FN":208,"FP":171,"recall":0.815111,"precision":0.842831},
+      "0.60": {"TP":918,"FN":207,"FP":175,"recall":0.816000,"precision":0.839890},
+      "0.65": {"TP":920,"FN":205,"FP":187,"recall":0.817778,"precision":0.831075},
+      "0.70": {"TP":922,"FN":203,"FP":211,"recall":0.819556,"precision":0.813769}
+    }
+  },
+  "suppressed_boxes_across_two_gt": {"evaluated":74,"useful_if_restored":9},
+  "best_simple_geometry_rule": {"useful_restored":9,"non_useful_restored":21,"decision":"discard"},
+  "best_simple_temporal_rule": {"useful_restored":6,"non_useful_restored":6,"decision":"discard"},
+  "decision": "keep global duplicate IoU threshold 0.55 and do not add rescue heuristic"
+}
