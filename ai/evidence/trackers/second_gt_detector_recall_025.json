@@ -17,15 +17,35 @@
     "217": {"visible_frames": 89, "detector_matches_ge_0_25": 64, "recall_percent": 71.910112, "baseline_output_matches": 64},
     "222": {"visible_frames": 90, "detector_matches_ge_0_25": 66, "recall_percent": 73.333333, "baseline_output_matches": 62}
   },
+  "upper_boundary_stratification": {
+    "definition": "GT top coordinate y < 5 px versus y >= 5 px",
+    "205": {
+      "y_lt_5": {"frames": 52, "detector_matches": 17, "recall_percent": 32.692308},
+      "y_ge_5": {"frames": 37, "detector_matches": 34, "recall_percent": 91.891892},
+      "y_eq_0": {"frames": 12, "detector_matches": 0, "recall_percent": 0.0}
+    },
+    "215": {
+      "y_lt_5": {"frames": 59, "detector_matches": 0, "recall_percent": 0.0},
+      "y_ge_5": {"frames": 31, "detector_matches": 16, "recall_percent": 51.612903},
+      "y_eq_0": {"frames": 35, "detector_matches": 0, "recall_percent": 0.0}
+    }
+  },
   "interpretation": {
     "205": "all GT-matching boxes available in the >=0.25 cache survive to the baseline output; its 38 misses are already absent at detector-cache matching stage",
     "215": "all 16 GT-matching boxes available in the >=0.25 cache survive to the baseline output; its 74 misses are already absent at detector-cache matching stage",
     "217": "GT-matching detector availability equals baseline output availability; the remaining issue includes localization/identity ambiguity during dense contact",
-    "222": "four GT-matching boxes present in the >=0.25 detector cache do not survive to baseline output, consistent with the separately audited duplicate-suppression loss frames"
+    "222": "four GT-matching boxes present in the >=0.25 detector cache do not survive to baseline output, consistent with the separately audited duplicate-suppression loss frames",
+    "boundary": "detector recall collapses when the human GT box is truncated by the upper image boundary; this makes a boundary-focused detection experiment higher priority than adding tracker memory or ReID for IDs 205/215"
+  },
+  "next_experiment": {
+    "candidate": "upper-boundary padding or selective boundary ROI reinference",
+    "requirement": "compare against the same GT with identical confidence thresholds and runtime measurements; do not promote without measured recall/precision improvement",
+    "why_not_global_resolution_first": "previous 1280 inference improved some fused-contact boxes but was about 2.47x slower; the current evidence identifies a spatially localized boundary failure instead"
   },
   "limits": [
     "this cache was generated at confidence 0.25, so it cannot determine whether a missing box existed between confidence 0.10 and 0.25",
     "detector-cache matching is a diagnostic and does not replace TrackEval",
-    "a current confidence-0.10 cache is required to separate low-confidence recovery from true detector misses for IDs 205 and 215"
+    "a current confidence-0.10 cache is required to separate low-confidence recovery from true detector misses for IDs 205 and 215",
+    "the boundary correlation is measured on two identities in one 90-frame interval and is not yet a general camera-edge benchmark"
   ]
 }
