@@ -1,0 +1,31 @@
+{
+  "status": "VERIFIED_HISTORICAL_CONFIDENCE_0_25_CACHE_DIAGNOSTIC",
+  "scope": {
+    "sequence": "ferro_lujan_hard_reentry",
+    "source_fixture_frames": [2915, 3004],
+    "frames": 90,
+    "matching_iou_threshold": 0.5,
+    "detector_cache_floor": 0.25,
+    "detector_cache_sha256": "1561d9bd0e5ffaab434ce634aef0aa3af8d1eab70def2dcef693aedcae98a199",
+    "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+    "model": "yolo11n.pt",
+    "qc_correction": {"task_frame": 13, "from_id": 21, "to_id": 215}
+  },
+  "per_gt_id": {
+    "205": {"visible_frames": 89, "detector_matches_ge_0_25": 51, "recall_percent": 57.303371, "baseline_output_matches": 51},
+    "215": {"visible_frames": 90, "detector_matches_ge_0_25": 16, "recall_percent": 17.777778, "baseline_output_matches": 16},
+    "217": {"visible_frames": 89, "detector_matches_ge_0_25": 64, "recall_percent": 71.910112, "baseline_output_matches": 64},
+    "222": {"visible_frames": 90, "detector_matches_ge_0_25": 66, "recall_percent": 73.333333, "baseline_output_matches": 62}
+  },
+  "interpretation": {
+    "205": "all GT-matching boxes available in the >=0.25 cache survive to the baseline output; its 38 misses are already absent at detector-cache matching stage",
+    "215": "all 16 GT-matching boxes available in the >=0.25 cache survive to the baseline output; its 74 misses are already absent at detector-cache matching stage",
+    "217": "GT-matching detector availability equals baseline output availability; the remaining issue includes localization/identity ambiguity during dense contact",
+    "222": "four GT-matching boxes present in the >=0.25 detector cache do not survive to baseline output, consistent with the separately audited duplicate-suppression loss frames"
+  },
+  "limits": [
+    "this cache was generated at confidence 0.25, so it cannot determine whether a missing box existed between confidence 0.10 and 0.25",
+    "detector-cache matching is a diagnostic and does not replace TrackEval",
+    "a current confidence-0.10 cache is required to separate low-confidence recovery from true detector misses for IDs 205 and 215"
+  ]
+}
