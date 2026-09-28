@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import re
 
 from prepare_mot_annotation import ensure_new_output, sha256_file
 
@@ -80,10 +81,13 @@ def validate_bundle(bundle):
         'STRUCTURALLY_VALID_REVIEW_ATTESTATION_NOT_ACCURACY_PROOF'
     ):
         raise ValueError('Unexpected bundle status')
-    if manifest.get('sequence') != SEQUENCE or manifest.get('dataset') != '7metros-train':
+    sequence = manifest.get('sequence')
+    if (not isinstance(sequence, str) or
+            not re.fullmatch(r'[A-Za-z0-9_.-]+', sequence) or
+            manifest.get('dataset') != '7metros-train'):
         raise ValueError('Unexpected bundle sequence or dataset')
     gt_path = (
-        bundle / 'gt' / 'mot_challenge' / '7metros-train' / SEQUENCE /
+        bundle / 'gt' / 'mot_challenge' / '7metros-train' / sequence /
         'gt' / 'gt.txt'
     )
     if sha256_file(gt_path) != manifest.get('gt_sha256'):
@@ -94,7 +98,7 @@ def validate_bundle(bundle):
     for label in labels:
         tracker_path = (
             bundle / 'trackers' / 'mot_challenge' / '7metros-train' /
-            label / 'data' / f'{SEQUENCE}.txt'
+            label / 'data' / f'{sequence}.txt'
         )
         expected = manifest['trackers'][label].get('mot_sha256')
         if sha256_file(tracker_path) != expected:
@@ -165,7 +169,7 @@ def evaluate(bundle, output, *, trackeval_module=None):
             'source': 'persisted_inference_cache_tracker_replay',
             'fresh_inference': False,
             'frames': manifest['frames'],
-            'sequence': SEQUENCE,
+            'sequence': manifest['sequence'],
             'iou_threshold': 0.5,
             'preprocessing': False,
         },

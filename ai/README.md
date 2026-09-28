@@ -158,6 +158,21 @@ python prepare_trackeval_bundle.py --task /ruta/tarea_contacto \
   --output /ruta/trackeval_bundle
 ```
 
+Los JSON compactos exportados por el revisor se importan con validación de
+procedencia y revisión completa antes de construir el bundle:
+
+```bash
+python import_reviewed_gt.py --review-json final.json --task /ruta/tarea \
+  --expected-manifest-sha256 SHA256_DEL_MANIFIESTO_ORIGINAL \
+  --id-correction 13:21:215
+```
+
+`--id-correction` es opcional, repetible y queda registrada en la constancia;
+se rechaza si no coincide exactamente con una caja del frame indicado.
+
+El manifiesto de una tarea puede definir `sequence`; el empaquetador y el
+evaluador la validan como nombre seguro y la conservan en TrackEval.
+
 El comando rechaza automáticamente el seed sin revisar, hashes de revisión
 obsoletos, frames faltantes, cajas inválidas e IDs duplicados. La estructura y
 el comando oficial de TrackEval están documentados en

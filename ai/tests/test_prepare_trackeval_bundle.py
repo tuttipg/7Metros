@@ -20,6 +20,7 @@ class TrackEvalBundleTests(unittest.TestCase):
         manifest = {
             'status': 'UNVERIFIED_TRACKER_PROPOSAL_NOT_GROUND_TRUTH',
             'task_frames': 2, 'width': 100, 'height': 80, 'fps': 30,
+            'sequence': 'hard_reentry',
         }
         write_json(task / 'manifest.json', manifest)
         (task / 'frames.csv').write_text(
@@ -84,7 +85,7 @@ class TrackEvalBundleTests(unittest.TestCase):
             self.assertEqual(result['trackers']['two_stage']['rows'], 2)
             prediction = (
                 output / 'trackers' / 'mot_challenge' / '7metros-train' /
-                'two_stage' / 'data' / 'ferro_lujan_contact.txt'
+                'two_stage' / 'data' / 'hard_reentry.txt'
             )
             with prediction.open(newline='') as stream:
                 rows = list(csv.reader(stream))
@@ -92,12 +93,12 @@ class TrackEvalBundleTests(unittest.TestCase):
             self.assertEqual(rows[1][:2], ['2', '7'])
             self.assertTrue((
                 output / 'gt' / 'mot_challenge' / '7metros-train' /
-                'ferro_lujan_contact' / 'gt' / 'gt.txt'
+                'hard_reentry' / 'gt' / 'gt.txt'
             ).is_file())
             self.assertEqual(
                 (output / 'gt' / 'mot_challenge' / 'seqmaps' /
                  '7metros-train.txt').read_text(),
-                'name\nferro_lujan_contact\n',
+                'name\nhard_reentry\n',
             )
 
 

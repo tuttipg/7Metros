@@ -186,6 +186,9 @@ def build(task, track_specs, output):
         raise ValueError('Tracker labels must be unique after normalization')
     task, output = Path(task), Path(output)
     manifest, review = validate_review(task)
+    sequence = manifest.get('sequence', SEQUENCE)
+    if not isinstance(sequence, str) or not re.fullmatch(r'[A-Za-z0-9_.-]+', sequence):
+        raise ValueError('Manifest sequence must be filesystem-safe')
     frame_count = int(manifest['task_frames'])
     width, height = int(manifest['width']), int(manifest['height'])
     fps = float(manifest['fps'])
@@ -202,7 +205,7 @@ def build(task, track_specs, output):
         ))
     output = ensure_new_output(output)
     dataset = f'{BENCHMARK}-{SPLIT}'
-    gt_dir = output / 'gt' / 'mot_challenge' / dataset / SEQUENCE
+    gt_dir = output / 'gt' / 'mot_challenge' / dataset / sequence
     (gt_dir / 'gt').mkdir(parents=True)
     shutil.copyfile(task / 'gt' / 'gt.txt', gt_dir / 'gt' / 'gt.txt')
     shutil.copyfile(task / 'seqinfo.ini', gt_dir / 'seqinfo.ini')
@@ -211,7 +214,7 @@ def build(task, track_specs, output):
     for label, (path, rows) in tracker_data.items():
         destination = (
             output / 'trackers' / 'mot_challenge' / dataset /
-            label / 'data' / f'{SEQUENCE}.txt'
+            label / 'data' / f'{sequence}.txt'
         )
         write_csv(destination, rows)
         tracker_stats[label] = {
@@ -223,10 +226,10 @@ def build(task, track_specs, output):
 
     seqmap = output / 'gt' / 'mot_challenge' / 'seqmaps' / f'{dataset}.txt'
     seqmap.parent.mkdir()
-    seqmap.write_text(f'name\n{SEQUENCE}\n', encoding='utf-8')
+    seqmap.write_text(f'name\n{sequence}\n', encoding='utf-8')
     result = {
         'status': 'STRUCTURALLY_VALID_REVIEW_ATTESTATION_NOT_ACCURACY_PROOF',
-        'sequence': SEQUENCE,
+        'sequence': sequence,
         'dataset': dataset,
         'frames': frame_count,
         'gt_rows': len(gt_rows),
