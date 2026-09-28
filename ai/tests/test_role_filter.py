@@ -5,7 +5,10 @@ from sevenmetros_ai.tracking import Detection, Track
 
 
 def _track(track_id=1, role=None):
-    return Track(track_id, Detection(0, 0, 10, 20, role_candidate=role))
+    return Track(
+        track_id, Detection(0, 0, 10, 20, role_candidate=role),
+        observed_role_candidate=role,
+    )
 
 
 class TemporalRoleFilterTests(unittest.TestCase):
@@ -34,6 +37,17 @@ class TemporalRoleFilterTests(unittest.TestCase):
         visible, excluded = role_filter.filter([_track(role=None)], 3)
         self.assertEqual(visible, [])
         self.assertEqual(excluded, 1)
+
+    def test_confirmed_display_role_does_not_replace_instant_evidence(self):
+        role_filter = TemporalRoleFilter()
+        track = Track(
+            1, Detection(0, 0, 10, 20, role_candidate='referee'),
+            observed_role_candidate=None,
+        )
+        for frame in range(3):
+            visible, excluded = role_filter.filter([track], frame)
+        self.assertEqual(len(visible), 1)
+        self.assertEqual(excluded, 0)
 
     def test_expired_identity_does_not_reuse_confirmation(self):
         role_filter = TemporalRoleFilter(max_missing=1)

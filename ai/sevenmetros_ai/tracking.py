@@ -35,6 +35,9 @@ class Track:
     velocity_x: float = 0.0
     velocity_y: float = 0.0
     association_team: Optional[str] = None
+    # Instantaneous classifier evidence, kept separate from the temporally
+    # confirmed role exposed in detection.role_candidate.
+    observed_role_candidate: Optional[str] = None
 
     @property
     def predicted_cx(self) -> float:
@@ -242,6 +245,7 @@ class CentroidTracker:
                 velocity_x=t.velocity_x,
                 velocity_y=t.velocity_y,
                 association_team=t.association_team,
+                observed_role_candidate=t.detection.role_candidate,
             )
             for t in sorted(self._tracks.values(), key=lambda item: item.track_id)
             if t.missed == 0

@@ -7,6 +7,7 @@ from math import isfinite
 from pathlib import Path
 
 from .metrics import TrackingMetrics
+from .role_filter import TemporalRoleFilter
 from .schema import frame_payload
 from .tracking import CentroidTracker
 from .visualization import draw_tracks
@@ -44,6 +45,7 @@ def analyze_video(
     if len(set(paths)) != len(paths):
         raise ValueError('Input, JSONL and annotated video paths must be distinct')
     tracker = CentroidTracker(max_distance=max_distance, max_missed=max_missed, temporal_teams=temporal_teams, velocity_alpha=velocity_alpha, assignment=assignment, two_stage=two_stage)
+    role_filter = TemporalRoleFilter() if exclude_confirmed_referees else None
     if not input_path.is_file():
         raise FileNotFoundError(input_path)
 
@@ -101,12 +103,8 @@ def analyze_video(
                 roles.update(d.label for d in detections)
                 tracks = tracker.update(detections)
                 if exclude_confirmed_referees:
-                    visible = [
-                        track for track in tracks
-                        if track.detection.role_candidate != 'referee'
-                    ]
-                    excluded_role_observations += len(tracks) - len(visible)
-                    tracks = visible
+                    tracks, excluded = role_filter.filter(tracks, frames)
+                    excluded_role_observations += excluded
                 output_teams.update(t.detection.team or 'unknown' for t in tracks)
                 role_candidates.update(t.detection.role_candidate or 'unknown' for t in tracks)
                 tracking_metrics.observe(frames, tracks)

@@ -34,12 +34,10 @@ class TemporalRoleFilter:
 
     def filter(self, tracks, frame_index):
         tracks = list(tracks)
-        seen = set()
         for track in tracks:
             track_id = track.track_id
-            seen.add(track_id)
             self._last_seen[track_id] = frame_index
-            role = track.detection.role_candidate
+            role = track.observed_role_candidate
             if role is None:
                 continue
             history = self._history.setdefault(track_id, deque(maxlen=self.window))

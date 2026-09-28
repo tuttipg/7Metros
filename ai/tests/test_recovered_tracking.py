@@ -53,6 +53,14 @@ class RecoveredTests(unittest.TestCase):
         self.assertEqual(obs.detection.role_candidate,'referee')
         self.assertIsNone(obs.detection.team)
 
+    def test_track_preserves_instant_role_evidence_after_confirmation(self):
+        t=CentroidTracker(temporal_teams=True)
+        for _ in range(3): obs=self.obs(t,role='referee')
+        self.assertEqual(obs.detection.role_candidate,'referee')
+        obs=self.obs(t)
+        self.assertEqual(obs.detection.role_candidate,'referee')
+        self.assertIsNone(obs.observed_role_candidate)
+
     def test_history_cleaned(self):
         t=CentroidTracker(temporal_teams=True,max_missed=0)
         self.obs(t,role='referee');t.update([])

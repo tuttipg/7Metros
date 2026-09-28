@@ -80,7 +80,10 @@ class StandardByteTrack:
                 x2=float(row[2]), y2=float(row[3]),
                 confidence=float(row[5]),
             )
-            tracks.append(Track(track_id=int(row[4]), detection=observed))
+            tracks.append(Track(
+                track_id=int(row[4]), detection=observed,
+                observed_role_candidate=source.role_candidate,
+            ))
         return tracks
 
 
@@ -133,7 +136,9 @@ def compare(video, cache, output_dir, max_frames=None, exclude_confirmed_referee
     clipped_output_boxes = {name: 0 for name in trackers}
     dropped_outside_boxes = {name: 0 for name in trackers}
     excluded_role_observations = {name: 0 for name in trackers}
-    byte_role_filter = TemporalRoleFilter() if exclude_confirmed_referees else None
+    role_filters = {
+        name: TemporalRoleFilter() for name in trackers
+    } if exclude_confirmed_referees else {}
     classifier = FerroLujanKits(allow_boundary_roles=exclude_confirmed_referees)
     frames = raw_detections = filtered_detections = 0
 
@@ -157,17 +162,7 @@ def compare(video, cache, output_dir, max_frames=None, exclude_confirmed_referee
                 for name, tracker in trackers.items():
                     tracks = tracker.update(inputs[name])
                     if exclude_confirmed_referees:
-                        if name == 'bytetrack_standard':
-                            tracks, excluded = byte_role_filter.filter(tracks, frames)
-                        else:
-                            # CentroidTracker already confirms temporal roles
-                            # using 3 votes at 75% before exposing a candidate.
-                            visible = [
-                                track for track in tracks
-                                if track.detection.role_candidate != 'referee'
-                            ]
-                            excluded = len(tracks) - len(visible)
-                            tracks = visible
+                        tracks, excluded = role_filters[name].filter(tracks, frames)
                         excluded_role_observations[name] += excluded
                     for track in tracks:
                         clipped = clipped_bbox(track.detection, width, height)
