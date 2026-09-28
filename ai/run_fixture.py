@@ -40,6 +40,7 @@ def main():
     p.add_argument('--refine', action='store_true')
     p.add_argument('--temporal-teams', action='store_true')
     p.add_argument('--fixture-kits', action='store_true')
+    p.add_argument('--exclude-confirmed-referees', action='store_true')
     p.add_argument('--velocity-alpha', type=float, default=1.0)
     p.add_argument('--max-missed', type=int, default=8)
     p.add_argument('--assignment', choices=['greedy','global'], default='greedy')
@@ -53,6 +54,8 @@ def main():
         p.error('two-stage requires --detector-confidence 0.10 or lower and a matching new cache')
     if a.detector_image_size is not None and a.detector_image_size <= 0:
         p.error('detector-image-size must be positive')
+    if a.exclude_confirmed_referees and not (a.fixture_kits and a.temporal_teams):
+        p.error('--exclude-confirmed-referees requires --fixture-kits and --temporal-teams')
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     with open(a.video, 'rb') as source:
@@ -76,13 +79,14 @@ def main():
         classifier = BlueCourtClassifier()
     if a.fixture_kits:
         from sevenmetros_ai.fixture_kits import FerroLujanKits
-        classifier = FerroLujanKits()
+        classifier = FerroLujanKits(allow_boundary_roles=a.exclude_confirmed_referees)
     started = time.perf_counter()
     try:
         result = analyze_video(a.video, detector, output_jsonl=out/'tracks.jsonl',
                                output_video=out/'annotated.mp4', team_classifier=classifier,
                                temporal_teams=a.temporal_teams, velocity_alpha=a.velocity_alpha,
-                               max_missed=a.max_missed, assignment=a.assignment, two_stage=a.two_stage)
+                               max_missed=a.max_missed, assignment=a.assignment, two_stage=a.two_stage,
+                               exclude_confirmed_referees=a.exclude_confirmed_referees)
     finally:
         detector.stream.close()
     if not detector.replay:

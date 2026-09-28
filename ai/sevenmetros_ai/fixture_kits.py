@@ -28,6 +28,9 @@ def classify_kit(rgb):
 
 
 class FerroLujanKits(BlueCourtClassifier):
+    def __init__(self, *, allow_boundary_roles=False):
+        self.allow_boundary_roles = bool(allow_boundary_roles)
+
     def classify(self, frame, detections):
         result = []
         for d in super().classify(frame, detections):
@@ -35,7 +38,9 @@ class FerroLujanKits(BlueCourtClassifier):
                 result.append(d)
                 continue
             team, role = classify_kit(representative_jersey_rgb(frame, d))
-            if role == 'referee' and (d.y2 >= frame.shape[0]-3 or d.x1 <= 0 or d.x2 >= frame.shape[1]-1):
+            if (not self.allow_boundary_roles and role == 'referee'
+                    and (d.y2 >= frame.shape[0]-3 or d.x1 <= 0
+                         or d.x2 >= frame.shape[1]-1)):
                 role = None
             result.append(replace(d, team=team, role_candidate=role))
         return result

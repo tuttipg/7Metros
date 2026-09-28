@@ -26,6 +26,7 @@ def analyze_video(
     velocity_alpha: float = 1.0,
     assignment: str = 'greedy',
     two_stage: bool = False,
+    exclude_confirmed_referees: bool = False,
 ) -> dict:
     try:
         import cv2
@@ -81,6 +82,7 @@ def analyze_video(
     roles = Counter()
     output_teams = Counter()
     role_candidates = Counter()
+    excluded_role_observations = 0
     started = perf_counter()
 
     try:
@@ -98,6 +100,13 @@ def analyze_video(
                 teams.update(d.team or 'unknown' for d in detections)
                 roles.update(d.label for d in detections)
                 tracks = tracker.update(detections)
+                if exclude_confirmed_referees:
+                    visible = [
+                        track for track in tracks
+                        if track.detection.role_candidate != 'referee'
+                    ]
+                    excluded_role_observations += len(tracks) - len(visible)
+                    tracks = visible
                 output_teams.update(t.detection.team or 'unknown' for t in tracks)
                 role_candidates.update(t.detection.role_candidate or 'unknown' for t in tracks)
                 tracking_metrics.observe(frames, tracks)
@@ -141,6 +150,8 @@ def analyze_video(
         "velocity_alpha": velocity_alpha,
         "assignment": assignment,
         "two_stage": two_stage,
+        "exclude_confirmed_referees": exclude_confirmed_referees,
+        "excluded_role_observations": excluded_role_observations,
         "identity_switches": None,
         "accuracy_status": "not_evaluated_no_ground_truth",
     }

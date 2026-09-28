@@ -1,0 +1,71 @@
+{
+  "status": "VERIFIED_ON_ONE_HUMAN_REVIEWED_GT_INTERVAL",
+  "scope": {
+    "source": "persisted_yolo11n_confidence_0.10_cache_replay",
+    "fresh_inference": false,
+    "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+    "full_replay_frames": 3600,
+    "reviewed_gt_frames": 105,
+    "reviewed_gt_source_frames": [105, 209],
+    "reviewed_gt_sha256": "6cbee6046118d3f25cc3ae028b1aaa24b75e42859f0bc2541eaab9cfdcd1b615"
+  },
+  "change": {
+    "default_behavior_changed": false,
+    "option": "--exclude-confirmed-referees",
+    "confirmation": {
+      "window": 12,
+      "minimum_votes": 3,
+      "minimum_ratio": 0.75
+    },
+    "association_behavior": "officials remain inside each tracker and are excluded only from player output after temporal confirmation"
+  },
+  "official_trackeval_percent_except_counts": {
+    "baseline_high_only": {
+      "before": {"HOTA": 82.844331, "MOTA": 76.011773, "IDF1": 87.052551, "TP": 1154, "FN": 205, "FP": 113, "IDSW": 8, "fragments": 19},
+      "after": {"HOTA": 85.110324, "MOTA": 81.751288, "IDF1": 89.717425, "TP": 1154, "FN": 205, "FP": 35, "IDSW": 8, "fragments": 19},
+      "delta": {"HOTA": 2.265993, "MOTA": 5.739515, "IDF1": 2.664874, "FP": -78}
+    },
+    "two_stage": {
+      "before": {"HOTA": 84.340666, "MOTA": 80.647535, "IDF1": 89.752127, "TP": 1224, "FN": 135, "FP": 120, "IDSW": 8, "fragments": 12},
+      "after": {"HOTA": 86.608198, "MOTA": 86.387049, "IDF1": 92.419048, "TP": 1224, "FN": 135, "FP": 42, "IDSW": 8, "fragments": 12},
+      "delta": {"HOTA": 2.267532, "MOTA": 5.739514, "IDF1": 2.666921, "FP": -78}
+    },
+    "bytetrack_standard": {
+      "before": {"HOTA": 72.101724, "MOTA": 80.279617, "IDF1": 83.289720, "TP": 1206, "FN": 153, "FP": 110, "IDSW": 5, "fragments": 16},
+      "after": {"HOTA": 74.718713, "MOTA": 88.005887, "IDF1": 86.692607, "TP": 1206, "FN": 153, "FP": 5, "IDSW": 5, "fragments": 16},
+      "delta": {"HOTA": 2.616989, "MOTA": 7.726270, "IDF1": 3.402887, "FP": -105}
+    }
+  },
+  "full_replay_excluded_role_observations": {
+    "baseline_high_only": 3282,
+    "two_stage": 3490,
+    "bytetrack_standard": 4343
+  },
+  "independent_unreviewed_interval": {
+    "source_frames": [2915, 3004],
+    "accuracy_status": "NOT_EVALUATED_GT_REVIEW_PENDING",
+    "baseline_high_only": {"observations_before": 1088, "observations_after": 1007, "excluded_track_observations": {"202": 66, "224": 15}},
+    "two_stage": {"observations_before": 1139, "observations_after": 1058, "excluded_track_observations": {"205": 66, "229": 15}},
+    "bytetrack_standard": {"observations_before": 1092, "observations_after": 976, "excluded_track_observations": {"1108": 83, "1132": 33}},
+    "event_track_222_baseline_observations_after": 27,
+    "visual_check": "the two baseline candidates are a black-clad sideline official and a boundary/merged non-player candidate; this is diagnostic only until independent GT review"
+  },
+  "artifacts": {
+    "comparison_sha256": "5e6c038fe03504c4e0feda02483e976f85a8844d9493b5cf4fabe567a9caec3e",
+    "baseline_jsonl_sha256": "88a5902dd613ff098deb5c4cc7b5334304ab40f6e38ab12a5066f11ad5b21cbd",
+    "two_stage_jsonl_sha256": "29ed8afbca7c877271964a6efd3dc8a45bf4b63415ac4138d7ad3658a0d43df1",
+    "bytetrack_jsonl_sha256": "047ffda4acef2d7eb20f09c4215c26215fa57d77bda672fa43c4a6ea6b34f8c6",
+    "trackeval_bundle_manifest_sha256": "574bd5d530e1dbb8e57857a4e64adec4a223deb4a445d6e401ab7a7aa3e083b8",
+    "official_result_sha256": "3e709f16fca228401ee382a831e94c2560a4b13c80479f6ffdc0003a0ff66e6a"
+  },
+  "tests": {
+    "vision_environment": {"passed": 123, "skipped": 0},
+    "minimal_environment": {"passed": 113, "skipped_optional": 10},
+    "trackeval_version": "1.3.0"
+  },
+  "limits": [
+    "the official metric improvement is established on one 105-frame human-reviewed interval, not the full match",
+    "the 90-frame independent reentry interval remains an unreviewed proposal and supplies no accuracy claim",
+    "fixture-specific color heuristics can confuse black uniforms, shadows, occlusions, or merged boxes; the option therefore remains disabled by default"
+  ]
+}

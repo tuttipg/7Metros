@@ -16,6 +16,7 @@ from types import SimpleNamespace
 
 from sevenmetros_ai.fixture_kits import FerroLujanKits
 from sevenmetros_ai.metrics import TrackingMetrics
+from sevenmetros_ai.role_filter import TemporalRoleFilter
 from sevenmetros_ai.schema import clipped_bbox, frame_payload
 from sevenmetros_ai.tracking import CentroidTracker, Detection, Track
 
@@ -97,7 +98,7 @@ def _validated_meta(video, cache):
     return meta
 
 
-def compare(video, cache, output_dir, max_frames=None):
+def compare(video, cache, output_dir, max_frames=None, exclude_confirmed_referees=False):
     try:
         import cv2
     except ImportError as exc:
@@ -131,7 +132,9 @@ def compare(video, cache, output_dir, max_frames=None):
     weak_observations = {name: 0 for name in trackers}
     clipped_output_boxes = {name: 0 for name in trackers}
     dropped_outside_boxes = {name: 0 for name in trackers}
-    classifier = FerroLujanKits()
+    excluded_role_observations = {name: 0 for name in trackers}
+    byte_role_filter = TemporalRoleFilter() if exclude_confirmed_referees else None
+    classifier = FerroLujanKits(allow_boundary_roles=exclude_confirmed_referees)
     frames = raw_detections = filtered_detections = 0
 
     try:
@@ -153,6 +156,19 @@ def compare(video, cache, output_dir, max_frames=None):
                 }
                 for name, tracker in trackers.items():
                     tracks = tracker.update(inputs[name])
+                    if exclude_confirmed_referees:
+                        if name == 'bytetrack_standard':
+                            tracks, excluded = byte_role_filter.filter(tracks, frames)
+                        else:
+                            # CentroidTracker already confirms temporal roles
+                            # using 3 votes at 75% before exposing a candidate.
+                            visible = [
+                                track for track in tracks
+                                if track.detection.role_candidate != 'referee'
+                            ]
+                            excluded = len(tracks) - len(visible)
+                            tracks = visible
+                        excluded_role_observations[name] += excluded
                     for track in tracks:
                         clipped = clipped_bbox(track.detection, width, height)
                         if clipped is None:
@@ -194,6 +210,7 @@ def compare(video, cache, output_dir, max_frames=None):
         'detector_confidence': meta.get('confidence'),
         'raw_detections': raw_detections,
         'filtered_detections': filtered_detections,
+        'exclude_confirmed_referees': exclude_confirmed_referees,
         'trackers': {},
     }
     for name, tracker in trackers.items():
@@ -206,6 +223,7 @@ def compare(video, cache, output_dir, max_frames=None):
             'weak_track_observations': weak_observations[name],
             'clipped_output_boxes': clipped_output_boxes[name],
             'dropped_fully_outside_boxes': dropped_outside_boxes[name],
+            'excluded_role_observations': excluded_role_observations[name],
             'metrics': summary,
             'output_jsonl': str(output_dir / f'{name}.jsonl'),
         }
@@ -224,10 +242,14 @@ def main():
     parser.add_argument('--cache', required=True)
     parser.add_argument('--out', required=True)
     parser.add_argument('--max-frames', type=int)
+    parser.add_argument('--exclude-confirmed-referees', action='store_true')
     args = parser.parse_args()
     if args.max_frames is not None and args.max_frames <= 0:
         parser.error('--max-frames must be positive')
-    print(json.dumps(compare(args.video, args.cache, args.out, args.max_frames), indent=2))
+    print(json.dumps(compare(
+        args.video, args.cache, args.out, args.max_frames,
+        exclude_confirmed_referees=args.exclude_confirmed_referees,
+    ), indent=2))
 
 
 if __name__ == '__main__':
