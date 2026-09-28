@@ -76,6 +76,25 @@ class DetectionRecallAuditTests(unittest.TestCase):
         self.assertEqual(result['ids']['7']['present_frames'], 2)
         self.assertEqual(result['qc_corrections_applied'], [[1, 70, 7]])
 
+    def test_stratifies_recall_by_top_boundary(self):
+        payload = json.loads(self.review.read_text(encoding='utf-8'))
+        payload['boxes'][1][0]['y'] = 10
+        self.review.write_text(json.dumps(payload), encoding='utf-8')
+        result = audit(
+            self.review, self.cache, ids=[7], thresholds=[.1, .25],
+            cache_meta=self.meta, top_y_boundary=5,
+        )
+        spatial = result['ids']['7']['spatial_by_top_y']
+        self.assertEqual(spatial['top_eq_0']['present_frames'], 1)
+        self.assertEqual(spatial['top_lt_boundary']['present_frames'], 1)
+        self.assertEqual(spatial['top_gte_boundary']['present_frames'], 1)
+        self.assertEqual(
+            spatial['top_lt_boundary']['by_confidence']['0.25']['matched_frames'], 1
+        )
+        self.assertEqual(
+            spatial['top_gte_boundary']['by_confidence']['0.25']['matched_frames'], 0
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

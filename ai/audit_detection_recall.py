@@ -59,11 +59,13 @@ def _load_cache(path):
 
 
 def audit(review, cache, *, ids, thresholds=(.25,), iou_threshold=.5,
-          cache_meta=None, qc_corrections=()):
+          cache_meta=None, qc_corrections=(), top_y_boundary=5.0):
     if not ids or len(set(ids)) != len(ids) or any(int(identity) <= 0 for identity in ids):
         raise ValueError('ids must be unique positive integers')
     if not 0 < iou_threshold <= 1 or not math.isfinite(iou_threshold):
         raise ValueError('iou_threshold must be finite and in (0,1]')
+    if not math.isfinite(top_y_boundary) or top_y_boundary <= 0:
+        raise ValueError('top_y_boundary must be positive and finite')
     thresholds = tuple(sorted(set(float(value) for value in thresholds)))
     if not thresholds or any(
         not math.isfinite(value) or not 0 <= value <= 1 for value in thresholds
@@ -87,6 +89,7 @@ def audit(review, cache, *, ids, thresholds=(.25,), iou_threshold=.5,
         'source_fixture_frames': [start, end],
         'frames': len(frames),
         'iou_threshold': iou_threshold,
+        'top_y_boundary': top_y_boundary,
         'thresholds': list(thresholds),
         'ids': {},
         'qc_corrections_applied': [list(row) for row in sorted(applied_qc)],
@@ -95,6 +98,13 @@ def audit(review, cache, *, ids, thresholds=(.25,), iou_threshold=.5,
         present = 0
         matched = {threshold: 0 for threshold in thresholds}
         miss_frames = {threshold: [] for threshold in thresholds}
+        spatial = {
+            name: {
+                'present_frames': 0,
+                'matched': {threshold: 0 for threshold in thresholds},
+            }
+            for name in ('top_eq_0', 'top_lt_boundary', 'top_gte_boundary')
+        }
         for offset, gt_rows in enumerate(frames):
             rows = [row for row in gt_rows if int(row['id']) == identity]
             if len(rows) > 1:
@@ -103,6 +113,15 @@ def audit(review, cache, *, ids, thresholds=(.25,), iou_threshold=.5,
                 continue
             present += 1
             gt = rows[0]
+            top_y = float(gt['y'])
+            groups = [
+                'top_lt_boundary' if top_y < top_y_boundary
+                else 'top_gte_boundary'
+            ]
+            if math.isclose(top_y, 0.0, abs_tol=1e-9):
+                groups.append('top_eq_0')
+            for group in groups:
+                spatial[group]['present_frames'] += 1
             gt_box = (
                 float(gt['x']), float(gt['y']),
                 float(gt['x']) + float(gt['w']),
@@ -121,6 +140,8 @@ def audit(review, cache, *, ids, thresholds=(.25,), iou_threshold=.5,
                     best = max(best, box_iou(gt_box, box))
                 if best >= iou_threshold:
                     matched[threshold] += 1
+                    for group in groups:
+                        spatial[group]['matched'][threshold] += 1
                 else:
                     miss_frames[threshold].append(source_frame)
         result['ids'][str(identity)] = {
@@ -136,6 +157,25 @@ def audit(review, cache, *, ids, thresholds=(.25,), iou_threshold=.5,
                 }
                 for threshold in thresholds
             },
+            'spatial_by_top_y': {
+                name: {
+                    'present_frames': values['present_frames'],
+                    'by_confidence': {
+                        str(threshold): {
+                            'matched_frames': values['matched'][threshold],
+                            'missed_frames': (
+                                values['present_frames'] - values['matched'][threshold]
+                            ),
+                            'recall_percent': round(
+                                100 * values['matched'][threshold] /
+                                values['present_frames'], 6,
+                            ) if values['present_frames'] else 0.0,
+                        }
+                        for threshold in thresholds
+                    },
+                }
+                for name, values in spatial.items()
+            },
         }
     return result
 
@@ -149,6 +189,7 @@ def main():
     parser.add_argument('--confidence', dest='thresholds', action='append',
                         type=float, required=True)
     parser.add_argument('--iou-threshold', type=float, default=.5)
+    parser.add_argument('--top-y-boundary', type=float, default=5.0)
     parser.add_argument('--qc', dest='qc_corrections', action='append', default=[],
                         help='task_frame:old_id:new_id')
     parser.add_argument('--output', required=True)
@@ -162,7 +203,7 @@ def main():
     result = audit(
         args.review, args.cache, ids=args.ids, thresholds=args.thresholds,
         iou_threshold=args.iou_threshold, cache_meta=args.cache_meta,
-        qc_corrections=qc,
+        qc_corrections=qc, top_y_boundary=args.top_y_boundary,
     )
     output = Path(args.output)
     if output.exists():

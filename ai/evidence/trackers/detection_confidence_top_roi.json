@@ -1,0 +1,74 @@
+{
+  "status": "LOW_CONFIDENCE_DIAGNOSED_TOP_ROI_REJECTED",
+  "scope": {
+    "sequence": "ferro_lujan_hard_reentry",
+    "source_fixture_frames": [2915, 3004],
+    "frames": 90,
+    "gt_source": "human_reviewed_with_qc_13_21_to_215",
+    "detector": "yolo11n/person",
+    "cache_confidence_floor": 0.10
+  },
+  "persisted_cache_recall_at_iou_0_5": {
+    "205": {"present": 89, "confidence_0_10": 78, "confidence_0_25": 51},
+    "215": {"present": 90, "confidence_0_10": 16, "confidence_0_25": 16},
+    "217": {"present": 89, "confidence_0_10": 76, "confidence_0_25": 64},
+    "222": {"present": 90, "confidence_0_10": 81, "confidence_0_25": 66}
+  },
+  "spatial_stratification": {
+    "boundary_y_pixels": 5,
+    "205": {
+      "top_lt_5": {"present": 52, "confidence_0_10": 42, "confidence_0_25": 17},
+      "top_gte_5": {"present": 37, "confidence_0_10": 36, "confidence_0_25": 34}
+    },
+    "215": {
+      "top_lt_5": {"present": 59, "confidence_0_10": 0, "confidence_0_25": 0},
+      "top_gte_5": {"present": 31, "confidence_0_10": 16, "confidence_0_25": 16}
+    }
+  },
+  "fresh_top_roi_inference": {
+    "fresh_inference": true,
+    "rois_xyxy": [[0, 0, 300, 250], [350, 0, 650, 250]],
+    "image_size": 640,
+    "confidence": 0.10,
+    "roi_inferences": 180,
+    "wall_seconds_decode_and_inference": 8.773809,
+    "source_frames_per_second": 10.257803,
+    "merge": "only remapped ROI boxes with y1 <= 5; confidence-ordered IoU 0.55 deduplication; unchanged cache outside the interval",
+    "trackeval_source_after_merge": "tracker replay; not fresh tracking inference"
+  },
+  "official_trackeval_1_3_0_uniform_role_filter": {
+    "baseline_high_only": {
+      "control": {"HOTA": 79.826078, "IDF1": 82.894106, "MOTA": 76.711111, "TP": 917, "FN": 208, "FP": 45, "IDSW": 9, "fragments": 28},
+      "top_roi": {"HOTA": 78.919211, "IDF1": 83.116883, "MOTA": 78.844444, "TP": 964, "FN": 161, "FP": 67, "IDSW": 10, "fragments": 28}
+    },
+    "two_stage": {
+      "control": {"HOTA": 81.245796, "IDF1": 84.190833, "MOTA": 79.377778, "TP": 959, "FN": 166, "FP": 54, "IDSW": 12, "fragments": 20},
+      "top_roi": {"HOTA": 78.010372, "IDF1": 80.872331, "MOTA": 79.733333, "TP": 995, "FN": 130, "FP": 81, "IDSW": 17, "fragments": 22}
+    },
+    "bytetrack_standard": {
+      "control": {"HOTA": 69.641012, "IDF1": 80.818658, "MOTA": 76.444444, "TP": 923, "FN": 202, "FP": 53, "IDSW": 10, "fragments": 24},
+      "top_roi": {"HOTA": 70.305655, "IDF1": 81.918819, "MOTA": 79.2, "TP": 973, "FN": 152, "FP": 70, "IDSW": 12, "fragments": 27}
+    }
+  },
+  "decision": {
+    "top_roi": "REJECTED",
+    "reason": "recall gains do not survive association safely: preferred two-stage loses HOTA and IDF1 and adds five ID switches",
+    "default_behavior_changed": false
+  },
+  "artifacts": {
+    "confidence_0_10_cache_sha256": "b825b6a8bf1312b1a43d636ae2c50be197bdd49a72ae321889d40e0cd1d57403",
+    "top_roi_detections_sha256": "a0db0e0d46cfae55a2138e5adbf7de1b9d8a43de646fd142f907604de730dfe6",
+    "merged_cache_sha256": "a207c9c27b24f8b1d40f494ed4f6e5e8f0332e3c5b15a3989cdd4d8594c0e37d",
+    "detector_audit_sha256": "417ec72a71d846c016f495149464bb9bfd8ad43d2d979969f987dc52cf8a7db1",
+    "trackeval_result_sha256": "c355ed971d68a0e5acfc01f676f6d91345e1f0fbea591f7fe9daea2591317e9c"
+  },
+  "tests": {
+    "vision_environment": {"passed": 140, "skipped": 0},
+    "minimal_environment": {"passed": 127, "skipped_optional": 13}
+  },
+  "limits": [
+    "detector recall is box availability and not identity accuracy",
+    "top ROI inference covers one 90-frame interval from one fixture",
+    "the ROI merge is rejected and not part of the production/default pipeline"
+  ]
+}
