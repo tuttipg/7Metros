@@ -101,6 +101,27 @@ assert.equal(bingEvidence.state, 'reviewed_anonymous_get_only');
 const explicitLinkEvidence = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: { kind: 'explicit_public_link', observedUrl: canonicalObservedRoute, sourceUrl: 'https://www.femebal.com/fixture-publico?season=2026' } });
 assert.equal(explicitLinkEvidence.state, 'reviewed_anonymous_get_only');
 
+// Real public FEMEBAL evidence published on 2026-02-24 for the LHC Caballeros Apertura 2026 fixture.
+// This is intentionally a provenance regression only: the returned GET remains anonymous, review-only,
+// and automaticProbeAllowed=false. The test performs no network request.
+const realLhcObservedRoute = 'https://www.femebal.com/tournament-tracker/RUdVX3VheVA%3D';
+const realLhcCanonicalRoute = 'https://www.femebal.com/tournament-tracker/RUdVX3VheVA=';
+const realLhcEvidence = {
+  kind: 'explicit_public_link',
+  observedUrl: realLhcObservedRoute,
+  sourceUrl: 'https://femebal.com/fixtures-disponibles-para-la-liga-hipotecario-seguros-y-la-liga-plata/',
+};
+const realLhcReviewed = buildReviewedIndexedTournamentTrackerGet(realLhcObservedRoute, { publicEvidence: realLhcEvidence });
+assert.equal(realLhcReviewed.state, 'reviewed_anonymous_get_only');
+assert.equal(realLhcReviewed.probe.url, realLhcCanonicalRoute);
+assert.equal(realLhcReviewed.probe.method, 'GET');
+assert.equal(realLhcReviewed.probe.auth, false);
+assert.equal(realLhcReviewed.probe.writes, false);
+assert.equal(realLhcReviewed.automaticProbeAllowed, false);
+assert.equal(realLhcReviewed.evidence.kind, 'explicit_public_link');
+assert.equal(realLhcReviewed.evidence.observedUrl, realLhcCanonicalRoute);
+assert.equal(realLhcReviewed.evidence.sourceUrl, realLhcEvidence.sourceUrl);
+
 const invalidReviewed = buildReviewedIndexedTournamentTrackerGet('https://evil.example/tournament-tracker/RUdVX3VkfFc=', { publicEvidence });
 assert.equal(invalidReviewed.state, 'probe_not_authorized');
 assert.equal(invalidReviewed.probe, null);
