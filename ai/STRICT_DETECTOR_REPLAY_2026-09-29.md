@@ -6,14 +6,22 @@ Las primeras cachés registraban `model: yolo11n.pt`, pero el nombre del archivo
 
 ## Modo estricto
 
-`run_fixture.py` acepta ahora `--expected-model-sha256`.
+`run_fixture.py` acepta `--expected-model-sha256`.
 
-Cuando se usa:
+### Generación de una caché nueva
+
 - `--model` debe apuntar a un archivo local existente;
 - el SHA256 se calcula **antes** de iniciar Ultralytics/inferencia;
 - un hash distinto bloquea la corrida;
-- el hash verificado se guarda también en `detections.meta.json`;
-- al hacer replay, la metadata completa debe coincidir o la caché se rechaza.
+- el hash verificado se guarda en `detections.meta.json`;
+- la identidad portable del modelo es `basename + SHA256`, no la ruta absoluta de una máquina.
+
+### Replay de una caché existente
+
+- no hace falta conservar el binario `.pt`, porque no se ejecuta inferencia;
+- el SHA esperado se compara contra `model_sha256` de la metadata;
+- si además se proporciona un archivo local, también se hashea y debe coincidir;
+- video, nombre portable del modelo, hash, confianza y tamaño de inferencia deben coincidir con la metadata o la caché se rechaza.
 
 Sin `--expected-model-sha256` se conserva el comportamiento histórico y Ultralytics puede resolver el nombre del modelo normalmente.
 
@@ -35,7 +43,7 @@ python run_fixture.py \
   --max-missed 30
 ```
 
-El objetivo de esta corrida no es elegir tracker; es producir una caché detectora cuya identidad pueda demostrarse. Después se usa `run_tracker_ab_experiment.py` para control/candidato y retención automática de GT, seguido de `evaluate_tracker_ab_experiment.py` para TrackEval y guardrail.
+El objetivo de esa corrida no es elegir tracker; es producir una caché detectora cuya identidad pueda demostrarse. Después se usa `run_tracker_ab_experiment.py` para control/candidato y retención automática de GT, seguido de `evaluate_tracker_ab_experiment.py` para TrackEval y guardrail.
 
 ## Tests
 
@@ -43,7 +51,9 @@ Se cubren:
 - aceptación del hash exacto;
 - rechazo de pesos distintos;
 - rechazo de hash mal formado;
-- requisito de archivo local en modo estricto;
+- requisito de archivo local para **nueva inferencia** estricta;
+- replay estricto sin binario local cuando la metadata ya registra el hash;
+- rechazo de un binario local incorrecto incluso durante replay;
 - compatibilidad del modo no estricto con el comportamiento anterior.
 
 No se incluyen pesos en Git ni se modifica producción.
