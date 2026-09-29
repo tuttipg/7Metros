@@ -21,11 +21,27 @@ class DetectorWeightIntegrityTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Model SHA256 mismatch'):
                 _verify_model_sha256(path, '0' * 64)
 
-    def test_strict_mode_requires_local_weight_file(self):
+    def test_strict_generation_requires_local_weight_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             missing = Path(tmp) / 'missing.pt'
             with self.assertRaisesRegex(FileNotFoundError, 'local weight file'):
                 _verify_model_sha256(missing, '0' * 64)
+
+    def test_strict_replay_can_trust_recorded_hash_without_weight_binary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / 'missing.pt'
+            expected = 'a' * 64
+            self.assertEqual(
+                _verify_model_sha256(missing, expected, require_local=False),
+                expected,
+            )
+
+    def test_strict_replay_still_rejects_wrong_local_binary_when_present(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'yolo11n.pt'
+            path.write_bytes(b'wrong')
+            with self.assertRaisesRegex(ValueError, 'Model SHA256 mismatch'):
+                _verify_model_sha256(path, '0' * 64, require_local=False)
 
     def test_rejects_malformed_expected_hash(self):
         with self.assertRaisesRegex(ValueError, '64 hexadecimal'):
