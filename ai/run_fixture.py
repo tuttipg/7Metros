@@ -31,12 +31,43 @@ class CachedDetector:
         return detections
 
 
+def _file_sha256(path):
+    with Path(path).open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
+def _verify_model_sha256(model, expected_sha256):
+    """Verify an exact local weight file when strict reproduction is requested.
+
+    Normal runs keep the historical behavior and may let Ultralytics resolve a
+    model name.  Strict runs intentionally require a local file so the binary is
+    verified *before* inference and the cache metadata records that hash.
+    """
+    if expected_sha256 is None:
+        return None
+    expected = str(expected_sha256).strip().lower()
+    if len(expected) != 64 or any(ch not in '0123456789abcdef' for ch in expected):
+        raise ValueError('expected-model-sha256 must be exactly 64 hexadecimal characters')
+    model_path = Path(model)
+    if not model_path.is_file():
+        raise FileNotFoundError(
+            'Strict model hash verification requires --model to point to a local weight file'
+        )
+    actual = _file_sha256(model_path)
+    if actual != expected:
+        raise ValueError(
+            f'Model SHA256 mismatch: expected={expected} actual={actual}'
+        )
+    return actual
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--video', required=True)
     p.add_argument('--out', required=True)
     p.add_argument('--cache', required=True)
     p.add_argument('--model', default='yolo11n.pt')
+    p.add_argument('--expected-model-sha256')
     p.add_argument('--refine', action='store_true')
     p.add_argument('--temporal-teams', action='store_true')
     p.add_argument('--fixture-kits', action='store_true')
@@ -56,13 +87,16 @@ def main():
         p.error('detector-image-size must be positive')
     if a.exclude_confirmed_referees and not (a.fixture_kits and a.temporal_teams):
         p.error('--exclude-confirmed-referees requires --fixture-kits and --temporal-teams')
+
+    model_sha256 = _verify_model_sha256(a.model, a.expected_model_sha256)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    with open(a.video, 'rb') as source:
-        digest = hashlib.file_digest(source, 'sha256').hexdigest()
+    digest = _file_sha256(a.video)
     cache = Path(a.cache)
     meta_path = cache.with_suffix('.meta.json')
     expected = {'video_sha256': digest, 'model': a.model, 'confidence': a.detector_confidence}
+    if model_sha256 is not None:
+        expected['model_sha256'] = model_sha256
     if a.detector_image_size is not None:
         expected['image_size'] = a.detector_image_size
     if cache.exists() and (not meta_path.exists() or json.loads(meta_path.read_text()) != expected):
