@@ -1,22 +1,52 @@
-# 7Metros AI — baseline v1
+# 7Metros AI — visión por computadora
 
-Primer baseline ejecutable de visión por computadora para 7Metros.
+Pipeline experimental y reproducible para analizar handball real en 7Metros.
 
-## Estado real
+## Estado real — 29/09/2026
 
-Este módulo **no afirma que exista un modelo entrenado específicamente para handball**. La primera etapa usa un detector genérico de personas de Ultralytics como adaptador opcional y un tracker determinista propio como baseline. Su objetivo es fijar un flujo reproducible y un contrato de datos estable antes de incorporar datasets, modelos y trackers más fuertes.
+Este módulo ya superó la etapa puramente sintética. Existe validación sobre el partido real **Ferro–N. S. de Luján** y dos intervalos con ground truth humano revisado. Sigue siendo investigación experimental: dos recortes de un mismo fixture **no** permiten afirmar precisión general sobre otros partidos, clubes, cámaras o canchas.
 
-## Qué hace hoy
+Componentes actuales:
 
-- Lee un video local con OpenCV.
-- Detecta personas mediante un modelo Ultralytics configurable.
-- Asigna IDs persistentes con un tracker determinista que usa centroide, IoU, compatibilidad semántica y predicción de velocidad constante.
-- Puede clasificar equipos con un baseline conservador de color de camiseta; los casos ambiguos permanecen como `unknown` en vez de forzar una etiqueta.
-- Incluye una calibración automática, determinista y sin entrenamiento que estima dos referencias de camiseta a partir de muestras RGB no etiquetadas del propio partido.
-- Escribe un JSONL por frame con `track_id`, bounding box, confianza, centro, velocidad estimada y equipo opcional.
-- Puede producir un MP4 anotado con bounding boxes, confianza e IDs persistentes para inspección visual cuadro a cuadro.
-- Devuelve métricas del procesamiento y salud del tracking: observaciones por track, span medio, tracks de un solo frame, tasa de IDs nuevos cada 100 frames y cobertura de etiquetas de equipo.
-- Mantiene tests del tracker, métricas, visualización, clasificación/calibración de color y contrato de salida sin requerir GPU.
+- YOLO11n/person como detector de control;
+- caché de detecciones para comparar trackers sobre exactamente las mismas cajas;
+- tracker determinista propio con centroide, IoU, predicción de velocidad y compatibilidad semántica;
+- asociación conservadora de dos etapas para cajas de confianza `0.10–0.25`;
+- ByteTrack estándar de Ultralytics como control externo;
+- clasificación de equipo/roles específica del fixture;
+- filtro temporal opt-in de árbitros sobre salida, sin eliminarlos del estado interno del tracker;
+- JSONL `7metros-ai.v1` y MP4 anotado;
+- TrackEval 1.3.0, HOTA/CLEAR/Identity;
+- importación/validación de GT humano, auditorías por frame e identidad y guardrails;
+- interpolación experimental corta de huecos, siempre marcada como sintética;
+- retención automática de slices GT para no perder evidencia reproducible;
+- guardia experimental ante cajas fusionadas, apagada por defecto.
+
+No hay todavía detector específico de pelota, identidad por dorsal, coordenadas métricas de cancha, posesión ni eventos automáticos confiables.
+
+## Resultados oficiales actuales
+
+### GT1 — contacto
+
+Fixture frames `105–209`, 105 frames, 1.359 anotaciones humanas y 13 identidades. TrackEval 1.3.0 con filtro temporal uniforme de roles:
+
+| Tracker | HOTA | IDF1 | MOTA | TP | FN | FP | IDSW | Frag |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| baseline ≥0.25 | 85.939 | 90.678 | 83.738 | 1154 | 205 | 8 | 8 | 19 |
+| **dos etapas 0.10/0.25** | **87.437** | **93.380** | **88.374** | **1224** | **135** | 15 | 8 | **12** |
+| ByteTrack estándar | 74.719 | 86.693 | 88.006 | 1206 | 153 | **5** | **5** | 16 |
+
+### GT2 — reentrada difícil, QC-v2
+
+Fixture frames `2915–3004`, 90 frames, 1.125 anotaciones y 13 identidades. El QC-v2 corrigió un único swap humano recíproco 217↔222 en task frame 3 antes del rerun oficial.
+
+| Tracker | HOTA | IDF1 | MOTA | TP | FN | FP | IDSW | Frag |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| baseline ≥0.25 | 79.884 | 82.990 | 77.067 | 917 | 208 | 45 | **5** | 28 |
+| **dos etapas 0.10/0.25** | **81.319** | **84.284** | **79.733** | **959** | **166** | 54 | 8 | **20** |
+| ByteTrack estándar | 69.675 | 80.914 | 76.444 | 923 | 202 | 53 | 10 | 22 |
+
+`two_stage` lidera HOTA e IDF1 en ambos GT humanos y se mantiene como candidato principal. Eso no lo convierte todavía en default productivo ni demuestra generalización.
 
 ## Instalación
 
@@ -24,18 +54,24 @@ Este módulo **no afirma que exista un modelo entrenado específicamente para ha
 cd ai
 python -m venv .venv
 # activar el entorno según el sistema operativo
-pip install -e ".[vision]"
+pip install -e ".[vision,benchmark]"
 ```
 
-## Ejecución
+Los tests dependency-light siguen funcionando sin toda la pila opcional:
 
-Salida de datos:
+```bash
+python -m unittest discover -s tests -v
+```
+
+## Pipeline básico
+
+Salida JSONL:
 
 ```bash
 7metros-ai --video partido.mp4 --output-jsonl artifacts/tracks.jsonl
 ```
 
-Salida de datos + video anotado:
+JSONL + MP4 anotado:
 
 ```bash
 7metros-ai \
@@ -44,161 +80,216 @@ Salida de datos + video anotado:
   --output-video artifacts/annotated.mp4
 ```
 
-Para una prueba corta:
+Cada línea de `7metros-ai.v1` representa un frame e incluye índice/timestamp, tamaño de imagen y objetos con `track_id`, bbox, confianza, centro, velocidad estimada, equipo opcional y rol cuando existe evidencia.
+
+`track_id` es una identidad temporal del tracker, **no** un `player_id` real.
+
+## Fixture real de control
+
+Fuente histórica aportada por Tomás:
+
+- `20260926-1444-24.0816290.mp4`;
+- fuente: 374,7333 s, 936×524, 30 FPS;
+- recorte usado: segundos 30–150, 120 s / 3.600 frames;
+- SHA256 fuente: `84a94f6e5526d94afc67dc8ee99cc9b390265482d6f0250f2d8a12080e437ed2`;
+- SHA256 `fixture120.mp4`: `7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d`;
+- SHA256 pesos YOLO11n usados: `0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1`;
+- Ultralytics histórico: 8.4.163.
+
+Comando histórico de recorte:
 
 ```bash
-7metros-ai --video partido.mp4 --output-jsonl artifacts/tracks.jsonl --output-video artifacts/annotated.mp4 --max-frames 300
+ffmpeg -ss 30 -i original.mp4 -t 120 -an -c:v libx264 -preset fast -crf 20 fixture120.mp4
 ```
 
-La salida de consola incluye `tracking_metrics`. Estas métricas sirven para comparar configuraciones o trackers sobre exactamente el mismo video, pero **no equivalen a métricas de identidad como IDF1/HOTA** porque todavía no existe ground truth anotado verificado.
+El hash del archivo final sigue siendo la verificación autoritativa; una versión distinta de FFmpeg/x264 puede producir bytes distintos aun usando la misma línea de comando.
 
-## Clasificación y calibración de equipos por color
+## Caché detectora estricta
 
-`JerseyColorTeamClassifier` recibe referencias RGB por equipo. El clasificador toma una región central del torso, calcula un color representativo robusto y compara cromaticidad para reducir sensibilidad a cambios de iluminación. Si la muestra queda demasiado lejos de las referencias o la diferencia entre los dos mejores candidatos es pequeña, devuelve `None`.
-
-`fit_team_color_references(samples)` permite obtener dos referencias iniciales sin cargarlas manualmente: toma muestras RGB no etiquetadas, inicializa los dos grupos con el par cromáticamente más distante y aplica una agrupación iterativa determinista en espacio de cromaticidad. Rechaza entradas insuficientes, clusters colapsados o dos familias de color demasiado similares, en vez de inventar una separación falsa. Las etiquetas resultantes (`team_a`/`team_b` por defecto) son estables pero todavía no equivalen por sí solas a identidad semántica local/visitante; esa asociación deberá venir de contexto del partido o una señal adicional.
-
-Este baseline no sustituye un clasificador aprendido. Su objetivo inmediato es aportar una señal reproducible y segura al tracker, que ya evita asociaciones incompatibles cuando ambos lados conocen el equipo.
-
-## Contrato `7metros-ai.v1`
-
-Cada línea del JSONL representa un frame y contiene: versión de esquema, índice y timestamp del frame, tamaño de imagen y objetos con `track_id`, tipo, confianza, bounding box, centro, velocidad estimada y equipo opcional.
-
-El contrato puede ampliarse sin romper los campos base con `team`, `player_id`, `court_xy`, `possession`, eventos y pelota.
-
-## Tests
+Para una comparación nueva no alcanza con que el archivo se llame `yolo11n.pt`. `run_fixture.py` puede verificar el binario **antes** de inferencia:
 
 ```bash
-cd ai
-python -m unittest discover -s tests -v
+python run_fixture.py \
+  --video /ruta/fixture120.mp4 \
+  --model /ruta/yolo11n.pt \
+  --expected-model-sha256 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1 \
+  --cache /ruta/detections_conf010.jsonl \
+  --out /ruta/cache_check \
+  --detector-confidence 0.10 \
+  --max-missed 30
 ```
+
+En modo estricto `--model` debe ser un archivo local. El hash validado queda incorporado a `detections.meta.json`; un replay posterior con video/modelo/confianza distintos se rechaza.
 
 ## Comparación reproducible de trackers
 
-Con una caché creada a confianza `0.10`, el comparador reproduce exactamente
-las mismas cajas y el mismo filtro del fixture para: baseline sólo fuerte
-(`>=0.25`), baseline experimental de dos etapas y ByteTrack estándar de
-Ultralytics. Es replay de caché, no inferencia nueva ni medición de precisión.
+El benchmark usa la misma caché para:
+
+- `baseline_high_only`: sólo cajas `>=0.25`;
+- `two_stage`: cajas `>=0.25` + mantenimiento conservador con `0.10–0.25`;
+- `bytetrack_standard`: ByteTrack estándar sobre el mismo stream `>=0.10`.
 
 ```bash
-pip install -e '.[benchmark]'
 python benchmark_trackers.py \
   --video /ruta/fixture120.mp4 \
-  --cache /ruta/detections_010.jsonl \
-  --out /ruta/comparison
+  --cache /ruta/detections_conf010.jsonl \
+  --out /ruta/comparison \
+  --exclude-confirmed-referees
 ```
 
-El resultado guarda `comparison.json` y un JSONL por tracker. Todos incluyen
-el hash del video y la configuración. Sin ground truth completo, las métricas
-de continuidad y fragmentación no equivalen a IDF1, HOTA o accuracy.
+Las métricas de salud del JSON no sustituyen TrackEval. HOTA/IDF1/MOTA sólo se usan cuando existe GT humano correspondiente.
 
-El tamaño de entrada del detector queda explícito y forma parte de la identidad
-de caché cuando se usa, por ejemplo, `--detector-image-size 1280` en
-`run_fixture.py`. El default histórico no cambia. Para medir costo y cobertura
-en contactos con inferencia nueva en ambas configuraciones:
+## A/B que no pierde evidencia
+
+Para experimentos que puedan respaldar una decisión, usar preferentemente:
 
 ```bash
-python benchmark_detector_resolution.py --video /ruta/fixture120.mp4 \
-  --model /ruta/yolo11n.pt --output /ruta/benchmark_resolucion \
-  --range 105:210 --range 1065:1155 \
-  --reference fixtures/ferro_lujan_crossing_points.json \
-  --reference fixtures/ferro_lujan_second_contact.json \
-  --baseline-size 640 --candidate-size 1280
+python run_tracker_ab_experiment.py \
+  --video /ruta/fixture120.mp4 \
+  --cache /ruta/detections_conf010.jsonl \
+  --output /ruta/ab_ambiguous_motion \
+  --exclude-confirmed-referees \
+  --ambiguity-iou 0.30
 ```
 
-Los puntos dispersos sólo diagnostican cajas compartidas o duplicadas; no son
-ground truth ni permiten calcular precisión o recall.
+Este runner ejecuta control + candidato y **retiene automáticamente** los JSONL de los rangos humanos actuales:
 
-Para auditar visualmente un episodio, se pueden superponer de dos a cuatro
-salidas sincronizadas sobre los mismos frames y reproducirlas en cámara lenta:
+- GT1: `105:210` end-exclusive;
+- GT2: `2915:3005` end-exclusive.
+
+Genera hashes de video, caché, metadata, outputs completos, slices y manifests. Así una corrida futura no puede quedar sólo con métricas agregadas sin las cajas necesarias para reevaluar.
+
+## TrackEval A/B + guardrail
+
+Con las tareas humanas disponibles:
 
 ```bash
-python compare_trackers_video.py --video /ruta/fixture120.mp4 \
-  --tracks 'Baseline=/ruta/baseline_high_only.jsonl' \
-  --tracks 'Dos etapas=/ruta/two_stage.jsonl' \
-  --tracks 'ByteTrack=/ruta/bytetrack_standard.jsonl' \
-  --output /ruta/contacto.mp4 --start 3.5 --seconds 3.5 --slowdown 2
+python evaluate_tracker_ab_experiment.py \
+  --experiment-manifest /ruta/ab_ambiguous_motion/experiment_manifest.json \
+  --task gt1=/ruta/contact_task_revisada \
+  --task gt2=/ruta/hard_reentry_task_qc_v2 \
+  --output /ruta/ab_ambiguous_motion_eval \
+  --tracker two_stage
 ```
 
-Para preparar una tarea de anotación completa del mismo episodio:
+El runner valida hashes, arma bundles MOTChallenge, ejecuta TrackEval oficial y aplica `validate_mot_candidate.py`.
+
+Un candidato sólo pasa el guardrail si **en cada secuencia**:
+
+- HOTA no baja;
+- IDF1 no baja;
+- IDSW no aumenta;
+- fragmentaciones no aumentan.
+
+Una mejora grande en un GT no puede ocultar una regresión en el otro.
+
+## Ground truth humano
+
+`prepare_mot_annotation.py` convierte un intervalo y un JSONL de tracker en una tarea MOTChallenge revisable. El seed automático nunca se considera ground truth.
+
+Después de revisión completa, `import_reviewed_gt.py` valida procedencia, frames, geometría, IDs y constancia humana. Correcciones puntuales de QC pueden declararse explícitamente, por ejemplo:
 
 ```bash
-python prepare_mot_annotation.py --video /ruta/fixture120.mp4 \
-  --tracks /ruta/two_stage.jsonl --output /ruta/tarea_contacto \
-  --start 3.5 --seconds 3.5
-```
-
-La carpeta incluye los frames, `seqinfo.ini`, el mapeo al video fuente y
-`seed/seed.txt`. El seed es sólo una propuesta automática: el exportador lo
-marca como no verificado y nunca crea `gt/gt.txt`. Las métricas MOT quedan
-prohibidas hasta corregir cajas, ausencias e identidades en todos los frames.
-
-Para empezar la revisión por los cuadros donde los trackers más difieren, sin
-confundir consenso automático con ground truth:
-
-```bash
-python prepare_mot_review_queue.py --task /ruta/tarea_contacto \
-  --tracks baseline=/ruta/baseline_high_only.jsonl \
-  --tracks two_stage=/ruta/two_stage.jsonl \
-  --tracks bytetrack=/ruta/bytetrack_standard.jsonl \
-  --output /ruta/review_queue.json
-```
-
-También genera `review_queue.csv`. La cola sólo ordena el trabajo: los cuadros
-con puntaje cero siguen requiriendo revisión humana completa.
-
-Después de una revisión humana completa y registrada en `gt/review.json`, el
-bundle común para TrackEval se construye así:
-
-```bash
-python prepare_trackeval_bundle.py --task /ruta/tarea_contacto \
-  --tracks Baseline=/ruta/baseline_high_only.jsonl \
-  --tracks TwoStage=/ruta/two_stage.jsonl \
-  --tracks ByteTrack=/ruta/bytetrack_standard.jsonl \
-  --output /ruta/trackeval_bundle
-```
-
-Los JSON compactos exportados por el revisor se importan con validación de
-procedencia y revisión completa antes de construir el bundle:
-
-```bash
-python import_reviewed_gt.py --review-json final.json --task /ruta/tarea \
-  --expected-manifest-sha256 SHA256_DEL_MANIFIESTO_ORIGINAL \
+python import_reviewed_gt.py \
+  --review-json final.json \
+  --task /ruta/tarea \
+  --expected-manifest-sha256 SHA256_DEL_MANIFIESTO \
   --id-correction 13:21:215
 ```
 
-`--id-correction` es opcional, repetible y queda registrada en la constancia;
-se rechaza si no coincide exactamente con una caja del frame indicado.
+`prepare_trackeval_bundle.py` convierte GT + JSONL a MOTChallenge y `evaluate_trackeval_bundle.py` ejecuta HOTA/CLEAR/Identity con TrackEval 1.3.0.
 
-El manifiesto de una tarea puede definir `sequence`; el empaquetador y el
-evaluador la validan como nombre seguro y la conservan en TrackEval.
+La validación estructural demuestra integridad del formato/procedencia, no que cada anotación humana sea infalible. Por eso existe QC posterior y las métricas sensibles a identidad se rerunean si cambia el GT.
 
-El comando rechaza automáticamente el seed sin revisar, hashes de revisión
-obsoletos, frames faltantes, cajas inválidas e IDs duplicados. La estructura y
-el comando oficial de TrackEval están documentados en
-`TRACKEVAL_BUNDLE_2026-09-27.md`. La validación estructural no demuestra que la
-revisión humana sea correcta.
+## Interpolación corta
 
-Los tests verifican persistencia de ID, recuperación tras frames perdidos, continuidad con movimiento rápido, cruces con bloqueo semántico, serialización estable, métricas de tracking, visualización y clasificación de equipos. La calibración automática tiene regresiones para dos familias de camiseta bajo cambios fuertes de brillo, reproducibilidad al invertir el orden de entrada y rechazo de una única familia de color.
+La interpolación lineal sólo rellena huecos **internos** del mismo ID y marca cada observación como sintética.
 
-Estos tests forman parte de `.github/workflows/validate.yml`, por lo que el PR falla si se rompe el baseline o su contrato.
+Sobre `two_stage`, `gap≤3` es el menor límite que pasa el guardrail en ambos GT:
+
+- GT1 HOTA/IDF1: `87.437/93.380 → 87.458/93.385`;
+- GT2 QC-v2: `81.319/84.284 → 81.664/84.612`;
+- IDSW no aumenta;
+- fragmentaciones: `12→10` y `20→17`.
+
+`gap≤5` fue rechazado porque mejora GT2 pero regresa HOTA/IDF1 en GT1. La interpolación sigue opt-in y no debe alimentar eventos como si fuera evidencia detectora real.
+
+## Filtro temporal de árbitros
+
+La clasificación de indumentaria produce candidatos de rol; `TemporalRoleFilter` exige evidencia repetida antes de excluir un oficial de la **salida**. La asociación interna sigue rastreándolo para no generar identidades nuevas constantemente.
+
+En GT1 y GT2 las observaciones eliminadas por el filtro no coincidieron ni solaparon a IoU 0,5 con cajas GT de jugadores. Aun así permanece opt-in: ambos GT pertenecen al mismo fixture y no cubren todos los uniformes/canchas.
+
+## Problemas separados que no deben mezclarse
+
+### Borde superior — 205/215
+
+En GT2:
+
+- ID205: 78/89 matches a confianza ≥0.10 frente a 51/89 a ≥0.25: gran parte es baja confianza;
+- ID215: 16/90 tanto a ≥0.10 como a ≥0.25;
+- para ID215 con `y<5 px`: 0/59 incluso a 0.10.
+
+Se probó inferencia en ROIs superiores. Recuperó cajas pero empeoró HOTA/IDF1 e incrementó IDSW de `two_stage`; fue descartada.
+
+### Contacto denso — 217/222
+
+- HSV/color simple funciona en frames fáciles pero falla exactamente en el cruce difícil: descartado como término de asociación;
+- con cajas GT perfectas ocultando identidad, el tracker actual produce 0 swaps entre 217/222;
+- con detecciones reales ≥0.25, hay una caja que solapa a ambos jugadores en 57/89 frames conjuntos a IoU≥0.20;
+- los cinco IDSW restantes del baseline QC-v2 ocurren en esos frames ambiguos.
+
+Esto apunta a interacción localización ambigua + estado temporal, no a que el asociador sea incapaz de mantener identidad con cajas limpias.
+
+## Guardia experimental de movimiento ambiguo
+
+`AmbiguityVelocityTracker` es una clase separada, apagada por defecto. Si una caja **fuerte** solapa ≥2 tracks visibles y compatibles, mantiene la asociación/output normal pero evita aprender una nueva velocidad desde esa caja potencialmente fusionada.
+
+El benchmark la expone con:
+
+```bash
+--freeze-ambiguous-velocity --ambiguity-iou 0.30
+```
+
+El screening high-only mostró una señal pequeña sin pérdida de TP, pero **no** constituye TrackEval oficial de `two_stage`. La guardia sólo puede promoverse después de una corrida exacta sobre caché 0.10 y de pasar el guardrail en los dos GT. Si no lo hace, se elimina.
+
+## Experimentos descartados
+
+- aumentar sólo `max_missed`: menos IDs totales pero sin mejora real de continuidad;
+- asociación global básica: sin mejora material;
+- histogramas HSV simples para 217/222: fallan en el evento crítico;
+- crops/ROI de borde superior: más recall pero peor tracking;
+- rescate global de duplicados: más falsos positivos de los aceptables;
+- interpolación >3 como política actual: `gap≤5` regresa GT1;
+- suprimir/diferir directamente una caja fuerte sólo por ambigüedad: reduce algunos switches pero pierde demasiado recall.
 
 ## Limitaciones conocidas
 
-- El detector genérico de personas no está ajustado a handball.
-- El tracker baseline no reemplaza ByteTrack/BoT-SORT ni resuelve todas las oclusiones complejas.
-- La clasificación por color puede quedar ambigua con camisetas similares, sombras, chalecos o arqueros con indumentaria distinta.
-- La calibración automática estima dos familias cromáticas, pero todavía no decide cuál es local/visitante y no filtra por sí sola árbitros o arqueros con camisetas diferenciadas.
-- Las métricas actuales miden salud/churn del tracker y cobertura de equipo; sin anotación humana no permiten afirmar precisión de identidad o clasificación.
-- Aún no hay detección de pelota, clasificación específica de arqueros, coordenadas de cancha ni eventos.
-- La precisión real sobre partidos FEMEBAL no se puede afirmar sin un video de prueba accesible al runtime.
-- Los pesos de Ultralytics pueden requerir descarga la primera vez.
+- YOLO11n COCO/person no está ajustado a handball;
+- los dos GT humanos pertenecen al mismo partido;
+- persisten fusiones de cajas durante contactos/oclusiones;
+- `two_stage` reduce pérdidas pero todavía fragmenta identidades difíciles;
+- clasificación de equipos/roles es específica del fixture y no equivale a identificación de jugador;
+- no existe todavía un benchmark humano multi-partido;
+- no hay pelota, posesión, lanzamiento, gol ni coordenadas métricas confiables;
+- los pesos/caché históricos grandes no se versionan en Git, por lo que los slices evaluables deben retenerse en toda corrida nueva.
 
 ## Próximos hitos
 
-1. incorporar un video de prueba descargable de forma reproducible;
-2. integrar la calibración automática al arranque del pipeline con filtrado de árbitros/arqueros;
-3. medir detecciones, estabilidad de IDs y cobertura de equipo sobre handball real y revisar el MP4 anotado;
-4. sustituir/comparar el tracker baseline con ByteTrack/BoT-SORT;
-5. añadir detector de pelota separado y coordenadas de cancha;
-6. agregar eventos de posesión, lanzamiento y gol sobre señales verificables.
+1. recuperar/regenerar la caché YOLO11n exacta a confianza 0.10 con hash de peso verificado;
+2. ejecutar A/B control vs guardia de movimiento ambiguo y conservar automáticamente ambos GT;
+3. TrackEval + guardrail; conservar la guardia sólo si no regresa ninguna secuencia;
+4. si la guardia falla, descartarla y probar una única señal de asociación más robusta a oclusión;
+5. ampliar validación a otro partido/cámara antes de convertir heurísticas fixture-specific en defaults;
+6. recién con identidad/detección suficientemente estables, avanzar a cancha, pelota, posesión y eventos.
+
+## Seguridad
+
+El trabajo de esta rama:
+
+- no toca Supabase;
+- no habilita escrituras productivas;
+- no contiene credenciales ni secretos;
+- no publica pesos ni videos del partido;
+- mantiene cambios experimentales como opt-in;
+- permanece en PR Draft mientras la validación siga limitada.
