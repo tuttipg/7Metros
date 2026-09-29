@@ -4,6 +4,10 @@ This performs cache replay, not neural inference.  Every tracker receives boxes
 from the same video/cache and fixture filter.  The high-only baseline receives
 only detections with confidence >= 0.25; the two-stage baseline and standard
 Ultralytics ByteTrack receive the complete >= 0.10 stream.
+
+The optional ambiguous-motion guard is deliberately experimental and only
+changes the two centroid trackers. ByteTrack remains an untouched external
+control.
 """
 from __future__ import annotations
 
@@ -14,6 +18,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+from sevenmetros_ai.experimental_tracking import AmbiguityVelocityTracker
 from sevenmetros_ai.fixture_kits import FerroLujanKits
 from sevenmetros_ai.metrics import TrackingMetrics
 from sevenmetros_ai.role_filter import TemporalRoleFilter
@@ -101,7 +106,15 @@ def _validated_meta(video, cache):
     return meta
 
 
-def compare(video, cache, output_dir, max_frames=None, exclude_confirmed_referees=False):
+def compare(
+    video,
+    cache,
+    output_dir,
+    max_frames=None,
+    exclude_confirmed_referees=False,
+    freeze_ambiguous_velocity=False,
+    ambiguity_iou=.30,
+):
     try:
         import cv2
     except ImportError as exc:
@@ -121,9 +134,18 @@ def compare(video, cache, output_dir, max_frames=None, exclude_confirmed_referee
         capture.release()
         raise RuntimeError('Invalid video metadata')
 
+    centroid_type = AmbiguityVelocityTracker if freeze_ambiguous_velocity else CentroidTracker
+    experimental_kwargs = (
+        {'ambiguity_iou': ambiguity_iou} if freeze_ambiguous_velocity else {}
+    )
     trackers = {
-        'baseline_high_only': CentroidTracker(max_missed=30, temporal_teams=True),
-        'two_stage': CentroidTracker(max_missed=30, temporal_teams=True, two_stage=True),
+        'baseline_high_only': centroid_type(
+            max_missed=30, temporal_teams=True, **experimental_kwargs,
+        ),
+        'two_stage': centroid_type(
+            max_missed=30, temporal_teams=True, two_stage=True,
+            **experimental_kwargs,
+        ),
         'bytetrack_standard': StandardByteTrack(frame_rate=fps),
     }
     metrics = {name: TrackingMetrics() for name in trackers}
@@ -206,6 +228,11 @@ def compare(video, cache, output_dir, max_frames=None, exclude_confirmed_referee
         'raw_detections': raw_detections,
         'filtered_detections': filtered_detections,
         'exclude_confirmed_referees': exclude_confirmed_referees,
+        'experimental_ambiguous_velocity_guard': {
+            'enabled': bool(freeze_ambiguous_velocity),
+            'ambiguity_iou': float(ambiguity_iou) if freeze_ambiguous_velocity else None,
+            'scope': 'centroid trackers only; ByteTrack unchanged',
+        },
         'trackers': {},
     }
     for name, tracker in trackers.items():
@@ -222,6 +249,10 @@ def compare(video, cache, output_dir, max_frames=None, exclude_confirmed_referee
             'metrics': summary,
             'output_jsonl': str(output_dir / f'{name}.jsonl'),
         }
+        if isinstance(tracker, AmbiguityVelocityTracker):
+            result['trackers'][name]['ambiguous_velocity_freezes'] = (
+                tracker.ambiguous_velocity_freezes
+            )
     byte = trackers['bytetrack_standard']
     result['trackers']['bytetrack_standard']['implementation'] = {
         'package': 'ultralytics', 'version': byte.version, **byte.config,
@@ -238,12 +269,18 @@ def main():
     parser.add_argument('--out', required=True)
     parser.add_argument('--max-frames', type=int)
     parser.add_argument('--exclude-confirmed-referees', action='store_true')
+    parser.add_argument('--freeze-ambiguous-velocity', action='store_true')
+    parser.add_argument('--ambiguity-iou', type=float, default=.30)
     args = parser.parse_args()
     if args.max_frames is not None and args.max_frames <= 0:
         parser.error('--max-frames must be positive')
+    if not 0 < args.ambiguity_iou <= 1:
+        parser.error('--ambiguity-iou must be in (0,1]')
     print(json.dumps(compare(
         args.video, args.cache, args.out, args.max_frames,
         exclude_confirmed_referees=args.exclude_confirmed_referees,
+        freeze_ambiguous_velocity=args.freeze_ambiguous_velocity,
+        ambiguity_iou=args.ambiguity_iou,
     ), indent=2))
 
 
