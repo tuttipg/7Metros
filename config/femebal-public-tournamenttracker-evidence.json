@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "safe": true,
+  "dry_run": true,
+  "auth_used": false,
+  "write_enabled": false,
+  "automatic_probe_allowed": false,
+  "observed_at": "2026-09-29",
+  "source": {
+    "url": "https://femebal.com/fixtures-disponibles-para-la-liga-hipotecario-seguros-y-la-liga-plata/",
+    "published": "2026-02-24",
+    "description": "Página pública oficial FEMEBAL que enlaza explícitamente los cuatro fixtures Apertura 2026 de Liga de Honor Hipotecario Seguros y Liga de Honor Plata."
+  },
+  "routes": [
+    {
+      "competition": "Liga de Honor Hipotecario Seguros",
+      "branch": "Caballeros",
+      "observed_url": "https://www.femebal.com/tournament-tracker/RUdVX3VheVA%3D",
+      "canonical_url": "https://www.femebal.com/tournament-tracker/RUdVX3VheVA="
+    },
+    {
+      "competition": "Liga de Honor Hipotecario Seguros",
+      "branch": "Damas",
+      "observed_url": "https://www.femebal.com/tournament-tracker/RUdVX3VhdlQ%3D",
+      "canonical_url": "https://www.femebal.com/tournament-tracker/RUdVX3VhdlQ="
+    },
+    {
+      "competition": "Liga de Honor Plata",
+      "branch": "Caballeros",
+      "observed_url": "https://www.femebal.com/tournament-tracker/RUdVX3Vhdlc%3D",
+      "canonical_url": "https://www.femebal.com/tournament-tracker/RUdVX3Vhdlc="
+    },
+    {
+      "competition": "Liga de Honor Plata",
+      "branch": "Damas",
+      "observed_url": "https://www.femebal.com/tournament-tracker/RUdVX3VhdlA%3D",
+      "canonical_url": "https://www.femebal.com/tournament-tracker/RUdVX3VhdlA="
+    }
+  ],
+  "coverage": {
+    "official_fixture_routes_observed": 4,
+    "routes_with_explicit_public_femebal_link": 4,
+    "routes_automatically_probed": 0,
+    "match_rows_discovered_from_routes": 0,
+    "match_sheets_discovered_from_routes": 0,
+    "parsed_match_sheets": 0
+  },
+  "limitations": [
+    "Las rutas públicas requieren JavaScript para renderizar su contenido; este manifest no ejecuta bundles ni endpoints.",
+    "Una ruta de fixture observada no demuestra por sí sola una relación partido → planilla.",
+    "Los contadores de partidos/planillas permanecen en cero hasta obtener evidencia pública reproducible sin inferir endpoints, IDs o tokens."
+  ]
+}
