@@ -36,23 +36,31 @@ def _file_sha256(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
-def _verify_model_sha256(model, expected_sha256):
-    """Verify an exact local weight file when strict reproduction is requested.
+def _normalize_sha256(value):
+    expected = str(value).strip().lower()
+    if len(expected) != 64 or any(ch not in '0123456789abcdef' for ch in expected):
+        raise ValueError('expected-model-sha256 must be exactly 64 hexadecimal characters')
+    return expected
 
-    Normal runs keep the historical behavior and may let Ultralytics resolve a
-    model name.  Strict runs intentionally require a local file so the binary is
-    verified *before* inference and the cache metadata records that hash.
+
+def _verify_model_sha256(model, expected_sha256, *, require_local=True):
+    """Verify a local weight file, or trust its recorded hash on cache replay.
+
+    Generation in strict mode always requires the local binary and verifies it
+    before inference.  Replay may omit the binary because no model is executed;
+    in that case the requested hash is still matched against cache metadata.
+    If a local file is supplied during replay it is verified as an extra check.
     """
     if expected_sha256 is None:
         return None
-    expected = str(expected_sha256).strip().lower()
-    if len(expected) != 64 or any(ch not in '0123456789abcdef' for ch in expected):
-        raise ValueError('expected-model-sha256 must be exactly 64 hexadecimal characters')
+    expected = _normalize_sha256(expected_sha256)
     model_path = Path(model)
     if not model_path.is_file():
-        raise FileNotFoundError(
-            'Strict model hash verification requires --model to point to a local weight file'
-        )
+        if require_local:
+            raise FileNotFoundError(
+                'Strict model hash verification requires --model to point to a local weight file for new inference'
+            )
+        return expected
     actual = _file_sha256(model_path)
     if actual != expected:
         raise ValueError(
@@ -88,13 +96,24 @@ def main():
     if a.exclude_confirmed_referees and not (a.fixture_kits and a.temporal_teams):
         p.error('--exclude-confirmed-referees requires --fixture-kits and --temporal-teams')
 
-    model_sha256 = _verify_model_sha256(a.model, a.expected_model_sha256)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     digest = _file_sha256(a.video)
     cache = Path(a.cache)
     meta_path = cache.with_suffix('.meta.json')
-    expected = {'video_sha256': digest, 'model': a.model, 'confidence': a.detector_confidence}
+    model_sha256 = _verify_model_sha256(
+        a.model,
+        a.expected_model_sha256,
+        require_local=not cache.exists(),
+    )
+    # In strict mode the portable identity of the model is basename + SHA, not
+    # the machine-specific absolute path used to locate the same weight file.
+    model_identity = Path(a.model).name if model_sha256 is not None else a.model
+    expected = {
+        'video_sha256': digest,
+        'model': model_identity,
+        'confidence': a.detector_confidence,
+    }
     if model_sha256 is not None:
         expected['model_sha256'] = model_sha256
     if a.detector_image_size is not None:
