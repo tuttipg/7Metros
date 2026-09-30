@@ -54,8 +54,17 @@ function validatePublicIndexSource(sourceUrl, targetCanonicalUrl, evidence) {
   return resultUrl;
 }
 
+function decodeEvidenceSourcePath(pathname) {
+  const rawPath = String(pathname ?? '');
+  let decoded;
+  try { decoded = decodeURIComponent(rawPath); } catch { throw new Error('La fuente explicit_public_link contiene percent-encoding inválido en path'); }
+  if (decoded.includes('%')) throw new Error('La fuente explicit_public_link contiene percent-encoding ambiguo en path');
+  return decoded;
+}
+
 function validateExplicitPublicLinkSource(sourceUrl, targetCanonicalUrl) {
-  if (sourceUrl.pathname.startsWith(INDEXED_ROUTE_PREFIX)) throw new Error('La evidencia explicit_public_link no puede usar TournamentTracker como fuente circular');
+  const decodedPath = decodeEvidenceSourcePath(sourceUrl.pathname);
+  if (decodedPath.toLowerCase().startsWith(INDEXED_ROUTE_PREFIX)) throw new Error('La evidencia explicit_public_link no puede usar TournamentTracker como fuente circular');
   if (sourceUrl.toString() === targetCanonicalUrl) throw new Error('La evidencia explicit_public_link no puede ser la propia ruta objetivo');
 }
 
