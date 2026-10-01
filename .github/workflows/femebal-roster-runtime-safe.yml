@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - name: Scoped authenticated guest roster discovery
+      - name: Fetch exact Ferro Apertura roster
         shell: bash
         env:
           API_BASE: https://api.femebal.cam.larrysport.tecdata.net
@@ -34,17 +34,31 @@ jobs:
           test "$code" = '200' || { cat "$onboarding"; exit 1; }
           access="$(jq -r '.accessToken // empty' "$onboarding")"
           test -n "$access" || { echo 'accessToken missing'; exit 1; }
-          echo 'guest onboarding OK; token ephemeral'
 
-          tournaments_body="$(mktemp)"
-          tournaments_code="$(curl "${common[@]}" --request GET \
+          roster="$(mktemp)"
+          roster_code="$(curl "${common[@]}" --request GET \
             --header "Authorization: Bearer ${access}" \
-            --output "$tournaments_body" --write-out '%{http_code}' \
-            "${API_BASE}/teams/1843/tournaments")"
-          printf '\n=== teamId 1843 tournaments ===\nHTTP %s\n' "$tournaments_code"
-          test "$tournaments_code" = '200' || { cat "$tournaments_body"; exit 1; }
-          jq . "$tournaments_body"
+            --output "$roster" --write-out '%{http_code}' \
+            "${API_BASE}/athletes/athletesByTeam/1843?tournamentId=775")"
+          printf 'roster HTTP %s\n' "$roster_code"
+          test "$roster_code" = '200' || { cat "$roster"; exit 1; }
+          jq -e 'type == "array"' "$roster" >/dev/null
+          printf 'roster_count=%s\n' "$(jq 'length' "$roster")"
+          printf 'unique_athlete_ids=%s\n' "$(jq '[.[].id|tostring] | unique | length' "$roster")"
+          printf '\n=== Ferro Mayores A LHC M Apertura 2026 roster ===\n'
+          jq '[.[] | {id, firstName, lastName, birthDate, picture}]' "$roster"
 
-          rm -f "$onboarding" "$tournaments_body"
-          unset access
-          echo 'Read-only; no token printed/persisted; teamId came from prior runtime response.'
+          ids_csv="$(jq -r '[.[].id|tostring] | unique | join(",")' "$roster")"
+          formation="$(mktemp)"
+          formation_code="$(curl "${common[@]}" --request GET \
+            --header "Authorization: Bearer ${access}" \
+            --output "$formation" --write-out '%{http_code}' \
+            "${API_BASE}/athletes/formation/positionAndNumber?athleteIds=${ids_csv}")"
+          printf '\nformation HTTP %s\n' "$formation_code"
+          test "$formation_code" = '200' || { cat "$formation"; exit 1; }
+          printf '\n=== formation enrichment keyed by athleteId ===\n'
+          jq . "$formation"
+
+          rm -f "$onboarding" "$roster" "$formation"
+          unset access ids_csv
+          echo 'Read-only guest flow. Token never printed or persisted. IDs came from validated runtime chain.'
