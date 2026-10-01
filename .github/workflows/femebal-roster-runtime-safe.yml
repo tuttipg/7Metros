@@ -27,29 +27,24 @@ jobs:
           )
 
           onboarding="$(mktemp)"
-          code="$(curl "${common[@]}" \
-            --request POST \
+          code="$(curl "${common[@]}" --request POST \
             --header 'Content-Type: application/json' \
-            --output "$onboarding" \
-            --write-out '%{http_code}' \
+            --output "$onboarding" --write-out '%{http_code}' \
             "${API_BASE}/init-onboarding")"
-          printf 'init-onboarding HTTP %s\n' "$code"
           test "$code" = '200' || { cat "$onboarding"; exit 1; }
           access="$(jq -r '.accessToken // empty' "$onboarding")"
           test -n "$access" || { echo 'accessToken missing'; exit 1; }
-          echo 'guest accessToken received and kept ephemeral'
+          echo 'guest onboarding OK; token ephemeral'
 
-          teams_body="$(mktemp)"
-          teams_code="$(curl "${common[@]}" \
-            --request GET \
+          tournaments_body="$(mktemp)"
+          tournaments_code="$(curl "${common[@]}" --request GET \
             --header "Authorization: Bearer ${access}" \
-            --output "$teams_body" \
-            --write-out '%{http_code}' \
-            "${API_BASE}/teams?club=335&category=100&gender=M")"
-          printf '\n=== Ferro clubId=335 / Mayores category=100 / gender=M ===\nHTTP %s\n' "$teams_code"
-          test "$teams_code" = '200' || { cat "$teams_body"; exit 1; }
-          jq . "$teams_body"
+            --output "$tournaments_body" --write-out '%{http_code}' \
+            "${API_BASE}/teams/1843/tournaments")"
+          printf '\n=== teamId 1843 tournaments ===\nHTTP %s\n' "$tournaments_code"
+          test "$tournaments_code" = '200' || { cat "$tournaments_body"; exit 1; }
+          jq . "$tournaments_body"
 
-          rm -f "$onboarding" "$teams_body"
+          rm -f "$onboarding" "$tournaments_body"
           unset access
-          echo 'Token remained ephemeral; read-only team discovery; no IDs guessed.'
+          echo 'Read-only; no token printed/persisted; teamId came from prior runtime response.'
