@@ -1,0 +1,16 @@
+{
+  "status": "INTEGRATED_UNVERIFIED_HANDBALL_ANALYSIS_DEMO",
+  "fixture": "Ferro - N. S. de Lujan",
+  "sequence": "ferro_lujan_contact",
+  "fixture_frames": [105, 210],
+  "frame_count": 105,
+  "ball_observed_frames": 38,
+  "possession_states": {"ball_unobserved":67,"observed_unassigned":17,"candidate":19,"observed_ambiguous":2},
+  "stable_possession_candidate_runs": 4,
+  "control_change_candidates": 1,
+  "free_ball_flight_candidates": 2,
+  "confirmed_events": 0,
+  "artifacts": {"demo_video_sha256":"3e7996c78a611cb44b47b1d8cb3b4ce08e0ac8d03693a9295a3767dc569fc4a0","summary_json_sha256":"8ad17a8f7f37b777eed2a80ced52a16d70c5c0536bf0e5bdb0b60f3c1a02b074"},
+  "accuracy_metrics": null,
+  "reason_accuracy_unavailable": "Ball, possession and semantic event ground truth do not exist yet; all semantic overlays remain candidates."
+}
