@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-01",
+  "source": "FEMEBAL Community / LarrySport 1.1.3",
+  "status": "confirmed_runtime",
+  "scope": {
+    "clubId": "335",
+    "clubName": "Ferro Carril Oeste",
+    "teamId": "1843",
+    "teamName": "Mayores A",
+    "tournamentId": 775,
+    "tournamentName": "Torneo Metropolitano Apertura",
+    "seasonId": 3,
+    "season": "2026",
+    "categoryId": "100",
+    "category": "Mayores",
+    "divisionId": "421",
+    "division": "LHC Hipotecario Seguros",
+    "genderCode": "M",
+    "gender": "Masculino"
+  },
+  "roster_endpoint": {
+    "method": "GET",
+    "path_template": "/athletes/athletesByTeam/{teamId}?tournamentId={tournamentId}",
+    "resolved_path": "/athletes/athletesByTeam/1843?tournamentId=775",
+    "response_shape": "array",
+    "pagination_observed": false,
+    "pagination_parameters_in_client_method": false
+  },
+  "roster_count": 16,
+  "unique_athlete_ids": 16,
+  "athletes": [
+    {"athleteId":"16284","firstName":"Juan Martín","lastName":"Bartolomeo"},
+    {"athleteId":"16299","firstName":"Matias","lastName":"Jacquemin"},
+    {"athleteId":"16355","firstName":"Ivan Luca","lastName":"Umansky Gavi"},
+    {"athleteId":"19470","firstName":"Juan Pablo","lastName":"Aguero"},
+    {"athleteId":"19472","firstName":"Mariano","lastName":"Bustamante"},
+    {"athleteId":"19475","firstName":"Santiago","lastName":"Duhau"},
+    {"athleteId":"19477","firstName":"Martín","lastName":"Fariña"},
+    {"athleteId":"19479","firstName":"Julián","lastName":"Santos"},
+    {"athleteId":"19480","firstName":"Valentín","lastName":"Schankula"},
+    {"athleteId":"19483","firstName":"Agustín","lastName":"Unzner"},
+    {"athleteId":"19484","firstName":"Fausto","lastName":"Vázquez Palmieri"},
+    {"athleteId":"28365","firstName":"Juan Francisco","lastName":"Ceccardi"},
+    {"athleteId":"28398","firstName":"Ignacio","lastName":"Goñi"},
+    {"athleteId":"28403","firstName":"Emiliano","lastName":"Rubio"},
+    {"athleteId":"57796","firstName":"Atilio","lastName":"Cocco"},
+    {"athleteId":"66223","firstName":"Federico Agustin","lastName":"Pallero"}
+  ],
+  "formation_enrichment": {
+    "status": "confirmed_runtime_but_not_roster_scoped",
+    "endpoint": "/athletes/formation/positionAndNumber?athleteIds={commaSeparatedAthleteIds}",
+    "warning": "This endpoint receives athleteIds only. shirtNumber and position are not proven to belong to a specific team/tournament membership. Do not map shirtNumber as historical roster dorsal.",
+    "byAthleteId": {
+      "16284":{"shirtNumber":16,"position":"Arquero"},
+      "16299":{"shirtNumber":null,"position":"Lateral Izquierdo"},
+      "16355":{"shirtNumber":15,"position":"Central"},
+      "19470":{"shirtNumber":null,"position":"Extremo Derecho"},
+      "19472":{"shirtNumber":9,"position":"Central"},
+      "19475":{"shirtNumber":null,"position":"Lateral Izquierdo"},
+      "19477":{"shirtNumber":2,"position":"Pivote"},
+      "19479":{"shirtNumber":11,"position":"Pivote"},
+      "19480":{"shirtNumber":8,"position":"Extremo Izquierdo"},
+      "19483":{"shirtNumber":17,"position":"Lateral Derecho"},
+      "19484":{"shirtNumber":12,"position":"Arquero"},
+      "28365":{"shirtNumber":null,"position":null},
+      "28398":{"shirtNumber":5,"position":"Extrema izquierdo"},
+      "28403":{"shirtNumber":null,"position":null},
+      "57796":{"shirtNumber":null,"position":null},
+      "66223":{"shirtNumber":6,"position":"Extrema derecha"}
+    }
+  },
+  "identity_validation": {
+    "endpoint_template": "/athletes/{athleteId}",
+    "profiles_checked": 16,
+    "exact_id_name_matches": 16,
+    "status": "confirmed_runtime"
+  },
+  "temporal_membership_validation": {
+    "comparisonTournamentId": 1204,
+    "comparisonTournamentName": "Torneo Metropolitano Clausura",
+    "apertura_count": 16,
+    "clausura_count": 19,
+    "common_count": 14,
+    "apertura_only_athleteIds": ["16299","19483"],
+    "clausura_only_athleteIds": ["16285","16306","19481","22197","22199"],
+    "conclusion": "Roster membership is tournament-specific; athlete-to-club alone is insufficient."
+  },
+  "membership_fields": {
+    "explicit_role": "pending",
+    "explicit_active_or_inactive_status": "pending",
+    "membership_start_date": "pending",
+    "membership_end_date": "pending",
+    "roster_specific_dorsal": "pending"
+  }
+}
