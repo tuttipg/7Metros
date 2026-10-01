@@ -1,22 +1,34 @@
-name: FEMEBAL roster runtime SAFE
+name: FEMEBAL roster runtime — Ferro LHC Apertura 2026
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - research/femebal-rosters-1.1.3
+    paths:
+      - .github/workflows/femebal-roster-runtime-safe.yml
 
 permissions:
   contents: read
 
 jobs:
-  probe:
+  validate-ferro-roster:
+    name: Validate Ferro Mayores A roster
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 3
+    env:
+      API_BASE: https://api.femebal.cam.larrysport.tecdata.net
+      CLUB_ID: '335'
+      TEAM_ID: '1843'
+      TOURNAMENT_ID: '775'
+      CATEGORY_ID: '100'
+      DIVISION_ID: '421'
     steps:
-      - name: Validate exact roster contract E2E
+      - name: Guest auth + read-only roster validation
         shell: bash
-        env:
-          API_BASE: https://api.femebal.cam.larrysport.tecdata.net
         run: |
           set -euo pipefail
+
           common=(
             --silent --show-error --location --max-time 15
             --header 'Accept: application/json'
@@ -24,69 +36,139 @@ jobs:
             --header 'X-App-Version: 1.1.3'
           )
 
-          onboarding="$(mktemp)"
-          code="$(curl "${common[@]}" --request POST \
-            --header 'Content-Type: application/json' \
-            --output "$onboarding" --write-out '%{http_code}' \
-            "${API_BASE}/init-onboarding")"
-          test "$code" = '200' || { cat "$onboarding"; exit 1; }
-          access="$(jq -r '.accessToken // empty' "$onboarding")"
-          test -n "$access" || { echo 'accessToken missing'; exit 1; }
+          cleanup() {
+            rm -f "${onboarding:-}" "${teams:-}" "${tournaments:-}" "${roster:-}"
+            unset access || true
+          }
+          trap cleanup EXIT
 
-          fetch_json() {
+          onboarding="$(mktemp)"
+          teams="$(mktemp)"
+          tournaments="$(mktemp)"
+          roster="$(mktemp)"
+
+          # Legitimate guest onboarding used by LarrySport 1.1.3.
+          onboarding_code="$(curl "${common[@]}" \
+            --request POST \
+            --header 'Content-Type: application/json' \
+            --output "$onboarding" \
+            --write-out '%{http_code}' \
+            "${API_BASE}/init-onboarding")"
+
+          if [[ "$onboarding_code" != '200' ]]; then
+            echo "ERROR: init-onboarding returned HTTP ${onboarding_code}"
+            exit 1
+          fi
+
+          access="$(jq -r '.accessToken // empty' "$onboarding")"
+          if [[ -z "$access" ]]; then
+            echo 'ERROR: init-onboarding did not return accessToken'
+            exit 1
+          fi
+          echo "::add-mask::${access}"
+
+          get_json() {
             local path="$1"
             local out="$2"
+            local label="$3"
             local code
-            code="$(curl "${common[@]}" --request GET \
+            code="$(curl "${common[@]}" \
+              --request GET \
               --header "Authorization: Bearer ${access}" \
-              --output "$out" --write-out '%{http_code}' \
+              --output "$out" \
+              --write-out '%{http_code}' \
               "${API_BASE}${path}")"
-            test "$code" = '200' || { echo "GET ${path} -> HTTP ${code}"; cat "$out"; exit 1; }
+            if [[ "$code" != '200' ]]; then
+              echo "ERROR: ${label} returned HTTP ${code}"
+              exit 1
+            fi
           }
 
-          ferro_ap="$(mktemp)"
-          ferro_cl="$(mktemp)"
-          fetch_json '/athletes/athletesByTeam/1843?tournamentId=775' "$ferro_ap"
-          fetch_json '/athletes/athletesByTeam/1843?tournamentId=1204' "$ferro_cl"
+          # 1) Prove that the known team still resolves to Ferro / Mayores / LHC / Masculino.
+          get_json "/teams?club=${CLUB_ID}&category=${CATEGORY_ID}&gender=M" "$teams" 'Ferro teams lookup'
+          jq -e --arg team "$TEAM_ID" --arg club "$CLUB_ID" --arg cat "$CATEGORY_ID" --arg div "$DIVISION_ID" '
+            [.items[] | select(
+              (.id|tostring)==$team and
+              (.club.id|tostring)==$club and
+              (.ageCategory.id|tostring)==$cat and
+              (.division.id|tostring)==$div and
+              .gender=="Masculino"
+            )] | length == 1
+          ' "$teams" >/dev/null || {
+            echo 'ERROR: teamId 1843 no longer resolves uniquely to Ferro Mayores A / LHC / Masculino'
+            exit 1
+          }
 
-          echo '=== Ferro roster shape ==='
-          jq '[.[] | keys] | unique' "$ferro_ap"
-          printf 'Ferro Apertura count=%s unique=%s\n' "$(jq 'length' "$ferro_ap")" "$(jq '[.[].id|tostring]|unique|length' "$ferro_ap")"
-          printf 'Ferro Clausura count=%s unique=%s\n' "$(jq 'length' "$ferro_cl")" "$(jq '[.[].id|tostring]|unique|length' "$ferro_cl")"
-          echo 'Ferro Apertura athleteIds:'
-          jq -r '.[].id' "$ferro_ap" | paste -sd, -
-          echo 'Apertura-only athleteIds:'
-          comm -23 <(jq -r '.[].id' "$ferro_ap" | sort -n) <(jq -r '.[].id' "$ferro_cl" | sort -n) | paste -sd, -
-          echo 'Clausura-only athleteIds:'
-          comm -13 <(jq -r '.[].id' "$ferro_ap" | sort -n) <(jq -r '.[].id' "$ferro_cl" | sort -n) | paste -sd, -
+          team_name="$(jq -r --arg team "$TEAM_ID" '.items[] | select((.id|tostring)==$team) | .name' "$teams")"
+          division_name="$(jq -r --arg team "$TEAM_ID" '.items[] | select((.id|tostring)==$team) | .division.name' "$teams" | xargs)"
 
-          matched=0
-          while IFS=$'\t' read -r id first last; do
-            profile="$(mktemp)"
-            fetch_json "/athletes/${id}" "$profile"
-            jq -e --arg id "$id" --arg first "$first" --arg last "$last" \
-              '(.id|tostring)==$id and .firstName==$first and .lastName==$last' "$profile" >/dev/null
-            matched=$((matched+1))
-            rm -f "$profile"
-          done < <(jq -r '.[] | [.id,.firstName,.lastName] | @tsv' "$ferro_ap")
-          printf 'individual_profiles_exactly_matched=%s\n' "$matched"
+          # 2) Prove that tournament 775 is still Apertura 2026 in that exact context.
+          get_json "/teams/${TEAM_ID}/tournaments" "$tournaments" 'team tournaments lookup'
+          jq -e --argjson tid "$TOURNAMENT_ID" --arg cat "$CATEGORY_ID" --arg div "$DIVISION_ID" '
+            [.[] | select(
+              .tournament.id==$tid and
+              .tournament.name=="Torneo Metropolitano Apertura" and
+              .tournament.season.description=="2026" and
+              (.tournament.ageCategory.id|tostring)==$cat and
+              (.tournament.division.id|tostring)==$div and
+              .tournament.gender=="Masculino"
+            )] | length == 1
+          ' "$tournaments" >/dev/null || {
+            echo 'ERROR: tournamentId 775 no longer resolves to Apertura 2026 / Mayores / LHC / Masculino'
+            exit 1
+          }
 
-          ballester_teams="$(mktemp)"
-          fetch_json '/teams?club=334&category=100&gender=M' "$ballester_teams"
-          ballester_team_id="$(jq -r '[.items[] | select(.club.id=="334" and .ageCategory.id=="100" and .division.id=="421" and .gender=="Masculino")] | if length==1 then .[0].id else error("Ballester LHC team not unique") end' "$ballester_teams")"
-          printf 'ballester_lhc_team_id=%s\n' "$ballester_team_id"
+          # 3) Fetch the exact tournament-scoped roster.
+          get_json "/athletes/athletesByTeam/${TEAM_ID}?tournamentId=${TOURNAMENT_ID}" "$roster" 'Ferro roster lookup'
 
-          ballester_tournaments="$(mktemp)"
-          fetch_json "/teams/${ballester_team_id}/tournaments" "$ballester_tournaments"
-          ballester_ap_id="$(jq -r '[.[] | select(.tournament.name=="Torneo Metropolitano Apertura" and .tournament.season.description=="2026" and .tournament.ageCategory.id=="100" and .tournament.division.id=="421" and .tournament.gender=="Masculino")] | if length==1 then .[0].tournament.id else error("Ballester Apertura tournament not unique") end' "$ballester_tournaments")"
-          printf 'ballester_apertura_tournament_id=%s\n' "$ballester_ap_id"
+          jq -e 'type=="array" and length>0' "$roster" >/dev/null || {
+            echo 'ERROR: roster is not a non-empty JSON array'
+            exit 1
+          }
 
-          ballester_roster="$(mktemp)"
-          fetch_json "/athletes/athletesByTeam/${ballester_team_id}?tournamentId=${ballester_ap_id}" "$ballester_roster"
-          printf 'Ballester Apertura count=%s unique=%s\n' "$(jq 'length' "$ballester_roster")" "$(jq '[.[].id|tostring]|unique|length' "$ballester_roster")"
-          echo 'athleteIds shared Ferro/Ballester Apertura:'
-          comm -12 <(jq -r '.[].id' "$ferro_ap" | sort -n) <(jq -r '.[].id' "$ballester_roster" | sort -n) | paste -sd, -
+          count="$(jq 'length' "$roster")"
+          unique_count="$(jq '[.[].id|tostring] | unique | length' "$roster")"
+          if [[ "$count" != "$unique_count" ]]; then
+            echo "ERROR: duplicate athleteIds detected: rows=${count}, unique=${unique_count}"
+            exit 1
+          fi
 
-          rm -f "$onboarding" "$ferro_ap" "$ferro_cl" "$ballester_teams" "$ballester_tournaments" "$ballester_roster"
-          unset access
-          echo 'All requests read-only except legitimate guest onboarding. Token never printed or persisted.'
+          jq -e 'all(.[]; (.id != null) and (.firstName|type=="string") and (.lastName|type=="string"))' "$roster" >/dev/null || {
+            echo 'ERROR: one or more roster rows are missing id/firstName/lastName'
+            exit 1
+          }
+
+          # Anchors from the already-confirmed Apertura 2026 snapshot.
+          jq -e '
+            any(.[]; (.id|tostring)=="19480" and .lastName=="Schankula") and
+            any(.[]; (.id|tostring)=="19483" and .lastName=="Unzner") and
+            any(.[]; (.id|tostring)=="28365" and .lastName=="Ceccardi")
+          ' "$roster" >/dev/null || {
+            echo 'ERROR: confirmed Ferro roster anchors were not found'
+            exit 1
+          }
+
+          {
+            echo '# ✅ FEMEBAL roster runtime OK'
+            echo
+            echo '| Campo | Valor |'
+            echo '|---|---|'
+            echo "| Club | Ferro Carril Oeste (${CLUB_ID}) |"
+            echo "| Equipo | ${team_name} (${TEAM_ID}) |"
+            echo "| Categoría | Mayores (${CATEGORY_ID}) |"
+            echo "| División | ${division_name} (${DIVISION_ID}) |"
+            echo '| Rama | Masculino |'
+            echo "| Torneo | Torneo Metropolitano Apertura 2026 (${TOURNAMENT_ID}) |"
+            echo "| Jugadores | ${count} |"
+            echo "| athleteId únicos | ${unique_count} |"
+            echo
+            echo '## Plantel devuelto'
+            echo
+            echo '| athleteId | Jugador |'
+            echo '|---:|---|'
+            jq -r '.[] | "| \(.id) | \(.firstName) \(.lastName) |"' "$roster"
+            echo
+            echo '> SAFE: guest legítimo 1.1.3; sólo lecturas GET después de /init-onboarding; sin Supabase, sin producción y sin persistir el Bearer.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "OK: Ferro ${team_name} / ${division_name} / Apertura 2026 -> ${count} atletas (${unique_count} IDs únicos)"
