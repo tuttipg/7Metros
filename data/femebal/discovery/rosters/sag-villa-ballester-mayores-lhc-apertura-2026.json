@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-01",
+  "source": "FEMEBAL Community / LarrySport 1.1.3",
+  "status": "confirmed_runtime",
+  "scope": {
+    "clubId": "334",
+    "clubName": "S.A.G. Villa Ballester",
+    "teamId": "3291",
+    "teamName": "Mayores A",
+    "tournamentId": 775,
+    "tournamentName": "Torneo Metropolitano Apertura",
+    "seasonId": 3,
+    "season": "2026",
+    "categoryId": "100",
+    "category": "Mayores",
+    "divisionId": "421",
+    "division": "LHC Hipotecario Seguros",
+    "genderCode": "M",
+    "gender": "Masculino"
+  },
+  "roster_endpoint": {
+    "method": "GET",
+    "path_template": "/athletes/athletesByTeam/{teamId}?tournamentId={tournamentId}",
+    "resolved_path": "/athletes/athletesByTeam/3291?tournamentId=775",
+    "response_shape": "array",
+    "pagination_observed": false
+  },
+  "roster_count": 25,
+  "unique_athlete_ids": 25,
+  "athletes": [
+    {"athleteId":"16288","firstName":"Marco Tiziano","lastName":"Gorgo"},
+    {"athleteId":"16362","firstName":"Ignacio","lastName":"Silva Fuentes"},
+    {"athleteId":"16363","firstName":"Juan Ignacio","lastName":"Sterman"},
+    {"athleteId":"16365","firstName":"Lorenzo Damian","lastName":"Ortmann"},
+    {"athleteId":"17229","firstName":"Tiago","lastName":"Maidana"},
+    {"athleteId":"17233","firstName":"Nicolás","lastName":"Rodriguez"},
+    {"athleteId":"21150","firstName":"Sebastian Alejandro","lastName":"Simonet"},
+    {"athleteId":"49369","firstName":"Julian","lastName":"Souto Cueto"},
+    {"athleteId":"49557","firstName":"Javier","lastName":"Altenbach"},
+    {"athleteId":"49560","firstName":"Mariano Andres","lastName":"Canepa"},
+    {"athleteId":"49585","firstName":"Leonardo","lastName":"Werner"},
+    {"athleteId":"49610","firstName":"Francisco","lastName":"Soto Rottenbucher"},
+    {"athleteId":"49637","firstName":"Andres","lastName":"Pinter"},
+    {"athleteId":"49642","firstName":"Francisco","lastName":"Tome"},
+    {"athleteId":"49657","firstName":"Patricio","lastName":"Orlandi"},
+    {"athleteId":"49731","firstName":"Ezequiel","lastName":"Romero"},
+    {"athleteId":"16366","firstName":"Patricio Agustin","lastName":"Coronel"},
+    {"athleteId":"21151","firstName":"Santiago","lastName":"Caamaño"},
+    {"athleteId":"49581","firstName":"Matias Adrian","lastName":"Scovenna"},
+    {"athleteId":"49602","firstName":"Santiago","lastName":"Fenochio"},
+    {"athleteId":"49322","firstName":"Francisco","lastName":"Facio"},
+    {"athleteId":"49653","firstName":"Faustino","lastName":"Hohl"},
+    {"athleteId":"49558","firstName":"Gonzalo","lastName":"Bono"},
+    {"athleteId":"49578","firstName":"Julian","lastName":"Romero"},
+    {"athleteId":"21081","firstName":"Joaquin","lastName":"Aravena"}
+  ],
+  "cross_team_validation": {
+    "compared_with": "Ferro Carril Oeste / teamId 1843 / tournamentId 775",
+    "shared_athleteIds": [],
+    "status": "confirmed_runtime_for_this_pair_only"
+  }
+}
