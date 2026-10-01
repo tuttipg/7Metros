@@ -1,9 +1,7 @@
 name: FEMEBAL roster runtime SAFE
 
 on:
-  push:
-    branches:
-      - research/femebal-rosters-1.1.3
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -75,8 +73,6 @@ jobs:
 
           ballester_teams="$(mktemp)"
           fetch_json '/teams?club=334&category=100&gender=M' "$ballester_teams"
-          echo '=== SAG Villa Ballester Mayores M candidates ==='
-          jq '[.items[] | {id,name,clubId:.club.id,category:.ageCategory,division,gender}]' "$ballester_teams"
           ballester_team_id="$(jq -r '[.items[] | select(.club.id=="334" and .ageCategory.id=="100" and .division.id=="421" and .gender=="Masculino")] | if length==1 then .[0].id else error("Ballester LHC team not unique") end' "$ballester_teams")"
           printf 'ballester_lhc_team_id=%s\n' "$ballester_team_id"
 
@@ -88,8 +84,6 @@ jobs:
           ballester_roster="$(mktemp)"
           fetch_json "/athletes/athletesByTeam/${ballester_team_id}?tournamentId=${ballester_ap_id}" "$ballester_roster"
           printf 'Ballester Apertura count=%s unique=%s\n' "$(jq 'length' "$ballester_roster")" "$(jq '[.[].id|tostring]|unique|length' "$ballester_roster")"
-          echo 'Ballester roster:'
-          jq '[.[] | {id,firstName,lastName,birthDate}]' "$ballester_roster"
           echo 'athleteIds shared Ferro/Ballester Apertura:'
           comm -12 <(jq -r '.[].id' "$ferro_ap" | sort -n) <(jq -r '.[].id' "$ballester_roster" | sort -n) | paste -sd, -
 
