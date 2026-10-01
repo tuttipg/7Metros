@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-01",
+  "scope": {
+    "clubId": "335",
+    "teamId": "1843",
+    "tournamentId": 775,
+    "matchDate": "2026-03-21",
+    "opponent": "Argentinos Juniors"
+  },
+  "sources": {
+    "formation": "GET /athletes/formation/positionAndNumber?athleteIds={ids}",
+    "matchSheetControl": "n8n/planilla-core-smoke.mjs official FEMEBAL sheet fixture"
+  },
+  "counts": {
+    "rosterAthletes": 16,
+    "formationShirtNumberNonNull": 10,
+    "formationShirtNumberNull": 6,
+    "nonNullExactMatchWithMatchDorsal": 7,
+    "nonNullMismatchWithMatchDorsal": 3
+  },
+  "players": [
+    {"athleteId":"16284","name":"Juan Martín Bartolomeo","formationShirtNumber":16,"matchDorsal":1,"comparison":"mismatch"},
+    {"athleteId":"16299","name":"Matias Jacquemin","formationShirtNumber":null,"matchDorsal":19,"comparison":"formation_null"},
+    {"athleteId":"16355","name":"Ivan Luca Umansky Gavi","formationShirtNumber":15,"matchDorsal":14,"comparison":"mismatch"},
+    {"athleteId":"19470","name":"Juan Pablo Aguero","formationShirtNumber":null,"matchDorsal":22,"comparison":"formation_null"},
+    {"athleteId":"19472","name":"Mariano Bustamante","formationShirtNumber":9,"matchDorsal":9,"comparison":"match"},
+    {"athleteId":"19475","name":"Santiago Duhau","formationShirtNumber":null,"matchDorsal":4,"comparison":"formation_null"},
+    {"athleteId":"19477","name":"Martín Fariña","formationShirtNumber":2,"matchDorsal":2,"comparison":"match"},
+    {"athleteId":"19479","name":"Julián Santos","formationShirtNumber":11,"matchDorsal":11,"comparison":"match"},
+    {"athleteId":"19480","name":"Valentín Schankula","formationShirtNumber":8,"matchDorsal":8,"comparison":"match"},
+    {"athleteId":"19483","name":"Agustín Unzner","formationShirtNumber":17,"matchDorsal":17,"comparison":"match"},
+    {"athleteId":"19484","name":"Fausto Vázquez Palmieri","formationShirtNumber":12,"matchDorsal":12,"comparison":"match"},
+    {"athleteId":"28365","name":"Juan Francisco Ceccardi","formationShirtNumber":null,"matchDorsal":10,"comparison":"formation_null"},
+    {"athleteId":"28398","name":"Ignacio Goñi","formationShirtNumber":5,"matchDorsal":3,"comparison":"mismatch"},
+    {"athleteId":"28403","name":"Emiliano Rubio","formationShirtNumber":null,"matchDorsal":21,"comparison":"formation_null"},
+    {"athleteId":"57796","name":"Atilio Cocco","formationShirtNumber":null,"matchDorsal":5,"comparison":"formation_null"},
+    {"athleteId":"66223","name":"Federico Agustin Pallero","formationShirtNumber":6,"matchDorsal":6,"comparison":"match"}
+  ],
+  "conclusion": "formation.shirtNumber is not a reliable historical roster or match dorsal. It is athleteId-scoped and can be null or differ from the official match-sheet dorsal. Store match dorsal as match participation data; leave roster-specific dorsal pending until a team+tournament-scoped source is found."
+}
