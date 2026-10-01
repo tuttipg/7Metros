@@ -1,0 +1,48 @@
+name: FEMEBAL roster runtime SAFE
+
+on:
+  push:
+    branches:
+      - research/femebal-rosters-1.1.3
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Probe only roster discovery prerequisites
+        shell: bash
+        env:
+          API_BASE: https://api.femebal.cam.larrysport.tecdata.net
+        run: |
+          set -euo pipefail
+          probe() {
+            local label="$1"
+            local path="$2"
+            local body="$(mktemp)"
+            local code
+            code="$(curl --silent --show-error --location --max-time 15 \
+              --request GET \
+              --header 'Accept: application/json' \
+              --header 'X-App-Variant: cah' \
+              --header 'X-App-Version: 1.1.3' \
+              --output "$body" \
+              --write-out '%{http_code}' \
+              "${API_BASE}${path}" || true)"
+            printf '\n=== %s ===\nHTTP %s\n' "$label" "$code"
+            head -c 6000 "$body" || true
+            printf '\n'
+            rm -f "$body"
+          }
+
+          # Connectivity/control surface already observed in the client.
+          probe 'categories control' '/teams/categories'
+          # Exact club-focused lookup only; no broad enumeration.
+          probe 'search Ferro' '/search?q=Ferro&skip=0'
+          # Guest surface observed in 1.1.3; used only to classify the auth boundary.
+          probe 'guest root' '/guests'
+
+          echo 'No Authorization/Cookie used; no writes; no roster IDs guessed.'
