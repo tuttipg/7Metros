@@ -11,9 +11,9 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 4
     steps:
-      - name: Fetch exact Ferro Apertura roster
+      - name: Validate exact roster contract E2E
         shell: bash
         env:
           API_BASE: https://api.femebal.cam.larrysport.tecdata.net
@@ -35,30 +35,64 @@ jobs:
           access="$(jq -r '.accessToken // empty' "$onboarding")"
           test -n "$access" || { echo 'accessToken missing'; exit 1; }
 
-          roster="$(mktemp)"
-          roster_code="$(curl "${common[@]}" --request GET \
-            --header "Authorization: Bearer ${access}" \
-            --output "$roster" --write-out '%{http_code}' \
-            "${API_BASE}/athletes/athletesByTeam/1843?tournamentId=775")"
-          printf 'roster HTTP %s\n' "$roster_code"
-          test "$roster_code" = '200' || { cat "$roster"; exit 1; }
-          jq -e 'type == "array"' "$roster" >/dev/null
-          printf 'roster_count=%s\n' "$(jq 'length' "$roster")"
-          printf 'unique_athlete_ids=%s\n' "$(jq '[.[].id|tostring] | unique | length' "$roster")"
-          printf '\n=== Ferro Mayores A LHC M Apertura 2026 roster ===\n'
-          jq '[.[] | {id, firstName, lastName, birthDate, picture}]' "$roster"
+          fetch_json() {
+            local path="$1"
+            local out="$2"
+            local code
+            code="$(curl "${common[@]}" --request GET \
+              --header "Authorization: Bearer ${access}" \
+              --output "$out" --write-out '%{http_code}' \
+              "${API_BASE}${path}")"
+            test "$code" = '200' || { echo "GET ${path} -> HTTP ${code}"; cat "$out"; exit 1; }
+          }
 
-          ids_csv="$(jq -r '[.[].id|tostring] | unique | join(",")' "$roster")"
-          formation="$(mktemp)"
-          formation_code="$(curl "${common[@]}" --request GET \
-            --header "Authorization: Bearer ${access}" \
-            --output "$formation" --write-out '%{http_code}' \
-            "${API_BASE}/athletes/formation/positionAndNumber?athleteIds=${ids_csv}")"
-          printf '\nformation HTTP %s\n' "$formation_code"
-          test "$formation_code" = '200' || { cat "$formation"; exit 1; }
-          printf '\n=== formation enrichment keyed by athleteId ===\n'
-          jq . "$formation"
+          ferro_ap="$(mktemp)"
+          ferro_cl="$(mktemp)"
+          fetch_json '/athletes/athletesByTeam/1843?tournamentId=775' "$ferro_ap"
+          fetch_json '/athletes/athletesByTeam/1843?tournamentId=1204' "$ferro_cl"
 
-          rm -f "$onboarding" "$roster" "$formation"
-          unset access ids_csv
-          echo 'Read-only guest flow. Token never printed or persisted. IDs came from validated runtime chain.'
+          echo '=== Ferro roster shape ==='
+          jq '[.[] | keys] | unique' "$ferro_ap"
+          printf 'Ferro Apertura count=%s unique=%s\n' "$(jq 'length' "$ferro_ap")" "$(jq '[.[].id|tostring]|unique|length' "$ferro_ap")"
+          printf 'Ferro Clausura count=%s unique=%s\n' "$(jq 'length' "$ferro_cl")" "$(jq '[.[].id|tostring]|unique|length' "$ferro_cl")"
+          echo 'Ferro Apertura athleteIds:'
+          jq -r '.[].id' "$ferro_ap" | paste -sd, -
+          echo 'Apertura-only athleteIds:'
+          comm -23 <(jq -r '.[].id' "$ferro_ap" | sort -n) <(jq -r '.[].id' "$ferro_cl" | sort -n) | paste -sd, -
+          echo 'Clausura-only athleteIds:'
+          comm -13 <(jq -r '.[].id' "$ferro_ap" | sort -n) <(jq -r '.[].id' "$ferro_cl" | sort -n) | paste -sd, -
+
+          matched=0
+          while IFS=$'\t' read -r id first last; do
+            profile="$(mktemp)"
+            fetch_json "/athletes/${id}" "$profile"
+            jq -e --arg id "$id" --arg first "$first" --arg last "$last" \
+              '(.id|tostring)==$id and .firstName==$first and .lastName==$last' "$profile" >/dev/null
+            matched=$((matched+1))
+            rm -f "$profile"
+          done < <(jq -r '.[] | [.id,.firstName,.lastName] | @tsv' "$ferro_ap")
+          printf 'individual_profiles_exactly_matched=%s\n' "$matched"
+
+          ballester_teams="$(mktemp)"
+          fetch_json '/teams?club=334&category=100&gender=M' "$ballester_teams"
+          echo '=== SAG Villa Ballester Mayores M candidates ==='
+          jq '[.items[] | {id,name,clubId:.club.id,category:.ageCategory,division,gender}]' "$ballester_teams"
+          ballester_team_id="$(jq -r '[.items[] | select(.club.id=="334" and .ageCategory.id=="100" and .division.id=="421" and .gender=="Masculino")] | if length==1 then .[0].id else error("Ballester LHC team not unique") end' "$ballester_teams")"
+          printf 'ballester_lhc_team_id=%s\n' "$ballester_team_id"
+
+          ballester_tournaments="$(mktemp)"
+          fetch_json "/teams/${ballester_team_id}/tournaments" "$ballester_tournaments"
+          ballester_ap_id="$(jq -r '[.[] | select(.tournament.name=="Torneo Metropolitano Apertura" and .tournament.season.description=="2026" and .tournament.ageCategory.id=="100" and .tournament.division.id=="421" and .tournament.gender=="Masculino")] | if length==1 then .[0].tournament.id else error("Ballester Apertura tournament not unique") end' "$ballester_tournaments")"
+          printf 'ballester_apertura_tournament_id=%s\n' "$ballester_ap_id"
+
+          ballester_roster="$(mktemp)"
+          fetch_json "/athletes/athletesByTeam/${ballester_team_id}?tournamentId=${ballester_ap_id}" "$ballester_roster"
+          printf 'Ballester Apertura count=%s unique=%s\n' "$(jq 'length' "$ballester_roster")" "$(jq '[.[].id|tostring]|unique|length' "$ballester_roster")"
+          echo 'Ballester roster:'
+          jq '[.[] | {id,firstName,lastName,birthDate}]' "$ballester_roster"
+          echo 'athleteIds shared Ferro/Ballester Apertura:'
+          comm -12 <(jq -r '.[].id' "$ferro_ap" | sort -n) <(jq -r '.[].id' "$ballester_roster" | sort -n) | paste -sd, -
+
+          rm -f "$onboarding" "$ferro_ap" "$ferro_cl" "$ballester_teams" "$ballester_tournaments" "$ballester_roster"
+          unset access
+          echo 'All requests read-only except legitimate guest onboarding. Token never printed or persisted.'
