@@ -49,7 +49,7 @@ jobs:
             [[ "$code" == 200 ]] || { echo "${label}: HTTP ${code}"; exit 1; }
           }
 
-          # Teams endpoint is paginated. Read every page for one club only.
+          # Paginate teams, scoped to Ferro masculino only.
           teams_all="$tmp/teams.jsonl"
           skip=0
           while :; do
@@ -62,7 +62,8 @@ jobs:
             (( skip >= count )) && break
           done
 
-          echo "Ferro male teams discovered=$(wc -l < "$teams_all" | xargs)"
+          team_count="$(wc -l < "$teams_all" | xargs)"
+          echo "Ferro male teams discovered=${team_count}"
 
           memberships="$tmp/memberships.tsv"
           : > "$memberships"
@@ -80,6 +81,7 @@ jobs:
               [[ -n "$tournament_id" ]] || continue
               roster="$tmp/roster-${team_id}-${tournament_id}.json"
               get_json "/athletes/athletesByTeam/${team_id}?tournamentId=${tournament_id}" "$roster" "roster ${team_id}/${tournament_id}"
+              jq -e 'type=="array"' "$roster" >/dev/null
               jq -r --arg team_id "$team_id" --arg team_name "$team_name" --arg category "$category" \
                 --arg division "$division" --arg tournament_id "$tournament_id" --arg tournament_name "$tournament_name" '
                 .[] | [(.id|tostring), .firstName, .lastName, $team_id, $team_name, $category, $division, $tournament_id, $tournament_name] | @tsv
@@ -89,32 +91,55 @@ jobs:
 
           total_memberships="$(wc -l < "$memberships" | xargs)"
           unique_athletes="$(cut -f1 "$memberships" | sort -u | wc -l | xargs)"
-          shared="$tmp/shared.txt"
-          cut -f1 "$memberships" | sort | uniq -d > "$shared"
-          shared_count="$(wc -l < "$shared" | xargs)"
+
+          repeated_membership_ids="$tmp/repeated-membership-ids.txt"
+          cut -f1 "$memberships" | sort | uniq -d > "$repeated_membership_ids"
+          repeated_membership_count="$(wc -l < "$repeated_membership_ids" | xargs)"
+
+          cross_team_ids="$tmp/cross-team-ids.txt"
+          awk -F '\t' '
+            { k=$1 SUBSEP $4; if (!seen[k]++) teams[$1]++ }
+            END { for (id in teams) if (teams[id] > 1) print id }
+          ' "$memberships" | sort -n > "$cross_team_ids"
+          cross_team_count="$(wc -l < "$cross_team_ids" | xargs)"
+
+          same_team_multi_tournament_ids="$tmp/same-team-multi-tournament-ids.txt"
+          awk -F '\t' '
+            {
+              kt=$1 SUBSEP $4; if (!seenTeam[kt]++) teamCount[$1]++;
+              kr=$1 SUBSEP $8; if (!seenTournament[kr]++) tournamentCount[$1]++;
+            }
+            END { for (id in tournamentCount) if (teamCount[id] == 1 && tournamentCount[id] > 1) print id }
+          ' "$memberships" | sort -n > "$same_team_multi_tournament_ids"
+          same_team_multi_tournament_count="$(wc -l < "$same_team_multi_tournament_ids" | xargs)"
 
           echo "2026 roster memberships=${total_memberships}"
           echo "unique athleteIds=${unique_athletes}"
-          echo "athleteIds with >1 roster membership=${shared_count}"
+          echo "athleteIds in >1 team+tournament membership=${repeated_membership_count}"
+          echo "athleteIds in >1 distinct teamId=${cross_team_count}"
+          echo "athleteIds repeated only across tournaments of one team=${same_team_multi_tournament_count}"
 
           {
-            echo '# FEMEBAL — Ferro 2026 shared roster diagnostic'
+            echo '# FEMEBAL — Ferro 2026 roster membership diagnostic'
             echo
-            echo "- memberships observadas: **${total_memberships}**"
+            echo "- equipos masculinos descubiertos: **${team_count}**"
+            echo "- membresías (teamId + tournamentId + athleteId) observadas: **${total_memberships}**"
             echo "- athleteId únicos: **${unique_athletes}**"
-            echo "- athleteId presentes en más de un `(teamId,tournamentId)`: **${shared_count}**"
+            echo "- athleteId repetidos en más de una membresía: **${repeated_membership_count}**"
+            echo "- athleteId presentes en más de un teamId distinto: **${cross_team_count}**"
+            echo "- athleteId repetidos solamente entre torneos del mismo teamId: **${same_team_multi_tournament_count}**"
             echo
-            if (( shared_count > 0 )); then
-              echo '## Atletas con múltiples membresías'
+            if (( cross_team_count > 0 )); then
+              echo '## Atletas realmente compartidos entre equipos distintos'
               echo
               echo '| athleteId | Jugador | teamId | Equipo | Categoría | División | tournamentId | Torneo |'
               echo '|---:|---|---:|---|---|---|---:|---|'
               while IFS= read -r athlete_id; do
                 awk -F '\t' -v id="$athlete_id" '$1==id {printf "| %s | %s %s | %s | %s | %s | %s | %s | %s |\n",$1,$2,$3,$4,$5,$6,$7,$8,$9}' "$memberships"
-              done < "$shared"
+              done < "$cross_team_ids"
             else
-              echo 'No se observaron athleteId compartidos en las membresías 2026 consultadas.'
+              echo 'No se observaron athleteId presentes en más de un teamId distinto.'
             fi
             echo
-            echo '> Diagnóstico acotado a equipos masculinos de Ferro. Guest legítimo 1.1.3, GET-only después de init-onboarding, sin Supabase y sin persistir tokens.'
+            echo '> Diagnóstico acotado a Ferro masculino y torneos temporada 2026. Guest legítimo 1.1.3, GET-only después de init-onboarding, sin Supabase y sin persistir tokens.'
           } >> "$GITHUB_STEP_SUMMARY"
