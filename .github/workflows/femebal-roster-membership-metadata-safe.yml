@@ -1,0 +1,92 @@
+name: FEMEBAL roster diagnostic — membership metadata
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/femebal-rosters-1.1.3
+    paths:
+      - .github/workflows/femebal-roster-membership-metadata-safe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      API_BASE: https://api.femebal.cam.larrysport.tecdata.net
+    steps:
+      - name: Inspect only known athlete/profile/formation surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          common=(
+            --silent --show-error --location --max-time 15
+            --header 'Accept: application/json'
+            --header 'X-App-Variant: cah'
+            --header 'X-App-Version: 1.1.3'
+          )
+          tmp="$(mktemp -d)"
+          cleanup(){ rm -rf "$tmp"; unset access || true; }
+          trap cleanup EXIT
+
+          onboarding="$tmp/onboarding.json"
+          code="$(curl "${common[@]}" --request POST --header 'Content-Type: application/json' \
+            --output "$onboarding" --write-out '%{http_code}' "${API_BASE}/init-onboarding")"
+          [[ "$code" == 200 ]] || { echo "init-onboarding HTTP $code"; exit 1; }
+          access="$(jq -r '.accessToken // empty' "$onboarding")"
+          [[ -n "$access" ]] || { echo 'guest accessToken missing'; exit 1; }
+          echo "::add-mask::${access}"
+
+          get_json(){
+            local path="$1" out="$2" label="$3" code
+            code="$(curl "${common[@]}" --request GET --header "Authorization: Bearer ${access}" \
+              --output "$out" --write-out '%{http_code}' "${API_BASE}${path}")"
+            [[ "$code" == 200 ]] || { echo "${label}: HTTP ${code}"; exit 1; }
+          }
+
+          # 16284 Bartolomeo is confirmed in Mayores A + Junior A.
+          # 10565 Simunovic Granero is confirmed in multiple Junior teamIds + Mayores B.
+          for athlete_id in 16284 10565; do
+            profile="$tmp/profile-${athlete_id}.json"
+            get_json "/athletes/${athlete_id}" "$profile" "profile ${athlete_id}"
+            echo "=== athlete ${athlete_id} profile top-level keys ==="
+            jq -r 'keys[]' "$profile" | sort
+            echo "=== athlete ${athlete_id} membership-like profile paths ==="
+            jq -r '
+              paths(scalars) as $p
+              | ($p | map(tostring) | join(".")) as $path
+              | select($path | test("team|tournament|club|role|status|active|shirt|number|position|start|end|created|updated"; "i"))
+              | [$path, (getpath($p)|tostring)] | @tsv
+            ' "$profile" || true
+          done
+
+          formation="$tmp/formation.json"
+          get_json '/athletes/formation/positionAndNumber?athleteIds=16284,10565' "$formation" 'formation enrichment'
+          echo '=== formation response ==='
+          jq . "$formation"
+
+          # Prove again that both athletes have multiple roster memberships without probing unknown routes.
+          declare -a checks=(
+            '1843:775:16284:Mayores A / Apertura'
+            '369:790:16284:Junior A / Apertura'
+            '369:1213:10565:Junior A / Clausura'
+            '3715:1223:10565:Juniors B / Clausura'
+            '3256:1205:10565:Mayores B / Clausura'
+          )
+
+          echo '=== exact roster membership checks ==='
+          for spec in "${checks[@]}"; do
+            IFS=: read -r team_id tournament_id athlete_id label <<<"$spec"
+            roster="$tmp/roster-${team_id}-${tournament_id}.json"
+            get_json "/athletes/athletesByTeam/${team_id}?tournamentId=${tournament_id}" "$roster" "roster ${team_id}/${tournament_id}"
+            jq -e --arg id "$athlete_id" 'any(.[]; (.id|tostring)==$id)' "$roster" >/dev/null || {
+              echo "ERROR: athlete ${athlete_id} not found in ${team_id}/${tournament_id}"
+              exit 1
+            }
+            echo "OK athlete=${athlete_id} membership teamId=${team_id} tournamentId=${tournament_id} (${label})"
+          done
+
+          echo 'No unknown endpoints were guessed. No writes performed.'
