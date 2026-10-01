@@ -1,0 +1,21 @@
+{
+  "status": "UNVERIFIED_POSSESSION_CANDIDATES_NO_POSSESSION_GT",
+  "decision": "KEEP_AS_EXPERIMENTAL_VISIBLE_CANDIDATE_LAYER",
+  "fixture": "Ferro - N. S. de Lujan",
+  "sequence": "ferro_lujan_contact",
+  "fixture_frames": [105, 210],
+  "frame_count": 105,
+  "inputs": {
+    "fixture_lossless_sha256": "aa82e2c4b159c9231a7ab51910176ab1cad83d7c8892a0d9c47cf260666a88ac",
+    "player_tracks_sha256": "565e5c8f9a742e123a5fb5db8062180a671cd512d917fd6d386d8a7379725b60",
+    "ball_observations_sha256": "0916efcc44f7b2fc41a6c8c02805ae5b0d63428a37cc873ae0cd895bb1f96335"
+  },
+  "settings": {"max_normalized_distance": 0.35, "min_margin_to_second": 0.08, "requires_observed_ball": true, "temporal_carry_forward": false},
+  "states": {"ball_unobserved": 67, "observed_unassigned": 17, "observed_ambiguous": 2, "candidate": 19},
+  "candidate_teams": {"Lujan": 11, "Ferro": 8},
+  "candidate_runs": 9,
+  "longest_candidate_run_frames": 5,
+  "artifacts": {"demo_video_sha256": "88e4071ef717ba491485ff397bcaa1893ec5b9b91d964316ba6890144e3f457e", "jsonl_sha256": "25d8f76bbc4de4036274e8522a21c3d773010a5d34af1334b657c1e66897a0d0"},
+  "accuracy_metrics": null,
+  "reason_accuracy_unavailable": "No human possession ground truth exists; POS? is a geometry-based candidate only."
+}
