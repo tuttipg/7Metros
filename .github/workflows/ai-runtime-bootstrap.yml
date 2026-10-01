@@ -33,11 +33,16 @@ jobs:
             --output runtime/yolo11n.pt
           echo '0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1  runtime/yolo11n.pt' | sha256sum --check --strict
 
+      - name: Include exact AI source from branch base
+        run: |
+          set -euo pipefail
+          cp -a ai runtime/repo_ai
+
       - name: Record reproducibility manifest
         run: |
           set -euo pipefail
           python - <<'PY'
-          import hashlib, json, pathlib
+          import hashlib, json, pathlib, subprocess
           root = pathlib.Path('runtime')
           files = {}
           for path in sorted(root.iterdir()):
@@ -47,6 +52,7 @@ jobs:
                       'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
                   }
           manifest = {
+              'source_commit': subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(),
               'python': '3.11',
               'ultralytics': '8.4.163',
               'model': 'yolo11n.pt',
@@ -59,7 +65,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: sevenmetros-ai-runtime-8.4.163
+          name: sevenmetros-ai-runtime-source-8.4.163
           path: runtime/
           if-no-files-found: error
           retention-days: 3
