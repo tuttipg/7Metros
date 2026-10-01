@@ -1,0 +1,120 @@
+name: FEMEBAL roster diagnostic — Ferro shared athletes
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/femebal-rosters-1.1.3
+    paths:
+      - .github/workflows/femebal-roster-shared-athletes-safe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      API_BASE: https://api.femebal.cam.larrysport.tecdata.net
+      CLUB_ID: '335'
+    steps:
+      - name: Compare Ferro 2026 roster memberships
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          common=(
+            --silent --show-error --location --max-time 15
+            --header 'Accept: application/json'
+            --header 'X-App-Variant: cah'
+            --header 'X-App-Version: 1.1.3'
+          )
+          tmp="$(mktemp -d)"
+          cleanup(){ rm -rf "$tmp"; unset access || true; }
+          trap cleanup EXIT
+
+          onboarding="$tmp/onboarding.json"
+          code="$(curl "${common[@]}" --request POST --header 'Content-Type: application/json' \
+            --output "$onboarding" --write-out '%{http_code}' "${API_BASE}/init-onboarding")"
+          [[ "$code" == 200 ]] || { echo "init-onboarding HTTP $code"; exit 1; }
+          access="$(jq -r '.accessToken // empty' "$onboarding")"
+          [[ -n "$access" ]] || { echo 'guest accessToken missing'; exit 1; }
+          echo "::add-mask::${access}"
+
+          get_json(){
+            local path="$1" out="$2" label="$3" code
+            code="$(curl "${common[@]}" --request GET --header "Authorization: Bearer ${access}" \
+              --output "$out" --write-out '%{http_code}' "${API_BASE}${path}")"
+            [[ "$code" == 200 ]] || { echo "${label}: HTTP ${code}"; exit 1; }
+          }
+
+          # Teams endpoint is paginated. Read every page for one club only.
+          teams_all="$tmp/teams.jsonl"
+          skip=0
+          while :; do
+            page="$tmp/teams-${skip}.json"
+            get_json "/teams?club=${CLUB_ID}&gender=M&skip=${skip}" "$page" 'Ferro teams'
+            jq -c '.items[]' "$page" >> "$teams_all"
+            count="$(jq -r '.count' "$page")"
+            limit="$(jq -r '.limit' "$page")"
+            skip=$((skip + limit))
+            (( skip >= count )) && break
+          done
+
+          echo "Ferro male teams discovered=$(wc -l < "$teams_all" | xargs)"
+
+          memberships="$tmp/memberships.tsv"
+          : > "$memberships"
+
+          while IFS= read -r team; do
+            team_id="$(jq -r '.id' <<<"$team")"
+            team_name="$(jq -r '.name' <<<"$team")"
+            category="$(jq -r '.ageCategory.name' <<<"$team")"
+            division="$(jq -r '.division.name' <<<"$team" | xargs)"
+
+            tournaments="$tmp/tournaments-${team_id}.json"
+            get_json "/teams/${team_id}/tournaments" "$tournaments" "tournaments team ${team_id}"
+
+            while IFS=$'\t' read -r tournament_id tournament_name; do
+              [[ -n "$tournament_id" ]] || continue
+              roster="$tmp/roster-${team_id}-${tournament_id}.json"
+              get_json "/athletes/athletesByTeam/${team_id}?tournamentId=${tournament_id}" "$roster" "roster ${team_id}/${tournament_id}"
+              jq -r --arg team_id "$team_id" --arg team_name "$team_name" --arg category "$category" \
+                --arg division "$division" --arg tournament_id "$tournament_id" --arg tournament_name "$tournament_name" '
+                .[] | [(.id|tostring), .firstName, .lastName, $team_id, $team_name, $category, $division, $tournament_id, $tournament_name] | @tsv
+              ' "$roster" >> "$memberships"
+            done < <(jq -r '.[] | select(.tournament.season.description=="2026") | [.tournament.id,.tournament.name] | @tsv' "$tournaments")
+          done < "$teams_all"
+
+          total_memberships="$(wc -l < "$memberships" | xargs)"
+          unique_athletes="$(cut -f1 "$memberships" | sort -u | wc -l | xargs)"
+          shared="$tmp/shared.txt"
+          cut -f1 "$memberships" | sort | uniq -d > "$shared"
+          shared_count="$(wc -l < "$shared" | xargs)"
+
+          echo "2026 roster memberships=${total_memberships}"
+          echo "unique athleteIds=${unique_athletes}"
+          echo "athleteIds with >1 roster membership=${shared_count}"
+
+          {
+            echo '# FEMEBAL — Ferro 2026 shared roster diagnostic'
+            echo
+            echo "- memberships observadas: **${total_memberships}**"
+            echo "- athleteId únicos: **${unique_athletes}**"
+            echo "- athleteId presentes en más de un `(teamId,tournamentId)`: **${shared_count}**"
+            echo
+            if (( shared_count > 0 )); then
+              echo '## Atletas con múltiples membresías'
+              echo
+              echo '| athleteId | Jugador | teamId | Equipo | Categoría | División | tournamentId | Torneo |'
+              echo '|---:|---|---:|---|---|---|---:|---|'
+              while IFS= read -r athlete_id; do
+                awk -F '\t' -v id="$athlete_id" '$1==id {printf "| %s | %s %s | %s | %s | %s | %s | %s | %s |\n",$1,$2,$3,$4,$5,$6,$7,$8,$9}' "$memberships"
+              done < "$shared"
+            else
+              echo 'No se observaron athleteId compartidos en las membresías 2026 consultadas.'
+            fi
+            echo
+            echo '> Diagnóstico acotado a equipos masculinos de Ferro. Guest legítimo 1.1.3, GET-only después de init-onboarding, sin Supabase y sin persistir tokens.'
+          } >> "$GITHUB_STEP_SUMMARY"
