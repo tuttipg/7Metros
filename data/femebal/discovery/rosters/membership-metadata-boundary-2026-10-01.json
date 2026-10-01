@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-01",
+  "source": "FEMEBAL Community / LarrySport 1.1.3",
+  "status": "confirmed_runtime_on_known_client_surfaces",
+  "testedAthletes": [
+    {
+      "athleteId": "16284",
+      "name": "Juan Martín Bartolomeo",
+      "confirmedMemberships": [
+        {"teamId":"1843","tournamentId":"775","label":"Mayores A / Apertura"},
+        {"teamId":"369","tournamentId":"790","label":"Junior A / Apertura"}
+      ]
+    },
+    {
+      "athleteId": "10565",
+      "name": "Tonko Simunovic Granero",
+      "confirmedMemberships": [
+        {"teamId":"369","tournamentId":"1213","label":"Junior A / Clausura"},
+        {"teamId":"3715","tournamentId":"1223","label":"Juniors B / Clausura"},
+        {"teamId":"3256","tournamentId":"1205","label":"Mayores B / Clausura"}
+      ]
+    }
+  ],
+  "surfaces": {
+    "roster": {
+      "endpoint": "GET /athletes/athletesByTeam/{teamId}?tournamentId={tournamentId}",
+      "observedRowKeys": ["id","firstName","lastName","birthDate","picture"],
+      "membershipMetadataObserved": false
+    },
+    "athleteProfile": {
+      "endpoint": "GET /athletes/{athleteId}",
+      "topLevelKeysForBothTestedAthletes": ["id","firstName","lastName","birthDate","picture"],
+      "membershipLikePathsObserved": [],
+      "membershipMetadataObserved": false
+    },
+    "formation": {
+      "endpoint": "GET /athletes/formation/positionAndNumber?athleteIds={ids}",
+      "observedFields": ["shirtNumber","position"],
+      "receivesTeamId": false,
+      "receivesTournamentId": false,
+      "membershipScoped": false
+    }
+  },
+  "confirmedNotExposedOnTheseSurfaces": [
+    "membershipRole",
+    "membershipActiveInactiveStatus",
+    "membershipStartDate",
+    "membershipEndDate",
+    "membershipCreatedAt",
+    "membershipUpdatedAt",
+    "membershipId",
+    "teamTournamentScopedShirtNumber",
+    "teamTournamentScopedPosition"
+  ],
+  "importantBoundary": "This does not prove that such fields or endpoints do not exist anywhere in the backend. It proves they are not present in the confirmed roster/profile/formation surfaces exercised by the 1.1.3 client contract.",
+  "modelingRule": "Do not infer role, active/baja, start/end dates or historical roster dorsal from athlete identity, tournament status, roster presence/absence, or global formation fields."
+}
