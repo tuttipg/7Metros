@@ -1,0 +1,144 @@
+{
+  "scope": "FEMEBAL Community / LarrySport 1.1.3 - partidos/fixture",
+  "apk_version": "1.1.3",
+  "api_base": "https://api.femebal.cam.larrysport.tecdata.net",
+  "evidence": {
+    "kind": "static_hbc96_exact_decode",
+    "runtime_verified_in_this_environment": false,
+    "notes": "Contrato reconstruido desde el cliente 1.1.3. No se realizaron escrituras ni se usaron credenciales privadas."
+  },
+  "matches": {
+    "list": {
+      "method": "GET",
+      "path": "/matches",
+      "query": {
+        "pagination": ["limit", "skip"],
+        "confirmed_filters": ["tournamentId", "teamId", "status", "date", "sortBy"],
+        "date_operator_encoding": ["$gte:<ISO-8601>", "$lte:<ISO-8601>"],
+        "array_encoding": "comma-separated"
+      },
+      "response_page": ["items", "count", "next", "prev"]
+    },
+    "by_id": {
+      "method": "GET",
+      "path_template": "/matches/{matchId}"
+    },
+    "subresources": {
+      "live_update": "/matches/{matchId}/live-update",
+      "formation": "/matches/{matchId}/formation",
+      "preview": "/matches/{matchId}/preview",
+      "mvp_results": "/matches/{matchId}/mvp/results",
+      "stats": "/matches/{matchId}/stats",
+      "referees": "/matches/{matchId}/referees",
+      "coaching_staff": "/matches/{matchId}/coachingStaff",
+      "events": "/matches/{matchId}/events",
+      "team_played_count": "/matches/tournaments/{tournamentId}/teams/{teamId}/played-count",
+      "top_scorers": "/athletes/topScorers/{matchId}"
+    }
+  },
+  "proven_paths": {
+    "tournament_to_matches": {
+      "client_method": "getMatchesByTournamentId",
+      "semantic_request": "GET /matches?tournamentId={tournamentId}&limit=0",
+      "fixture_sort": "matchday:asc",
+      "alternate_grid_sort": "round:asc"
+    },
+    "team_to_matches": {
+      "semantic_filters": ["tournamentId", "teamId", "limit"],
+      "upcoming": {
+        "date": "$gte:<ISO-8601>",
+        "sortBy": "date:asc"
+      },
+      "past": {
+        "date": "$lte:<ISO-8601>",
+        "sortBy": "date:desc",
+        "status": "finalized"
+      }
+    }
+  },
+  "match_resource": {
+    "scheduled_fields": [
+      "id",
+      "awayTeam",
+      "homeTeam",
+      "date",
+      "tournamentId",
+      "matchday",
+      "status",
+      "urlTransmission",
+      "matchSheetStatus",
+      "playingField",
+      "isFictitiousMatch",
+      "eliminationTournamentMatch",
+      "isTelevised",
+      "hasMvpVoting"
+    ],
+    "finalized_additions": ["result", "finishedAt"],
+    "result_fields": [
+      "homeTeamGoals",
+      "awayTeamGoals",
+      "definitionByPenalties",
+      "homePenaltyGoals",
+      "awayPenaltyGoals"
+    ],
+    "playing_field": "structured nullable object; client model supports venue metadata including name/address/city when supplied"
+  },
+  "tournament_resource": {
+    "fields": [
+      "id",
+      "name",
+      "type",
+      "federationId",
+      "ageCategory",
+      "season",
+      "gender",
+      "startDate",
+      "status",
+      "division",
+      "isRelevant"
+    ],
+    "competition_level_display": "ageCategory.name + ' - ' + division.name + ' - ' + gender.name",
+    "competition_level_endpoints": [
+      "/competition-level/categories",
+      "/competition-level/divisions"
+    ]
+  },
+  "id_semantics": {
+    "matchId": {
+      "status": "confirmed",
+      "meaning": "match.id; canonical key used for match detail and match-derived subresources/results/statistics"
+    },
+    "tournamentId": {
+      "status": "confirmed",
+      "meaning": "top-level match field and list filter; joins match to tournament metadata"
+    },
+    "teamId": {
+      "status": "confirmed",
+      "meaning": "team identifier used in match filters and nested home/away team objects"
+    },
+    "matchSheetId": {
+      "status": "confirmed_but_not_as_pdf_id",
+      "meaning": "field observed in RefereeByMatch and CoachingStaffByMatch records alongside matchId; not present in the top-level Match JSON model",
+      "warning": "Static client evidence does not prove that this value dereferences the official PDF or the complete match sheet. Do not use it as planilla_url FK without runtime evidence."
+    },
+    "multidivisionId": {
+      "status": "competition_model_confirmed_match_direct_field_unconfirmed",
+      "meaning": "observed in multidivision/competition-level model; not confirmed as a direct top-level match field by the 1.1.3 static Match model"
+    }
+  },
+  "sheet_reference": {
+    "official_pdf_relation": "separate evidence channel",
+    "control_pdf": "https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf",
+    "control_pdf_hash_token": "5ce377051ea0acb1",
+    "relationship_to_matchSheetId": "unproven"
+  },
+  "runtime_pending": [
+    "real tournamentId for Apertura 2026 LHC Caballeros",
+    "real teamId values for Ferro and opponents",
+    "real matchId values for the preview rows",
+    "real matchSheetId values if exposed by referee/coachingStaff responses",
+    "runtime status vocabulary and exact current API payloads",
+    "direct relation, if any, between matchSheetId and official digital/PDF sheet",
+    "direct match exposure, if any, of multidivisionId"
+  ]
+}
