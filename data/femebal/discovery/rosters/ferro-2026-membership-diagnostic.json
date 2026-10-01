@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-01",
+  "source": "FEMEBAL Community / LarrySport 1.1.3",
+  "status": "confirmed_runtime",
+  "scope": {
+    "clubId": "335",
+    "clubName": "Ferro Carril Oeste",
+    "gender": "Masculino",
+    "season": "2026"
+  },
+  "method": {
+    "guest": "POST /init-onboarding",
+    "teams": "GET /teams?club=335&gender=M&skip={skip}",
+    "tournaments": "GET /teams/{teamId}/tournaments",
+    "roster": "GET /athletes/athletesByTeam/{teamId}?tournamentId={tournamentId}",
+    "writes": false
+  },
+  "counts": {
+    "maleTeams": 20,
+    "rosterMembershipRows": 482,
+    "uniqueAthleteIds": 192,
+    "athleteIdsInMultipleMemberships": 170,
+    "athleteIdsInMultipleDistinctTeamIds": 80,
+    "athleteIdsInMultipleAgeCategories": 63,
+    "athleteIdsInMultipleTeamIdsWithinOneAgeCategory": 17,
+    "athleteIdsInMultipleTeamIdsWithinSameTournamentId": 0,
+    "athleteIdsRepeatedOnlyAcrossTournamentsOfOneTeamId": 90
+  },
+  "interpretation": {
+    "athleteToTeamIsOneToOne": false,
+    "athleteToClubIsSufficientMembershipModel": false,
+    "recommendedMembershipIdentity": ["teamId", "tournamentId", "athleteId"],
+    "sameTournamentCrossTeamConclusion": "No cases observed in this Ferro masculino 2026 scope; do not generalize to all FEMEBAL without further validation."
+  },
+  "examples": [
+    {
+      "athleteId": "914",
+      "name": "Juan Martín Pallero",
+      "memberships": [
+        {"teamId":"368","team":"Juveniles A","category":"Juveniles","division":"A","tournamentId":"789","tournament":"Torneo Metropolitano Apertura"},
+        {"teamId":"368","team":"Juveniles A","category":"Juveniles","division":"A","tournamentId":"1212","tournament":"Torneo Metropolitano Clausura"},
+        {"teamId":"369","team":"Junior A","category":"Junior","division":"A","tournamentId":"790","tournament":"Torneo Metropolitano Apertura"},
+        {"teamId":"3256","team":"Mayores B","category":"Mayores","division":"Liga de Honor Plata","tournamentId":"782","tournament":"Torneo Metropolitano Apertura"},
+        {"teamId":"3256","team":"Mayores B","category":"Mayores","division":"Liga de Honor Plata","tournamentId":"1205","tournament":"Torneo Metropolitano Clausura"}
+      ]
+    },
+    {
+      "athleteId": "10565",
+      "name": "Tonko Simunovic Granero",
+      "memberships": [
+        {"teamId":"369","team":"Junior A","category":"Junior","division":"A","tournamentId":"1213","tournament":"Torneo Metropolitano Clausura"},
+        {"teamId":"3715","team":"Juniors B","category":"Junior","division":"C","tournamentId":"834","tournament":"Torneo Metropolitano Apertura"},
+        {"teamId":"3715","team":"Juniors B","category":"Junior","division":"C","tournamentId":"1223","tournament":"Torneo Metropolitano Clausura"},
+        {"teamId":"3256","team":"Mayores B","category":"Mayores","division":"Liga de Honor Plata","tournamentId":"1205","tournament":"Torneo Metropolitano Clausura"}
+      ]
+    },
+    {
+      "athleteId": "16284",
+      "name": "Juan Martín Bartolomeo",
+      "memberships": [
+        {"teamId":"1843","team":"Mayores A","category":"Mayores","division":"LHC Hipotecario Seguros","tournamentId":"775","tournament":"Torneo Metropolitano Apertura"},
+        {"teamId":"1843","team":"Mayores A","category":"Mayores","division":"LHC Hipotecario Seguros","tournamentId":"1204","tournament":"Torneo Metropolitano Clausura"},
+        {"teamId":"369","team":"Junior A","category":"Junior","division":"A","tournamentId":"790","tournament":"Torneo Metropolitano Apertura"},
+        {"teamId":"369","team":"Junior A","category":"Junior","division":"A","tournamentId":"1213","tournament":"Torneo Metropolitano Clausura"}
+      ]
+    },
+    {
+      "athleteId": "16285",
+      "name": "Juan Jeremías Bus Saldaña",
+      "memberships": [
+        {"teamId":"1843","team":"Mayores A","category":"Mayores","division":"LHC Hipotecario Seguros","tournamentId":"1204","tournament":"Torneo Metropolitano Clausura"},
+        {"teamId":"369","team":"Junior A","category":"Junior","division":"A","tournamentId":"790","tournament":"Torneo Metropolitano Apertura"},
+        {"teamId":"369","team":"Junior A","category":"Junior","division":"A","tournamentId":"1213","tournament":"Torneo Metropolitano Clausura"},
+        {"teamId":"3256","team":"Mayores B","category":"Mayores","division":"Liga de Honor Plata","tournamentId":"782","tournament":"Torneo Metropolitano Apertura"}
+      ]
+    }
+  ]
+}
