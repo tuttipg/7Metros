@@ -35,23 +35,21 @@ jobs:
             "${API_BASE}/init-onboarding")"
           printf 'init-onboarding HTTP %s\n' "$code"
           test "$code" = '200' || { cat "$onboarding"; exit 1; }
-
-          # Never print or persist the bearer. Verify only that the field exists.
           access="$(jq -r '.accessToken // empty' "$onboarding")"
-          test -n "$access" || { echo 'accessToken missing'; jq -r 'keys[]' "$onboarding"; exit 1; }
+          test -n "$access" || { echo 'accessToken missing'; exit 1; }
           echo 'guest accessToken received and kept ephemeral'
 
-          search_body="$(mktemp)"
-          search_code="$(curl "${common[@]}" \
+          teams_body="$(mktemp)"
+          teams_code="$(curl "${common[@]}" \
             --request GET \
             --header "Authorization: Bearer ${access}" \
-            --output "$search_body" \
+            --output "$teams_body" \
             --write-out '%{http_code}' \
-            "${API_BASE}/search?q=Ferro&skip=0")"
-          printf '\n=== authenticated search Ferro ===\nHTTP %s\n' "$search_code"
-          test "$search_code" = '200' || { cat "$search_body"; exit 1; }
-          jq . "$search_body"
+            "${API_BASE}/teams?club=335&category=100&gender=M")"
+          printf '\n=== Ferro clubId=335 / Mayores category=100 / gender=M ===\nHTTP %s\n' "$teams_code"
+          test "$teams_code" = '200' || { cat "$teams_body"; exit 1; }
+          jq . "$teams_body"
 
-          rm -f "$onboarding" "$search_body"
+          rm -f "$onboarding" "$teams_body"
           unset access
-          echo 'No tokens printed or persisted; no writes beyond the app legitimate guest onboarding; no IDs guessed.'
+          echo 'Token remained ephemeral; read-only team discovery; no IDs guessed.'
