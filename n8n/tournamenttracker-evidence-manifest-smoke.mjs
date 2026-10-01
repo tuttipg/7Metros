@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { canonicalizeOfficialFemebalUrl } from './official-url-policy.mjs';
 import { canonicalizeIndexedTournamentTrackerRoute } from './tournamenttracker-indexed-route-core.mjs';
 
 const manifest = JSON.parse(await readFile(new URL('../config/femebal-public-tournamenttracker-evidence.json', import.meta.url), 'utf8'));
@@ -11,9 +12,12 @@ assert.equal(manifest.auth_used, false);
 assert.equal(manifest.write_enabled, false);
 assert.equal(manifest.automatic_probe_allowed, false);
 
-const source = new URL(manifest.source?.url);
-assert.equal(source.protocol, 'https:');
-assert.ok(['femebal.com', 'www.femebal.com'].includes(source.hostname.toLowerCase()));
+assert.match(manifest.observed_at, /^\d{4}-\d{2}-\d{2}$/);
+assert.match(manifest.source?.published, /^\d{4}-\d{2}-\d{2}$/);
+const sourceCanonical = canonicalizeOfficialFemebalUrl(manifest.source?.url);
+const source = new URL(sourceCanonical);
+assert.equal(source.search, '', 'La evidencia explícita no debe depender de query params');
+assert.equal(source.pathname.startsWith('/tournament-tracker/'), false, 'La fuente no puede ser circular');
 assert.ok(Array.isArray(manifest.routes) && manifest.routes.length > 0);
 
 const seenCanonical = new Set();
