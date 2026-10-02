@@ -1,0 +1,116 @@
+name: FEMEBAL roster boundary — omitted tournamentId
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/femebal-rosters-1.1.3
+    paths:
+      - .github/workflows/femebal-roster-no-tournament-semantics-safe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      API_BASE: https://api.femebal.cam.larrysport.tecdata.net
+      TEAM_ID: '1843'
+    steps:
+      - name: Compare omitted tournamentId with tournament-scoped union
+        shell: bash
+        run: |
+          set -euo pipefail
+          common=(
+            --silent --show-error --location --max-time 15
+            --header 'Accept: application/json'
+            --header 'X-App-Variant: cah'
+            --header 'X-App-Version: 1.1.3'
+          )
+          tmp="$(mktemp -d)"
+          cleanup(){ rm -rf "$tmp"; unset access || true; }
+          trap cleanup EXIT
+
+          onboarding="$tmp/onboarding.json"
+          code="$(curl "${common[@]}" --request POST --header 'Content-Type: application/json' \
+            --output "$onboarding" --write-out '%{http_code}' "${API_BASE}/init-onboarding")"
+          [[ "$code" == 200 ]] || { echo "init-onboarding HTTP $code"; exit 1; }
+          access="$(jq -r '.accessToken // empty' "$onboarding")"
+          [[ -n "$access" ]] || { echo 'guest accessToken missing'; exit 1; }
+          echo "::add-mask::${access}"
+
+          get_json(){
+            local path="$1" out="$2" label="$3" code
+            code="$(curl "${common[@]}" --request GET --header "Authorization: Bearer ${access}" \
+              --output "$out" --write-out '%{http_code}' "${API_BASE}${path}")"
+            [[ "$code" == 200 ]] || { echo "${label}: HTTP ${code}"; exit 1; }
+            jq -e . "$out" >/dev/null
+          }
+
+          all="$tmp/all.json"
+          tournaments="$tmp/tournaments.json"
+          get_json "/athletes/athletesByTeam/${TEAM_ID}" "$all" 'unscoped roster'
+          get_json "/teams/${TEAM_ID}/tournaments" "$tournaments" 'team tournaments'
+          jq -e 'type=="array"' "$all" >/dev/null
+          jq -e 'type=="array"' "$tournaments" >/dev/null
+
+          jq -r '.[].id|tostring' "$all" | sort -u > "$tmp/all.ids"
+          all_rows="$(jq 'length' "$all")"
+          all_unique="$(wc -l < "$tmp/all.ids" | xargs)"
+
+          : > "$tmp/union.raw"
+          : > "$tmp/tournament-summary.tsv"
+          while IFS=$'\t' read -r tid season name; do
+            [[ -n "$tid" ]] || continue
+            roster="$tmp/roster-${tid}.json"
+            get_json "/athletes/athletesByTeam/${TEAM_ID}?tournamentId=${tid}" "$roster" "roster tournament ${tid}"
+            count="$(jq 'length' "$roster")"
+            jq -r '.[].id|tostring' "$roster" >> "$tmp/union.raw"
+            printf '%s\t%s\t%s\t%s\n' "$tid" "$season" "$name" "$count" >> "$tmp/tournament-summary.tsv"
+          done < <(jq -r '.[] | [.tournament.id, .tournament.season.description, .tournament.name] | @tsv' "$tournaments" | sort -u)
+
+          sort -u "$tmp/union.raw" > "$tmp/union.ids"
+          union_unique="$(wc -l < "$tmp/union.ids" | xargs)"
+          tournament_count="$(wc -l < "$tmp/tournament-summary.tsv" | xargs)"
+
+          comm -23 "$tmp/all.ids" "$tmp/union.ids" > "$tmp/only-unscoped.ids"
+          comm -13 "$tmp/all.ids" "$tmp/union.ids" > "$tmp/only-union.ids"
+          only_unscoped="$(wc -l < "$tmp/only-unscoped.ids" | xargs)"
+          only_union="$(wc -l < "$tmp/only-union.ids" | xargs)"
+
+          echo "tournaments=${tournament_count}"
+          echo "unscoped rows=${all_rows} unique=${all_unique}"
+          echo "union tournament-scoped unique=${union_unique}"
+          echo "only in unscoped=${only_unscoped}"
+          echo "only in tournament union=${only_union}"
+          echo '--- tournaments ---'
+          cat "$tmp/tournament-summary.tsv"
+          if (( only_unscoped > 0 )); then
+            echo '--- first IDs only in unscoped ---'
+            head -20 "$tmp/only-unscoped.ids"
+          fi
+          if (( only_union > 0 )); then
+            echo '--- first IDs only in tournament union ---'
+            head -20 "$tmp/only-union.ids"
+          fi
+
+          {
+            echo '# FEMEBAL — omitted tournamentId semantics'
+            echo
+            echo "- teamId: **${TEAM_ID}**"
+            echo "- torneos asociados devueltos por /teams/${TEAM_ID}/tournaments: **${tournament_count}**"
+            echo "- roster sin tournamentId: **${all_rows} filas / ${all_unique} athleteId únicos**"
+            echo "- unión de todos los rosters tournament-scoped conocidos: **${union_unique} athleteId únicos**"
+            echo "- sólo en respuesta sin tournamentId: **${only_unscoped}**"
+            echo "- sólo en unión por torneos: **${only_union}**"
+            echo
+            echo '| tournamentId | temporada | torneo | atletas |'
+            echo '|---:|---|---|---:|'
+            while IFS=$'\t' read -r tid season name count; do
+              echo "| ${tid} | ${season} | ${name} | ${count} |"
+            done < "$tmp/tournament-summary.tsv"
+            echo
+            echo '> Guest legítimo 1.1.3; read-only; sin Supabase ni persistencia de tokens.'
+          } >> "$GITHUB_STEP_SUMMARY"
