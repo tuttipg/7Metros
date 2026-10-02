@@ -1,0 +1,64 @@
+name: FEMEBAL roster diagnostic — default team vs membership
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/femebal-rosters-1.1.3
+    paths:
+      - .github/workflows/femebal-roster-default-team-safe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      API_BASE: https://api.femebal.cam.larrysport.tecdata.net
+    steps:
+      - name: Compare athlete default team with exact roster memberships
+        shell: bash
+        run: |
+          set -euo pipefail
+          common=(
+            --silent --show-error --location --max-time 15
+            --header 'Accept: application/json'
+            --header 'X-App-Variant: cah'
+            --header 'X-App-Version: 1.1.3'
+          )
+          tmp="$(mktemp -d)"
+          cleanup(){ rm -rf "$tmp"; unset access || true; }
+          trap cleanup EXIT
+
+          onboarding="$tmp/onboarding.json"
+          code="$(curl "${common[@]}" --request POST --header 'Content-Type: application/json' \
+            --output "$onboarding" --write-out '%{http_code}' "${API_BASE}/init-onboarding")"
+          [[ "$code" == 200 ]] || exit 1
+          access="$(jq -r '.accessToken // empty' "$onboarding")"
+          [[ -n "$access" ]] || exit 1
+          echo "::add-mask::${access}"
+
+          get(){
+            local path="$1" out="$2" code
+            code="$(curl "${common[@]}" --request GET --header "Authorization: Bearer ${access}" \
+              --output "$out" --write-out '%{http_code}' "${API_BASE}${path}")"
+            printf '%s' "$code"
+          }
+
+          # Both 16284 and 10565 have already-confirmed multiple team/tournament memberships at Ferro in 2026.
+          for id in 16284 10565 19480; do
+            default="$tmp/default-${id}.json"
+            club="$tmp/club-${id}.json"
+            profile="$tmp/profile-${id}.json"
+            dc="$(get "/athletes/${id}/default-team" "$default")"
+            cc="$(get "/athletes/${id}/club-id" "$club")"
+            pc="$(get "/users/athlete-profile/${id}" "$profile")"
+            echo "=== athlete ${id} ==="
+            echo "default-team HTTP=${dc}"; jq . "$default" 2>/dev/null || cat "$default"
+            echo "club-id HTTP=${cc}"; jq . "$club" 2>/dev/null || cat "$club"
+            echo "user-athlete-profile HTTP=${pc}"; jq . "$profile" 2>/dev/null || cat "$profile"
+          done
+
+          echo 'Known exact memberships remain represented by teamId+tournamentId; this probe does not write anything.'
