@@ -35,8 +35,12 @@ jobs:
           curl --fail --location --retry 3 \
             'https://huggingface.co/martinjolif/yolo-football-ball-detection/resolve/main/yolo-football-ball-detection.pt' \
             --output runtime/yolo-football-ball-detection.pt
+          curl --fail --location --retry 3 \
+            'https://huggingface.co/acatorcini/yolov9-soccer-ball/resolve/main/v9b_best.pt' \
+            --output runtime/v9b_best.pt
           test -s runtime/yolo-football-ball-detection.pt
-          sha256sum runtime/yolo-football-ball-detection.pt
+          test -s runtime/v9b_best.pt
+          sha256sum runtime/yolo-football-ball-detection.pt runtime/v9b_best.pt
 
       - name: Record reproducibility manifest
         run: |
@@ -55,7 +59,10 @@ jobs:
               'source_commit': subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(),
               'python': '3.11',
               'ultralytics': '8.4.163',
-              'specialized_model_source': 'martinjolif/yolo-football-ball-detection',
+              'specialized_model_sources': [
+                'martinjolif/yolo-football-ball-detection',
+                'acatorcini/yolov9-soccer-ball'
+              ],
               'files': files,
           }
           (root / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
@@ -64,7 +71,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: sevenmetros-specialized-ball-runtime
+          name: sevenmetros-specialized-ball-runtime-v2
           path: runtime/
           if-no-files-found: error
           retention-days: 3
