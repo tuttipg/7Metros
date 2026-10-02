@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "contract_name": "femebal_larrysport_1_1_3_roster_membership",
+  "observed_at": "2026-10-01",
+  "status": "confirmed_code_and_runtime",
+  "identity": {
+    "athlete": ["athleteId"],
+    "rosterMembership": ["teamId", "tournamentId", "athleteId"]
+  },
+  "resolution": [
+    {
+      "step": 1,
+      "entity": "team",
+      "source": "GET /teams",
+      "requiredScope": ["clubId", "category", "division", "gender"],
+      "note": "Use original IDs/metadata; fail closed if the intended team is ambiguous."
+    },
+    {
+      "step": 2,
+      "entity": "tournament",
+      "source": "GET /teams/{teamId}/tournaments",
+      "requiredScope": ["season", "tournament/competition", "category", "division", "gender"],
+      "note": "The selected tournamentId must be returned for the selected teamId."
+    },
+    {
+      "step": 3,
+      "entity": "roster",
+      "source": "GET /athletes/athletesByTeam/{teamId}?tournamentId={tournamentId}",
+      "requiredParameters": ["teamId", "tournamentId"],
+      "response": "array<AthleteIdentity>"
+    }
+  ],
+  "athleteIdentityFieldsObserved": [
+    "id",
+    "firstName",
+    "lastName",
+    "birthDate",
+    "picture"
+  ],
+  "validation": {
+    "requireTournamentId": true,
+    "requireTeamTournamentRelationship": true,
+    "requireJsonArray": true,
+    "requireNonNullAthleteId": true,
+    "requireUniqueAthleteIdWithinExactRoster": true,
+    "http200AloneIsNotValidityProof": true,
+    "failClosedOnKnownPairMismatchEmptyArray": true,
+    "rejectUnscopedAthletesByTeam": true
+  },
+  "runtimeControls": {
+    "ferroMayoresA": {
+      "clubId": "335",
+      "teamId": "1843",
+      "tournamentId": 775,
+      "categoryId": "100",
+      "divisionId": "421",
+      "gender": "Masculino",
+      "season": "2026",
+      "scopedRosterRows": 16,
+      "scopedUniqueAthleteIds": 16,
+      "unscopedRows": 106,
+      "unscopedUniqueAthleteIds": 31
+    },
+    "ferroMayoresB": {
+      "clubId": "335",
+      "teamId": "3256",
+      "tournamentId": 782,
+      "gender": "Masculino",
+      "season": "2026",
+      "scopedRosterRows": 26,
+      "scopedUniqueAthleteIds": 26,
+      "unscopedRows": 103,
+      "unscopedUniqueAthleteIds": 46
+    },
+    "ballesterMayoresA": {
+      "clubId": "334",
+      "teamId": "3291",
+      "tournamentId": 775,
+      "gender": "Masculino",
+      "season": "2026",
+      "scopedRosterRows": 25,
+      "scopedUniqueAthleteIds": 25,
+      "unscopedRows": 131,
+      "unscopedUniqueAthleteIds": 30
+    }
+  },
+  "membershipMetadata": {
+    "role": "pending_not_exposed_in_confirmed_surfaces",
+    "explicitActiveInactive": "pending_not_exposed_in_confirmed_surfaces",
+    "membershipStartDate": "pending_not_exposed_in_confirmed_surfaces",
+    "membershipEndDate": "pending_not_exposed_in_confirmed_surfaces",
+    "membershipRelationId": "pending_not_exposed_in_confirmed_surfaces",
+    "rosterScopedDorsal": "pending_not_exposed_in_confirmed_surfaces",
+    "rosterScopedPosition": "pending_not_exposed_in_confirmed_surfaces"
+  },
+  "formation": {
+    "source": "GET /athletes/formation/positionAndNumber?athleteIds={ids}",
+    "fields": ["shirtNumber", "position"],
+    "teamTournamentScoped": false,
+    "shirtNumberMayBeUsedAsHistoricalRosterDorsal": false
+  },
+  "prohibitedInferences": [
+    "athleteId permanently belongs to clubId",
+    "athleteId permanently belongs to teamId",
+    "absence from another tournament means baja",
+    "tournament start/end dates are membership start/end dates",
+    "formation.shirtNumber is historical roster dorsal",
+    "HTTP 200 from roster endpoint proves team+tournament compatibility",
+    "deduplicated unscoped athletesByTeam equals exact roster"
+  ],
+  "provenanceRequirement": {
+    "recommended": [
+      "sourceEndpoint",
+      "observedAt",
+      "appVersion",
+      "teamId",
+      "tournamentId"
+    ]
+  }
+}
