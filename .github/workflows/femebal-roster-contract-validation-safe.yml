@@ -1,0 +1,72 @@
+name: FEMEBAL roster diagnostic — final contract validation
+
+on:
+  push:
+    branches:
+      - research/femebal-rosters-1.1.3
+    paths:
+      - .github/workflows/femebal-roster-contract-validation-safe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate roster evidence and canonical handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo 'Validating JSON evidence...'
+          for f in data/femebal/discovery/rosters/*.json; do
+            python -m json.tool "$f" >/dev/null
+          done
+
+          echo 'Checking canonical files...'
+          required=(
+            data/femebal/discovery/rosters/roster-integration-contract-v1.json
+            data/femebal/discovery/rosters/athlete-scoped-surfaces-boundary-2026-10-02.json
+            data/femebal/discovery/rosters/apk-1.1.3-static-roster-surface.json
+            data/femebal/discovery/rosters/full-bidirectional-closure-2026-10-01.json
+            data/femebal/discovery/rosters/ferro-1843-unscoped-multiset-semantics-2026-10-01.json
+            docs/femebal/rosters/README.md
+            docs/femebal/rosters/larrysport-1.1.3-roster-contract.md
+            docs/femebal/rosters/membership-metadata-boundary.md
+          )
+          for f in "${required[@]}"; do
+            test -s "$f" || { echo "missing/empty: $f"; exit 1; }
+          done
+
+          echo 'Checking current handoffs for stale pending wording...'
+          if grep -Ein '\bPENDIENTE\b' \
+            docs/femebal/rosters/README.md \
+            docs/femebal/rosters/larrysport-1.1.3-roster-contract.md \
+            docs/femebal/rosters/membership-metadata-boundary.md; then
+            echo 'ERROR: stale PENDIENTE state remains in canonical handoff'
+            exit 1
+          fi
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('data/femebal/discovery/rosters/roster-integration-contract-v1.json')
+          c = json.loads(p.read_text())
+          assert c['identity']['rosterMembership'] == ['teamId','tournamentId','athleteId']
+          assert c['forwardRoster']['canonicalForExactRosterEnumeration'] is True
+          assert c['validation']['requireTournamentIdForExactRoster'] is True
+          assert c['validation']['rejectUnscopedAthletesByTeamForMembershipFacts'] is True
+          m = c['membershipMetadata']
+          expected = 'not_exposed_in_confirmed_1_1_3_client_surfaces'
+          for k in ['role','explicitActiveInactive','membershipStartDate','membershipEndDate','membershipRelationId','rosterScopedDorsal','rosterScopedPosition']:
+              assert m[k] == expected, (k, m[k])
+          s = c['tournamentPerformanceStats']
+          assert s['mayBeUsedAsRosterMembershipMetadata'] is False
+          print('Contract semantic assertions passed.')
+          PY
+
+          echo 'Final PLANTELES contract validation passed.'
