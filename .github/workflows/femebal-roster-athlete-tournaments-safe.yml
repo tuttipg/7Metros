@@ -17,7 +17,7 @@ jobs:
     env:
       API_BASE: https://api.femebal.cam.larrysport.tecdata.net
     steps:
-      - name: Validate athlete -> team+tournament relations bidirectionally
+      - name: Validate reverse memberships and tournament listing boundary
         shell: bash
         run: |
           set -euo pipefail
@@ -62,18 +62,32 @@ jobs:
               total_pairs=$((total_pairs+1))
               roster="$tmp/roster-${id}-${team}-${tournament}.json"
               get_json "/athletes/athletesByTeam/${team}?tournamentId=${tournament}" "$roster"
-              if jq -e --arg id "$id" 'any(.[]; (.id|tostring)==$id)' "$roster" >/dev/null; then
-                verified_pairs=$((verified_pairs+1))
-                printf 'OK athlete=%s team=%s tournament=%s season=%s teamName=%s tournament=%s rosterCount=%s\n' \
-                  "$id" "$team" "$tournament" "$season" "$teamName" "$tournamentName" "$(jq 'length' "$roster")"
-              else
+              jq -e --arg id "$id" 'any(.[]; (.id|tostring)==$id)' "$roster" >/dev/null || {
                 echo "ERROR: reverse pair ${id} -> ${team}/${tournament} does not contain athlete in forward roster"
                 exit 1
-              fi
+              }
+              verified_pairs=$((verified_pairs+1))
+              printf 'OK athlete=%s team=%s tournament=%s season=%s teamName=%s tournament=%s rosterCount=%s\n' \
+                "$id" "$team" "$tournament" "$season" "$teamName" "$tournamentName" "$(jq 'length' "$roster")"
             done < <(jq -r '.[] | [(.team.id|tostring),(.tournament.id|tostring),.team.name,.tournament.name,.tournament.season.description] | @tsv' "$out")
           done
 
           echo "bidirectional_membership_pairs=${verified_pairs}/${total_pairs}"
           [[ "$verified_pairs" == "$total_pairs" ]] || exit 1
-          echo 'All reverse athlete memberships were confirmed by the exact forward roster endpoint.'
+
+          team_tournaments="$tmp/team-1843-tournaments.json"
+          get_json '/teams/1843/tournaments' "$team_tournaments"
+          echo '=== /teams/1843/tournaments ==='
+          jq '[.[] | {tournamentId:.tournament.id,name:.tournament.name,season:.tournament.season.description,status:.tournament.status}]' "$team_tournaments"
+
+          jq -e 'any(.[]; (.tournament.id|tostring)=="775")' "$team_tournaments" >/dev/null
+          jq -e 'any(.[]; (.tournament.id|tostring)=="1204")' "$team_tournaments" >/dev/null
+
+          if jq -e 'any(.[]; (.tournament.id|tostring)=="776")' "$team_tournaments" >/dev/null; then
+            echo 'team_tournaments_contains_776=true'
+          else
+            echo 'team_tournaments_contains_776=false'
+            echo 'CONFIRMED BOUNDARY: 1843/776 is a valid bidirectional athlete membership but is absent from /teams/1843/tournaments.'
+          fi
+
           echo 'Guest legítimo 1.1.3; sólo GET después de onboarding; sin Supabase ni producción.'
