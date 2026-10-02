@@ -1,0 +1,73 @@
+name: FEMEBAL player diagnostic — profile contract validation
+
+on:
+  push:
+    branches:
+      - research/femebal-rosters-1.1.3
+    paths:
+      - .github/workflows/femebal-player-profile-contract-validation-safe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate player and roster contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in data/femebal/discovery/rosters/*.json; do
+            python -m json.tool "$f" >/dev/null
+          done
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          roster = json.loads(Path('data/femebal/discovery/rosters/roster-integration-contract-v1.json').read_text())
+          profile = json.loads(Path('data/femebal/discovery/rosters/player-profile-integration-contract-v1.json').read_text())
+          coverage = json.loads(Path('data/femebal/discovery/rosters/player-profile-coverage-ferro-1843-775-2026-10-02.json').read_text())
+
+          assert roster['identity']['rosterMembership'] == ['teamId','tournamentId','athleteId']
+          assert profile['identity']['athlete'] == ['athleteId']
+          assert profile['sources']['formationBulkProfile']['teamTournamentScoped'] is False
+          assert profile['sources']['formationBulkProfile']['runtimeControl']['positionEqualToUserProfileIncludingNull'] == '16/16'
+          assert profile['sources']['formationBulkProfile']['runtimeControl']['shirtNumberEqualToUserProfileIncludingNull'] == '16/16'
+          assert profile['sources']['formationBulkProfile']['runtimeControl']['mismatches'] == 0
+          assert profile['sources']['defaultTeam']['mayBeUsedAsRosterMembership'] is False
+          assert profile['sources']['associatedClub']['mayBeUsedAsRosterMembership'] is False
+          assert profile['sources']['federativeCard']['statusMayBeUsedAsRosterActiveInactive'] is False
+
+          c = coverage['coverage']
+          assert coverage['control_scope']['rosterRows'] == 16
+          assert coverage['control_scope']['uniqueAthleteIds'] == 16
+          assert c['userAthleteProfile']['http200'] == 16
+          assert c['userAthleteProfile']['heightNonNull'] == 10
+          assert c['userAthleteProfile']['positionNonNull'] == 13
+          assert c['userAthleteProfile']['shirtNumberNonNull'] == 10
+          assert c['federativeCard']['http200'] == 16
+          assert c['federativeCard']['personalScalarValuesPersistedOrLogged'] is False
+          assert c['formationPositionAndNumber']['entries'] == 16
+          assert coverage['profileVsFormation']['positionMismatch'] == 0
+          assert coverage['profileVsFormation']['shirtNumberMismatch'] == 0
+
+          privacy = coverage['privacy']
+          assert all(v is False for v in privacy.values())
+
+          readme = Path('docs/femebal/rosters/README.md').read_text()
+          for expected in [
+              'player-profile-integration-contract-v1.json',
+              'player-profile-coverage-ferro-1843-775-2026-10-02.json',
+              '16/16 iguales incluyendo null',
+          ]:
+              assert expected in readme, expected
+
+          print('Player profile + roster contract assertions passed.')
+          PY
+
+          echo 'Final player profile contract validation passed.'
