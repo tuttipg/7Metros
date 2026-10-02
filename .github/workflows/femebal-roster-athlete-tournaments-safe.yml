@@ -49,7 +49,7 @@ jobs:
 
           total_pairs=0
           verified_pairs=0
-          for id in 16284 10565 19480; do
+          for id in 16284 10565 19480 21150; do
             out="$tmp/${id}.json"
             get_json "/athletes/${id}/tournaments" "$out"
             rows="$(jq 'length' "$out")"
@@ -75,11 +75,14 @@ jobs:
           echo "bidirectional_membership_pairs=${verified_pairs}/${total_pairs}"
           [[ "$verified_pairs" == "$total_pairs" ]] || exit 1
 
+          jq -e 'any(.[]; (.team.id|tostring)=="3291" and (.tournament.id|tostring)=="775")' "$tmp/21150.json" >/dev/null || {
+            echo 'ERROR: Ballester control 21150 -> 3291/775 missing'
+            exit 1
+          }
+          echo 'Ballester reverse membership control 21150 -> 3291/775 OK.'
+
           team_tournaments="$tmp/team-1843-tournaments.json"
           get_json '/teams/1843/tournaments' "$team_tournaments"
-          echo '=== /teams/1843/tournaments ==='
-          jq '[.[] | {tournamentId:.tournament.id,name:.tournament.name,season:.tournament.season.description,status:.tournament.status}]' "$team_tournaments"
-
           jq -e 'any(.[]; (.tournament.id|tostring)=="775")' "$team_tournaments" >/dev/null
           jq -e 'any(.[]; (.tournament.id|tostring)=="1204")' "$team_tournaments" >/dev/null
 
