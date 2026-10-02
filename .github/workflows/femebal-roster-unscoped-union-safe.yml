@@ -1,0 +1,81 @@
+name: FEMEBAL roster diagnostic — unscoped union semantics
+
+on:
+  push:
+    branches:
+      - research/femebal-rosters-1.1.3
+    paths:
+      - .github/workflows/femebal-roster-unscoped-union-safe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      API_BASE: https://api.femebal.cam.larrysport.tecdata.net
+      TEAM_ID: '1843'
+    steps:
+      - name: Compare unscoped unique athletes with known tournament roster union
+        shell: bash
+        run: |
+          set -euo pipefail
+          common=(
+            --silent --show-error --location --max-time 15
+            --header 'Accept: application/json'
+            --header 'X-App-Variant: cah'
+            --header 'X-App-Version: 1.1.3'
+          )
+          tmp="$(mktemp -d)"
+          cleanup(){ rm -rf "$tmp"; unset access || true; }
+          trap cleanup EXIT
+
+          onboarding="$tmp/onboarding.json"
+          code="$(curl "${common[@]}" --request POST --header 'Content-Type: application/json' \
+            --output "$onboarding" --write-out '%{http_code}' "${API_BASE}/init-onboarding")"
+          [[ "$code" == 200 ]] || exit 1
+          access="$(jq -r '.accessToken // empty' "$onboarding")"
+          [[ -n "$access" ]] || exit 1
+          echo "::add-mask::${access}"
+
+          get_array(){
+            local path="$1" out="$2" code
+            code="$(curl "${common[@]}" --request GET --header "Authorization: Bearer ${access}" \
+              --output "$out" --write-out '%{http_code}' "${API_BASE}${path}")"
+            [[ "$code" == 200 ]] || { echo "HTTP ${code}: ${path}"; exit 1; }
+            jq -e 'type=="array"' "$out" >/dev/null
+          }
+
+          unscoped="$tmp/unscoped.json"
+          get_array "/athletes/athletesByTeam/${TEAM_ID}" "$unscoped"
+          jq -r '.[].id|tostring' "$unscoped" | sort -u > "$tmp/unscoped.ids"
+
+          : > "$tmp/union.raw"
+          for tid in 775 1204 776; do
+            r="$tmp/${tid}.json"
+            get_array "/athletes/athletesByTeam/${TEAM_ID}?tournamentId=${tid}" "$r"
+            echo "tournament=${tid} rows=$(jq 'length' "$r") unique=$(jq '[.[].id|tostring]|unique|length' "$r")"
+            jq -r '.[].id|tostring' "$r" >> "$tmp/union.raw"
+          done
+          sort -u "$tmp/union.raw" > "$tmp/union.ids"
+
+          comm -23 "$tmp/unscoped.ids" "$tmp/union.ids" > "$tmp/only-unscoped.ids"
+          comm -13 "$tmp/unscoped.ids" "$tmp/union.ids" > "$tmp/only-union.ids"
+
+          echo "unscoped_rows=$(jq 'length' "$unscoped")"
+          echo "unscoped_unique=$(wc -l < "$tmp/unscoped.ids" | xargs)"
+          echo "known_union_unique=$(wc -l < "$tmp/union.ids" | xargs)"
+          echo "only_unscoped=$(wc -l < "$tmp/only-unscoped.ids" | xargs)"
+          echo "only_union=$(wc -l < "$tmp/only-union.ids" | xargs)"
+
+          echo '--- athletes added by 776 beyond 775+1204 ---'
+          cat "$tmp/775.json" "$tmp/1204.json" | jq -s '[.[][] | .id|tostring] | unique[]' | sort -u > "$tmp/regular.ids"
+          comm -13 "$tmp/regular.ids" <(jq -r '.[].id|tostring' "$tmp/776.json" | sort -u) > "$tmp/only-776.ids"
+          cat "$tmp/only-776.ids"
+
+          [[ ! -s "$tmp/only-unscoped.ids" ]]
+          [[ ! -s "$tmp/only-union.ids" ]]
+          echo 'SET_EQUALITY_CONFIRMED: deduped unscoped response equals union of 775+1204+776 rosters.'
+          echo 'Guest legítimo 1.1.3; read-only; sin Supabase ni producción.'
