@@ -17,7 +17,7 @@ jobs:
     env:
       API_BASE: https://api.femebal.cam.larrysport.tecdata.net
     steps:
-      - name: Inspect athlete tournament-scoped surfaces safely
+      - name: Bound remaining athlete surfaces without logging personal values
         shell: bash
         run: |
           set -euo pipefail
@@ -39,32 +39,26 @@ jobs:
           [[ -n "$access" ]] || { echo 'guest accessToken missing'; exit 1; }
           echo "::add-mask::${access}"
 
-          get_json(){
+          inspect_shape(){
             local label="$1" path="$2" out="$3" code
             code="$(curl "${common[@]}" --request GET --header "Authorization: Bearer ${access}" \
               --output "$out" --write-out '%{http_code}' "${API_BASE}${path}")"
             echo "=== ${label} HTTP ${code} ==="
             if [[ "$code" != 200 ]]; then
-              head -c 300 "$out" | tr '\n' ' '; echo
+              echo 'non-200 (body intentionally not logged)'
               return 0
             fi
             jq -e . "$out" >/dev/null
             echo "type=$(jq -r 'type' "$out")"
-            echo 'top-level:'
-            jq -c 'if type=="object" then keys elif type=="array" then {length:length,firstType:(if length>0 then .[0]|type else null end),firstKeys:(if length>0 and (.[0]|type)=="object" then .[0]|keys else [] end)} else . end' "$out"
-            echo 'field paths:'
-            jq -r '[paths] | map(map(tostring)|join(".")) | unique[]' "$out" | head -200
-            echo 'sports-relevant scalar fields:'
-            jq -c 'paths(scalars) as $p | ($p|map(tostring)|join(".")) as $k | select($k|test("goal|match|played|card|susp|exclusion|position|shirt|number|role|active|status|team|tournament";"i")) | {path:$k,value:getpath($p)}' "$out" | head -120
+            jq -c 'if type=="object" then {keys:(keys|sort)} elif type=="array" then {length:length,firstType:(if length>0 then .[0]|type else null end),firstKeys:(if length>0 and (.[0]|type)=="object" then (.[0]|keys|sort) else [] end)} else {type:type} end' "$out"
+            echo 'nested key paths matching possible membership metadata:'
+            jq -r '[paths | map(tostring)|join(".")] | unique[] | select(test("team|tournament|role|position|shirt|number|active|status|start|end|date|membership|assignment|roster|club";"i"))' "$out" | head -120 || true
           }
 
-          get_json 'athlete 16284 tournament 775 stats' '/athletes/16284/tournaments/775/stats' "$tmp/stats-775.json"
-          get_json 'athlete 16284 tournament 790 stats' '/athletes/16284/tournaments/790/stats' "$tmp/stats-790.json"
-          get_json 'athlete 16284 tournament 1204 stats' '/athletes/16284/tournaments/1204/stats' "$tmp/stats-1204.json"
-          get_json 'athlete 19480 tournament 776 stats' '/athletes/19480/tournaments/776/stats' "$tmp/stats-776.json"
-          get_json 'athlete 16284 identity' '/athletes/16284' "$tmp/athlete.json"
-          get_json 'athlete 16284 formation enrichment' '/athletes/formation/positionAndNumber?athleteIds=16284' "$tmp/formation.json"
-          get_json 'athlete 16284 user profile' '/users/athlete-profile/16284' "$tmp/profile.json"
-          get_json 'team 1843 identity' '/teams/1843' "$tmp/team.json"
+          inspect_shape 'athlete 16284 federative card' '/athletes/16284/federative-card' "$tmp/fed-card.json"
+          inspect_shape 'athlete 16284 socials' '/athletes/16284/socials' "$tmp/socials.json"
+          inspect_shape 'athlete 16284 mvp awards' '/athletes/16284/mvp-awards' "$tmp/mvp.json"
+          inspect_shape 'athlete 19480 federative card' '/athletes/19480/federative-card' "$tmp/fed-card-19480.json"
 
+          echo 'No response scalar values were logged by this diagnostic.'
           echo 'Guest legítimo 1.1.3; GET-only después de onboarding; no Supabase ni producción.'
