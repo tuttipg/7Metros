@@ -84,14 +84,44 @@
       "unscopedUniqueAthleteIds": 30
     }
   },
+  "athleteProfileLevelSurfaces": {
+    "defaultTeam": {
+      "source": "GET /athletes/{athleteId}/default-team",
+      "teamTournamentScoped": false,
+      "semantics": "singular default/profile-level team exposed by app; not a list of roster memberships",
+      "mayBeUsedAsRosterMembership": false,
+      "runtimeProof": {
+        "16284": {
+          "defaultTeamId": "369",
+          "alsoConfirmedInTeamId": "1843"
+        },
+        "10565": {
+          "defaultTeamId": "3715",
+          "alsoConfirmedInTeamIds": ["369", "3256"]
+        }
+      }
+    },
+    "clubId": {
+      "source": "GET /athletes/{athleteId}/club-id",
+      "teamTournamentScoped": false,
+      "mayBeUsedAsRosterMembership": false
+    },
+    "userAthleteProfile": {
+      "source": "GET /users/athlete-profile/{athleteId}",
+      "fieldsObserved": ["status", "shirtNumber", "height", "position", "useFederationPicture", "socialMedia"],
+      "teamTournamentScoped": false,
+      "statusMayBeUsedAsRosterActiveInactive": false,
+      "shirtNumberMayBeUsedAsHistoricalRosterDorsal": false
+    }
+  },
   "membershipMetadata": {
-    "role": "pending_not_exposed_in_confirmed_surfaces",
-    "explicitActiveInactive": "pending_not_exposed_in_confirmed_surfaces",
-    "membershipStartDate": "pending_not_exposed_in_confirmed_surfaces",
-    "membershipEndDate": "pending_not_exposed_in_confirmed_surfaces",
-    "membershipRelationId": "pending_not_exposed_in_confirmed_surfaces",
-    "rosterScopedDorsal": "pending_not_exposed_in_confirmed_surfaces",
-    "rosterScopedPosition": "pending_not_exposed_in_confirmed_surfaces"
+    "role": "pending_not_exposed_in_confirmed_membership_surfaces",
+    "explicitActiveInactive": "pending_not_exposed_in_confirmed_membership_surfaces",
+    "membershipStartDate": "pending_not_exposed_in_confirmed_membership_surfaces",
+    "membershipEndDate": "pending_not_exposed_in_confirmed_membership_surfaces",
+    "membershipRelationId": "pending_not_exposed_in_confirmed_membership_surfaces",
+    "rosterScopedDorsal": "pending_not_exposed_in_confirmed_membership_surfaces",
+    "rosterScopedPosition": "pending_not_exposed_in_confirmed_membership_surfaces"
   },
   "formation": {
     "source": "GET /athletes/formation/positionAndNumber?athleteIds={ids}",
@@ -101,10 +131,14 @@
   },
   "prohibitedInferences": [
     "athleteId permanently belongs to clubId",
-    "athleteId permanently belongs to teamId",
+    "athleteId permanently belongs only to defaultTeam",
+    "default-team represents all roster memberships",
+    "club-id is sufficient to establish roster membership",
+    "user athlete profile status means roster active/baja",
     "absence from another tournament means baja",
     "tournament start/end dates are membership start/end dates",
     "formation.shirtNumber is historical roster dorsal",
+    "user athlete profile shirtNumber is historical roster dorsal",
     "HTTP 200 from roster endpoint proves team+tournament compatibility",
     "deduplicated unscoped athletesByTeam equals exact roster"
   ],
