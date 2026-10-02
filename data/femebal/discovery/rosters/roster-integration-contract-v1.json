@@ -1,11 +1,12 @@
 {
   "schema_version": 1,
   "contract_name": "femebal_larrysport_1_1_3_roster_membership",
-  "observed_at": "2026-10-01",
+  "observed_at": "2026-10-02",
   "status": "confirmed_code_and_runtime",
   "identity": {
     "athlete": ["athleteId"],
-    "rosterMembership": ["teamId", "tournamentId", "athleteId"]
+    "rosterMembership": ["teamId", "tournamentId", "athleteId"],
+    "athleteTournamentMatchStat": ["athleteId", "tournamentId", "matchId"]
   },
   "forwardRoster": {
     "source": "GET /athletes/athletesByTeam/{teamId}?tournamentId={tournamentId}",
@@ -104,6 +105,20 @@
     },
     "integrationRule": "Never create RosterMembership from this surface because each repeated identity row has lost the tournament that generated it."
   },
+  "tournamentPerformanceStats": {
+    "source": "GET /athletes/{athleteId}/tournaments/{tournamentId}/stats",
+    "response": "array<AthleteTournamentMatchStat>",
+    "rowFields": ["matchId", "goals", "sanctions"],
+    "sanctionFields": ["yellowCards", "redCards", "blueCards", "twoMinuteSuspensions"],
+    "runtimeControls": [
+      {"athleteId":"16284","tournamentId":775,"rows":15},
+      {"athleteId":"16284","tournamentId":790,"rows":15},
+      {"athleteId":"16284","tournamentId":1204,"rows":8},
+      {"athleteId":"19480","tournamentId":776,"rows":1}
+    ],
+    "mayBeUsedAsRosterMembershipMetadata": false,
+    "model": "AthleteTournamentMatchStat(athleteId,tournamentId,matchId,goals,sanctions)"
+  },
   "runtimeControls": {
     "ferroMayoresA": {
       "clubId": "335", "teamId": "1843", "tournamentId": 775,
@@ -141,23 +156,49 @@
       "fieldsObserved": ["status", "shirtNumber", "height", "position", "useFederationPicture", "socialMedia"],
       "teamTournamentScoped": false,
       "statusMayBeUsedAsRosterActiveInactive": false,
-      "shirtNumberMayBeUsedAsHistoricalRosterDorsal": false
+      "shirtNumberMayBeUsedAsHistoricalRosterDorsal": false,
+      "positionMayBeUsedAsHistoricalRosterPosition": false
+    },
+    "federativeCard": {
+      "source": "GET /athletes/{athleteId}/federative-card",
+      "fieldsObserved": ["athleteId", "birthDate", "category", "clubName", "documentNumber", "fullName", "habilitationYear", "picture", "status"],
+      "scalarValuesPersistedOrLoggedByRosterDiagnostic": false,
+      "teamTournamentScoped": false,
+      "statusMayBeUsedAsRosterActiveInactive": false,
+      "note": "Card/federative status is not a team+tournament membership state."
+    },
+    "socials": {
+      "source": "GET /athletes/{athleteId}/socials",
+      "fieldsObserved": ["followers", "links"],
+      "mayBeUsedAsRosterMembership": false
+    },
+    "mvpAwards": {
+      "source": "GET /athletes/{athleteId}/mvp-awards",
+      "mayBeUsedAsRosterMembership": false
     }
   },
   "membershipMetadata": {
-    "role": "pending_not_exposed_in_confirmed_membership_surfaces",
-    "explicitActiveInactive": "pending_not_exposed_in_confirmed_membership_surfaces",
-    "membershipStartDate": "pending_not_exposed_in_confirmed_membership_surfaces",
-    "membershipEndDate": "pending_not_exposed_in_confirmed_membership_surfaces",
-    "membershipRelationId": "pending_not_exposed_in_confirmed_membership_surfaces",
-    "rosterScopedDorsal": "pending_not_exposed_in_confirmed_membership_surfaces",
-    "rosterScopedPosition": "pending_not_exposed_in_confirmed_membership_surfaces"
+    "scopeStatement": "The following fields are not exposed by the confirmed roster/profile/federative/stats surfaces used by the shipped 1.1.3 client. This is a client-surface boundary, not a claim that no undocumented/internal backend resource exists.",
+    "role": "not_exposed_in_confirmed_1_1_3_client_surfaces",
+    "explicitActiveInactive": "not_exposed_in_confirmed_1_1_3_client_surfaces",
+    "membershipStartDate": "not_exposed_in_confirmed_1_1_3_client_surfaces",
+    "membershipEndDate": "not_exposed_in_confirmed_1_1_3_client_surfaces",
+    "membershipRelationId": "not_exposed_in_confirmed_1_1_3_client_surfaces",
+    "rosterScopedDorsal": "not_exposed_in_confirmed_1_1_3_client_surfaces",
+    "rosterScopedPosition": "not_exposed_in_confirmed_1_1_3_client_surfaces"
   },
   "formation": {
     "source": "GET /athletes/formation/positionAndNumber?athleteIds={ids}",
     "fields": ["shirtNumber", "position"],
     "teamTournamentScoped": false,
-    "shirtNumberMayBeUsedAsHistoricalRosterDorsal": false
+    "shirtNumberMayBeUsedAsHistoricalRosterDorsal": false,
+    "positionMayBeUsedAsHistoricalRosterPosition": false
+  },
+  "recommendedModel": {
+    "Athlete": "Athlete(athleteId, identity fields...)",
+    "AthleteProfile": "AthleteProfile(athleteId, defaultTeamId?, associatedClubId?, profile/federative fields with their own provenance)",
+    "RosterMembership": "RosterMembership(teamId,tournamentId,athleteId,provenance)",
+    "AthleteTournamentMatchStat": "AthleteTournamentMatchStat(athleteId,tournamentId,matchId,goals,sanctions)"
   },
   "dataQualityRules": {
     "persistOriginalIds": true,
@@ -174,10 +215,14 @@
     "default-team represents all roster memberships",
     "club-id is sufficient to establish roster membership",
     "user athlete profile status means roster active/baja",
+    "federative-card status means roster active/baja for a team+tournament",
     "absence from another tournament means baja",
     "tournament start/end dates are membership start/end dates",
     "formation.shirtNumber is historical roster dorsal",
+    "formation.position is historical roster position",
     "user athlete profile shirtNumber is historical roster dorsal",
+    "user athlete profile position is historical roster position",
+    "tournament performance stats encode roster role or membership state",
     "HTTP 200 from roster endpoint proves team+tournament compatibility",
     "deduplicated unscoped athletesByTeam equals an exact roster",
     "unscoped duplicate count can be converted back to tournament membership without tournament context",
