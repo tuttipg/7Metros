@@ -7,7 +7,28 @@
     "athlete": ["athleteId"],
     "rosterMembership": ["teamId", "tournamentId", "athleteId"]
   },
-  "resolution": [
+  "forwardRoster": {
+    "source": "GET /athletes/athletesByTeam/{teamId}?tournamentId={tournamentId}",
+    "purpose": "enumerate the exact athlete identities for a known team+tournament pair",
+    "requiredParameters": ["teamId", "tournamentId"],
+    "response": "array<AthleteIdentity>",
+    "canonicalForExactRosterEnumeration": true
+  },
+  "reverseMembership": {
+    "source": "GET /athletes/{athleteId}/tournaments",
+    "purpose": "discover or validate team+tournament memberships for one athlete",
+    "response": "array<{team,tournament}>",
+    "rowKeysObserved": ["team", "tournament"],
+    "confirmedAsReverseMembershipIndex": true,
+    "runtimeValidation": {
+      "athletesTested": 4,
+      "clubsTested": 2,
+      "reversePairs": 13,
+      "pairsConfirmedByForwardRoster": 13
+    },
+    "membershipMetadataIncluded": false
+  },
+  "directScopeResolution": [
     {
       "step": 1,
       "entity": "team",
@@ -20,7 +41,7 @@
       "entity": "tournament",
       "source": "GET /teams/{teamId}/tournaments",
       "requiredScope": ["season", "tournament/competition", "category", "division", "gender"],
-      "note": "The selected tournamentId must be returned for the selected teamId."
+      "note": "Use this listing to resolve the requested competition when it is exposed for the team. It is not guaranteed to be a complete historical membership index."
     },
     {
       "step": 3,
@@ -38,14 +59,29 @@
     "picture"
   ],
   "validation": {
-    "requireTournamentId": true,
-    "requireTeamTournamentRelationship": true,
+    "requireTournamentIdForExactRoster": true,
     "requireJsonArray": true,
     "requireNonNullAthleteId": true,
     "requireUniqueAthleteIdWithinExactRoster": true,
     "http200AloneIsNotValidityProof": true,
     "failClosedOnKnownPairMismatchEmptyArray": true,
-    "rejectUnscopedAthletesByTeam": true
+    "rejectUnscopedAthletesByTeam": true,
+    "reversePairMayBeConfirmedByForwardRoster": true,
+    "requireEveryValidPairInTeamTournamentListing": false
+  },
+  "teamTournamentListing": {
+    "source": "GET /teams/{teamId}/tournaments",
+    "usefulForDirectCompetitionResolution": true,
+    "completeHistoricalMembershipIndex": false,
+    "runtimeCounterexample": {
+      "teamId": "1843",
+      "validTournamentId": 776,
+      "listedTournamentIdsAtSameRuntime": [775, 1204],
+      "athleteId": "19480",
+      "reverseEndpointContainsPair": true,
+      "forwardRosterContainsAthlete": true,
+      "forwardRosterCount": 16
+    }
   },
   "runtimeControls": {
     "ferroMayoresA": {
@@ -82,6 +118,11 @@
       "scopedUniqueAthleteIds": 25,
       "unscopedRows": 131,
       "unscopedUniqueAthleteIds": 30
+    },
+    "reverseMembership": {
+      "verifiedPairs": "13/13",
+      "ferroAthleteIds": ["16284", "10565", "19480"],
+      "ballesterAthleteIds": ["21150"]
     }
   },
   "athleteProfileLevelSurfaces": {
@@ -129,6 +170,15 @@
     "teamTournamentScoped": false,
     "shirtNumberMayBeUsedAsHistoricalRosterDorsal": false
   },
+  "dataQualityRules": {
+    "persistOriginalIds": true,
+    "doNotInferSeasonFromTournamentDisplayName": true,
+    "observedExample": {
+      "tournamentId": 776,
+      "name": "Super 8 Liga Hipotecario Seguros Masculino 2025",
+      "seasonDescription": "2026"
+    }
+  },
   "prohibitedInferences": [
     "athleteId permanently belongs to clubId",
     "athleteId permanently belongs only to defaultTeam",
@@ -140,7 +190,9 @@
     "formation.shirtNumber is historical roster dorsal",
     "user athlete profile shirtNumber is historical roster dorsal",
     "HTTP 200 from roster endpoint proves team+tournament compatibility",
-    "deduplicated unscoped athletesByTeam equals exact roster"
+    "deduplicated unscoped athletesByTeam equals exact roster",
+    "every valid team+tournament membership must appear in /teams/{teamId}/tournaments",
+    "tournament display name alone determines season"
   ],
   "provenanceRequirement": {
     "recommended": [
@@ -148,7 +200,8 @@
       "observedAt",
       "appVersion",
       "teamId",
-      "tournamentId"
+      "tournamentId",
+      "athleteId"
     ]
   }
 }
