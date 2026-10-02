@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "contract_name": "femebal_larrysport_1_1_3_player_profile",
+  "observed_at": "2026-10-02",
+  "status": "confirmed_code_and_runtime",
+  "identity": {
+    "athlete": ["athleteId"]
+  },
+  "sources": {
+    "athleteIdentity": {
+      "source": "GET /athletes/{athleteId}",
+      "fieldsObserved": ["id", "firstName", "lastName", "birthDate", "picture"],
+      "scope": "athlete_identity"
+    },
+    "userAthleteProfile": {
+      "source": "GET /users/athlete-profile/{athleteId}",
+      "fieldsObserved": ["height", "position", "shirtNumber", "status", "avatar/profile/social metadata"],
+      "scope": "athlete_profile",
+      "teamTournamentScoped": false
+    },
+    "formationBulkProfile": {
+      "source": "GET /athletes/formation/positionAndNumber?athleteIds={ids}",
+      "fieldsObserved": ["position", "shirtNumber"],
+      "scope": "bulk_athlete_profile_enrichment",
+      "teamTournamentScoped": false,
+      "runtimeControl": {
+        "teamId": "1843",
+        "tournamentId": 775,
+        "athletesCompared": 16,
+        "positionEqualToUserProfileIncludingNull": "16/16",
+        "shirtNumberEqualToUserProfileIncludingNull": "16/16",
+        "mismatches": 0
+      },
+      "interpretation": "On the complete Ferro control roster, formation position/shirtNumber exactly mirror the same athlete-level profile fields, including nulls."
+    },
+    "defaultTeam": {
+      "source": "GET /athletes/{athleteId}/default-team",
+      "scope": "athlete_profile_default_association",
+      "mayBeUsedAsRosterMembership": false
+    },
+    "associatedClub": {
+      "source": "GET /athletes/{athleteId}/club-id",
+      "scope": "athlete_profile_association",
+      "mayBeUsedAsRosterMembership": false
+    },
+    "federativeCard": {
+      "source": "GET /athletes/{athleteId}/federative-card",
+      "scope": "athlete_federative_profile",
+      "sportsMetadataObserved": ["category", "clubName", "habilitationYear", "status", "picture"],
+      "teamTournamentScoped": false,
+      "statusMayBeUsedAsRosterActiveInactive": false,
+      "dataMinimization": "Do not ingest document-like personal fields for 7Metros unless a product requirement explicitly needs them and their handling is separately reviewed."
+    }
+  },
+  "controlCoverage": {
+    "clubId": "335",
+    "teamId": "1843",
+    "tournamentId": 775,
+    "rosterAthletes": 16,
+    "identityBirthDateNonNull": 16,
+    "identityPictureNonNull": 16,
+    "userProfileHttp200": 16,
+    "userProfileHeightNonNull": 10,
+    "userProfilePositionNonNull": 13,
+    "userProfileShirtNumberNonNull": 10,
+    "federativeCardHttp200": 16,
+    "defaultTeamHttp200": 16,
+    "clubIdHttp200": 16,
+    "formationEntries": 16,
+    "formationPositionNonNull": 13,
+    "formationShirtNumberNonNull": 10
+  },
+  "recommendedModel": {
+    "Athlete": ["athleteId", "firstName", "lastName", "birthDate?", "picture?"],
+    "AthleteProfile": ["athleteId", "height?", "position?", "shirtNumber?", "defaultTeamId?", "associatedClubId?", "federativeSportsMetadata?", "provenance"],
+    "RosterMembership": ["teamId", "tournamentId", "athleteId", "provenance"],
+    "AthleteTournamentMatchStat": ["athleteId", "tournamentId", "matchId", "goals", "sanctions"]
+  },
+  "fieldSemantics": {
+    "profilePosition": "current/profile-level athlete enrichment; not proven historical team+tournament position",
+    "profileShirtNumber": "current/profile-level athlete enrichment; not proven historical team+tournament dorsal",
+    "profileStatus": "profile-level state; not roster active/baja",
+    "federativeStatus": "federative-card state; not roster active/baja",
+    "defaultTeam": "singular default/profile association; not complete roster history",
+    "associatedClub": "profile association; not sufficient to prove a roster membership"
+  },
+  "prohibitedInferences": [
+    "profile.position is historical roster position",
+    "profile.shirtNumber is historical roster dorsal",
+    "formation.position is team+tournament-scoped position",
+    "formation.shirtNumber is team+tournament-scoped dorsal",
+    "profile status means roster active/baja",
+    "federative status means roster active/baja",
+    "default-team is the athlete's only team",
+    "club-id proves membership in a specific team+tournament"
+  ],
+  "privacy": {
+    "coverageEvidenceStoresAggregateCountsOnly": true,
+    "federativePersonalScalarValuesPersistedByCoverageEvidence": false,
+    "recommendedDefault": "collect only fields needed by 7Metros"
+  }
+}
