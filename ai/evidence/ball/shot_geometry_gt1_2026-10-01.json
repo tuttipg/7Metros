@@ -1,0 +1,44 @@
+{
+  "status": "SHOT_GEOMETRY_READY_POSITIVE_BLOCKED_BY_BALL_DETECTOR",
+  "decision": "KEEP_DYNAMIC_GOAL_GEOMETRY_ADVANCE_TO_BALL_DETECTOR",
+  "fixture": "Ferro - N. S. de Lujan",
+  "goal_proxy": {
+    "anchor": "visible *_GK role_candidate",
+    "horizontal_half_width_height_ratio": 0.85,
+    "top_expand_height_ratio": 0.15,
+    "bottom_expand_height_ratio": 0.15,
+    "fixed_pixel_goal_region": false
+  },
+  "shot_geometry": {
+    "requires_detector_backed_ball": true,
+    "min_observed_points": 3,
+    "max_projection_frames": 30.0,
+    "interpolates_ball_positions": false
+  },
+  "gt1": {
+    "free_ball_flights": [[108, 112], [156, 160]],
+    "shot_geometry_candidates": 0
+  },
+  "positive_context_window": {
+    "fixture_frames": [315, 340],
+    "broadcast_score_context": "0-0 at frame 300; 1-0 Ferro before frame 435",
+    "detector": {
+      "model": "yolo11n.pt",
+      "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+      "ultralytics": "8.4.163",
+      "class_id": 32,
+      "imgsz": 960,
+      "inference_confidence": 0.01
+    },
+    "frames": 25,
+    "raw_candidates": 23,
+    "candidate_frames": 17,
+    "max_confidence": 0.03537377715110779,
+    "candidates_ge_0_10": 0,
+    "candidates_ge_0_02": 3,
+    "ball_observation_segment_can_spawn": false
+  },
+  "confirmed_shots": 0,
+  "accuracy_metrics": null,
+  "reason_accuracy_unavailable": "No human ball/shot ground truth exists; the score transition is sanity context, not training or an accuracy label."
+}
