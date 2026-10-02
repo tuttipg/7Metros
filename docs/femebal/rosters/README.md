@@ -63,6 +63,11 @@ El bundle real `base.apk/assets/index.android.bundle` es Hermes bytecode v96. El
 
 En la superficie del cliente 1.1.3 no se observó una segunda ruta evidente de membresía bajo términos `roster`, `squad`, `membership` o `assignment`. `plantel` aparece sólo como texto de interfaz. Esto limita lo que está confirmado en el cliente: **no demuestra que el servidor no tenga alguna ruta interna/no utilizada por la app**.
 
+Dos strings que podían parecer relacionadas con planteles quedaron además desambiguadas en código:
+
+- `/matches/{id}/formation` pertenece a `matchFormationAs`: es formación de partido, no roster de temporada;
+- `/teams/{id}/tournaments/{tournamentId}/position` pertenece a `getPositionByTournamentId`: es posición del equipo en el torneo, no posición de un atleta.
+
 ## Ejemplo E2E principal
 
 ```text
@@ -106,6 +111,28 @@ Ferro masculino, temporada 2026:
 
 El `0` del mismo tournamentId aplica sólo al scope Ferro masculino 2026 y no debe convertirse en restricción global sin más evidencia.
 
+## default-team y club-id NO son el plantel
+
+La app 1.1.3 implementa también:
+
+```text
+GET /athletes/{athleteId}/default-team
+GET /athletes/{athleteId}/club-id
+GET /users/athlete-profile/{athleteId}
+```
+
+Estas superficies son de atleta/perfil y no reciben `tournamentId`.
+
+Runtime demostró la diferencia:
+
+- Bartolomeo `16284`: `default-team=369 Junior A`, pero también integra `1843/775` y `1843/1204` en Mayores A LHC;
+- Tonko `10565`: `default-team=3715 Juniors B`, pero también integra `369/1213` y `3256/1205`;
+- Schankula `19480`: `default-team=1843 Mayores A`.
+
+Por lo tanto, `default-team` es una elección/asociación singular de perfil, **no la lista de membresías deportivas**. `club-id` devuelve el club asociado, pero tampoco contiene equipo+torneo y no alcanza para crear una membresía.
+
+`/users/athlete-profile/{id}` expone campos como `status`, `shirtNumber`, `height` y `position`, pero no `teamId` ni `tournamentId`. En los controles consultados `status` fue `pending` incluso para atletas presentes en planteles y partidos oficiales. No mapear ese `status` a activo/baja del plantel.
+
 ## Metadata de membresía
 
 En las superficies confirmadas de 1.1.3:
@@ -145,14 +172,17 @@ El dorsal de planilla debe quedar asociado a participación/partido. No copiarlo
 
 - `docs/femebal/rosters/larrysport-1.1.3-roster-contract.md`
 - `docs/femebal/rosters/membership-metadata-boundary.md`
+- `docs/femebal/rosters/profile-vs-membership.md`
 - `docs/femebal/rosters/runtime-one-click.md`
 
 ### Evidencia machine-readable
 
+- `data/femebal/discovery/rosters/roster-integration-contract-v1.json`
 - `data/femebal/discovery/rosters/ferro-mayores-lhc-apertura-2026.json`
 - `data/femebal/discovery/rosters/sag-villa-ballester-mayores-lhc-apertura-2026.json`
 - `data/femebal/discovery/rosters/ferro-2026-membership-diagnostic.json`
 - `data/femebal/discovery/rosters/membership-metadata-boundary-2026-10-01.json`
+- `data/femebal/discovery/rosters/default-team-vs-membership-2026-10-01.json`
 - `data/femebal/discovery/rosters/ferro-formation-vs-match-dorsal-2026-03-21.json`
 - `data/femebal/discovery/rosters/apk-1.1.3-static-roster-surface.json`
 - `data/femebal/discovery/rosters/team-tournament-boundary-runtime-2026-10-01.json`
@@ -168,6 +198,7 @@ El dorsal de planilla debe quedar asociado a participación/partido. No copiarlo
 - `.github/workflows/femebal-roster-no-tournament-semantics-safe.yml`
 - `.github/workflows/femebal-roster-unscoped-shape-safe.yml`
 - `.github/workflows/femebal-roster-unscoped-crosscheck-safe.yml`
+- `.github/workflows/femebal-roster-default-team-safe.yml`
 
 ## Regla de integración
 
@@ -175,12 +206,15 @@ Guardar hechos, no inferencias:
 
 ```text
 Athlete(athleteId, identidad...)
+AthleteProfile(athleteId, defaultTeamId?, associatedClubId?, profile fields...)
 RosterMembership(teamId, tournamentId, athleteId, provenance...)
 ```
 
 Resolver `clubId`, temporada, categoría, división y rama a través del equipo/torneo correspondiente.
 
 No convertir presencia/ausencia en activo/baja, ni fechas del torneo en fechas de membresía, ni `formation.shirtNumber` en dorsal histórico.
+
+No usar `default-team`, `club-id` ni `user-athlete-profile.status` para inferir pertenencia o estado de una membresía concreta.
 
 Nunca aceptar la variante sin `tournamentId` como fuente de `RosterMembership`, ni siquiera deduplicándola.
 
