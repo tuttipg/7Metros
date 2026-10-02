@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-01",
+  "source": "FEMEBAL Community / LarrySport 1.1.3 runtime guest",
+  "status": "confirmed_code_and_runtime",
+  "codeSurfaces": {
+    "defaultTeam": "GET /athletes/{athleteId}/default-team",
+    "clubId": "GET /athletes/{athleteId}/club-id",
+    "userAthleteProfile": "GET /users/athlete-profile/{athleteId}"
+  },
+  "athletes": [
+    {
+      "athleteId": "16284",
+      "name": "Juan Martín Bartolomeo",
+      "clubId": "335",
+      "defaultTeam": {
+        "teamId": "369",
+        "name": "Junior A",
+        "categoryId": "6",
+        "category": "Junior",
+        "divisionId": "401",
+        "division": "A",
+        "gender": "Masculino"
+      },
+      "knownExact2026Memberships": [
+        {"teamId":"1843","tournamentId":775,"team":"Mayores A","competition":"Apertura LHC"},
+        {"teamId":"1843","tournamentId":1204,"team":"Mayores A","competition":"Clausura LHC"},
+        {"teamId":"369","tournamentId":790,"team":"Junior A","competition":"Apertura"},
+        {"teamId":"369","tournamentId":1213,"team":"Junior A","competition":"Clausura"}
+      ],
+      "userAthleteProfile": {
+        "status": "pending",
+        "shirtNumber": 16,
+        "position": "Arquero"
+      }
+    },
+    {
+      "athleteId": "10565",
+      "name": "Tonko Simunovic Granero",
+      "clubId": "335",
+      "defaultTeam": {
+        "teamId": "3715",
+        "name": "Juniors B",
+        "categoryId": "6",
+        "category": "Junior",
+        "divisionId": "505",
+        "division": "C",
+        "gender": "Masculino"
+      },
+      "knownExact2026Memberships": [
+        {"teamId":"369","tournamentId":1213,"team":"Junior A","competition":"Clausura"},
+        {"teamId":"3715","tournamentId":834,"team":"Juniors B","competition":"Apertura"},
+        {"teamId":"3715","tournamentId":1223,"team":"Juniors B","competition":"Clausura"},
+        {"teamId":"3256","tournamentId":1205,"team":"Mayores B","competition":"Clausura Plata"}
+      ],
+      "userAthleteProfile": {
+        "status": "pending",
+        "shirtNumber": null,
+        "position": null
+      }
+    },
+    {
+      "athleteId": "19480",
+      "name": "Valentín Schankula",
+      "clubId": "335",
+      "defaultTeam": {
+        "teamId": "1843",
+        "name": "Mayores A",
+        "categoryId": "100",
+        "category": "Mayores",
+        "divisionId": "421",
+        "division": "LHC Hipotecario Seguros",
+        "gender": "Masculino"
+      },
+      "knownExact2026Memberships": [
+        {"teamId":"1843","tournamentId":775,"team":"Mayores A","competition":"Apertura LHC"},
+        {"teamId":"1843","tournamentId":1204,"team":"Mayores A","competition":"Clausura LHC"}
+      ],
+      "userAthleteProfile": {
+        "status": "pending",
+        "shirtNumber": 8,
+        "position": "Extremo Izquierdo"
+      }
+    }
+  ],
+  "conclusions": {
+    "defaultTeamIsMembershipList": false,
+    "defaultTeamIdentifiesAllRosters": false,
+    "clubIdIsSufficientForRosterMembership": false,
+    "userAthleteProfileStatusIsRosterActiveInactive": false,
+    "safeInterpretation": "default-team is a singular athlete/profile-level team choice or default exposed by the app. Exact competition membership remains teamId+tournamentId+athleteId. The user athlete profile status is not team/tournament scoped and must not be mapped to roster active/baja."
+  }
+}
