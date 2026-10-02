@@ -1,0 +1,125 @@
+name: FEMEBAL player diagnostic — profile coverage
+
+on:
+  push:
+    branches:
+      - research/femebal-rosters-1.1.3
+    paths:
+      - .github/workflows/femebal-player-profile-coverage-safe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      API_BASE: https://api.femebal.cam.larrysport.tecdata.net
+      TEAM_ID: '1843'
+      TOURNAMENT_ID: '775'
+    steps:
+      - name: Measure enrichment coverage without logging personal values
+        shell: bash
+        run: |
+          set -euo pipefail
+          common=(
+            --silent --show-error --location --max-time 15
+            --header 'Accept: application/json'
+            --header 'X-App-Variant: cah'
+            --header 'X-App-Version: 1.1.3'
+          )
+          tmp="$(mktemp -d)"
+          cleanup(){ rm -rf "$tmp"; unset access || true; }
+          trap cleanup EXIT
+
+          onboarding="$tmp/onboarding.json"
+          code="$(curl "${common[@]}" --request POST --header 'Content-Type: application/json' \
+            --output "$onboarding" --write-out '%{http_code}' "${API_BASE}/init-onboarding")"
+          [[ "$code" == 200 ]] || exit 1
+          access="$(jq -r '.accessToken // empty' "$onboarding")"
+          [[ -n "$access" ]] || exit 1
+          echo "::add-mask::${access}"
+
+          get(){
+            local path="$1" out="$2"
+            curl "${common[@]}" --request GET --header "Authorization: Bearer ${access}" \
+              --output "$out" --write-out '%{http_code}' "${API_BASE}${path}"
+          }
+
+          roster="$tmp/roster.json"
+          code="$(get "/athletes/athletesByTeam/${TEAM_ID}?tournamentId=${TOURNAMENT_ID}" "$roster")"
+          [[ "$code" == 200 ]] || { echo "roster HTTP $code"; exit 1; }
+          jq -e 'type=="array"' "$roster" >/dev/null
+          roster_rows="$(jq 'length' "$roster")"
+          roster_unique="$(jq '[.[].id|tostring]|unique|length' "$roster")"
+          [[ "$roster_rows" == 16 && "$roster_unique" == 16 ]] || {
+            echo "unexpected roster control rows=${roster_rows} unique=${roster_unique}"; exit 1;
+          }
+
+          identity_birthdate=0
+          identity_picture=0
+          profile_200=0
+          profile_height=0
+          profile_position=0
+          profile_shirt=0
+          profile_status_field=0
+          fedcard_200=0
+          default_team_200=0
+          club_id_200=0
+
+          ids_csv="$(jq -r '[.[].id|tostring]|join(",")' "$roster")"
+          identity_birthdate="$(jq '[.[]|select(.birthDate != null and .birthDate != "")]|length' "$roster")"
+          identity_picture="$(jq '[.[]|select(.picture != null and .picture != "")]|length' "$roster")"
+
+          while read -r id; do
+            profile="$tmp/profile-${id}.json"
+            code="$(get "/users/athlete-profile/${id}" "$profile")"
+            if [[ "$code" == 200 ]] && jq -e 'type=="object"' "$profile" >/dev/null 2>&1; then
+              profile_200=$((profile_200+1))
+              jq -e 'has("height") and .height != null' "$profile" >/dev/null && profile_height=$((profile_height+1)) || true
+              jq -e 'has("position") and .position != null and .position != ""' "$profile" >/dev/null && profile_position=$((profile_position+1)) || true
+              jq -e 'has("shirtNumber") and .shirtNumber != null' "$profile" >/dev/null && profile_shirt=$((profile_shirt+1)) || true
+              jq -e 'has("status")' "$profile" >/dev/null && profile_status_field=$((profile_status_field+1)) || true
+            fi
+
+            fed="$tmp/fed-${id}.json"
+            code="$(get "/athletes/${id}/federative-card" "$fed")"
+            if [[ "$code" == 200 ]] && jq -e 'type=="object"' "$fed" >/dev/null 2>&1; then
+              fedcard_200=$((fedcard_200+1))
+            fi
+
+            def="$tmp/default-${id}.json"
+            code="$(get "/athletes/${id}/default-team" "$def")"
+            [[ "$code" == 200 ]] && default_team_200=$((default_team_200+1)) || true
+
+            club="$tmp/club-${id}.json"
+            code="$(get "/athletes/${id}/club-id" "$club")"
+            [[ "$code" == 200 ]] && club_id_200=$((club_id_200+1)) || true
+          done < <(jq -r '.[].id|tostring' "$roster")
+
+          formation="$tmp/formation.json"
+          code="$(get "/athletes/formation/positionAndNumber?athleteIds=${ids_csv}" "$formation")"
+          [[ "$code" == 200 ]] || { echo "formation HTTP $code"; exit 1; }
+          jq -e 'type=="object"' "$formation" >/dev/null
+          formation_entries="$(jq 'length' "$formation")"
+          formation_position="$(jq '[to_entries[]|select(.value.position != null and .value.position != "")]|length' "$formation")"
+          formation_shirt="$(jq '[to_entries[]|select(.value.shirtNumber != null)]|length' "$formation")"
+
+          echo "roster_rows=${roster_rows}"
+          echo "roster_unique=${roster_unique}"
+          echo "identity_birthDate_nonnull=${identity_birthdate}"
+          echo "identity_picture_nonnull=${identity_picture}"
+          echo "user_profile_http_200=${profile_200}"
+          echo "user_profile_height_nonnull=${profile_height}"
+          echo "user_profile_position_nonnull=${profile_position}"
+          echo "user_profile_shirtNumber_nonnull=${profile_shirt}"
+          echo "user_profile_status_field_present=${profile_status_field}"
+          echo "federative_card_http_200=${fedcard_200}"
+          echo "default_team_http_200=${default_team_200}"
+          echo "club_id_http_200=${club_id_200}"
+          echo "formation_entries=${formation_entries}"
+          echo "formation_position_nonnull=${formation_position}"
+          echo "formation_shirtNumber_nonnull=${formation_shirt}"
+          echo 'No names, dates, profile values, federative values, social data, or document values were logged.'
+          echo 'Guest legítimo 1.1.3; GET-only; sin Supabase ni producción.'
