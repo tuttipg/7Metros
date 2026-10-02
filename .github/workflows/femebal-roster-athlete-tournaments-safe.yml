@@ -13,11 +13,11 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 4
     env:
       API_BASE: https://api.femebal.cam.larrysport.tecdata.net
     steps:
-      - name: Validate athlete -> team+tournament relations
+      - name: Validate athlete -> team+tournament relations bidirectionally
         shell: bash
         run: |
           set -euo pipefail
@@ -47,34 +47,33 @@ jobs:
             jq -e . "$out" >/dev/null
           }
 
+          total_pairs=0
+          verified_pairs=0
           for id in 16284 10565 19480; do
             out="$tmp/${id}.json"
             get_json "/athletes/${id}/tournaments" "$out"
-            echo "=== athleteId ${id} ==="
-            echo "rows=$(jq 'length' "$out") unique_pairs=$(jq '[.[] | [(.team.id|tostring),(.tournament.id|tostring)]] | unique | length' "$out")"
-            echo 'key-shapes:'
-            jq '[.[]|keys|sort]|unique' "$out"
-            echo 'pairs:'
-            jq '[.[] | {
-              teamId:(.team.id|tostring),
-              teamName:.team.name,
-              clubId:(.team.club.id|tostring),
-              categoryId:(.team.ageCategory.id|tostring),
-              category:.team.ageCategory.name,
-              divisionId:(.team.division.id|tostring),
-              division:.team.division.name,
-              gender:.team.gender,
-              tournamentId:.tournament.id,
-              tournament:.tournament.name,
-              season:.tournament.season.description,
-              tournamentStatus:.tournament.status
-            }]' "$out"
+            rows="$(jq 'length' "$out")"
+            unique_pairs="$(jq '[.[] | [(.team.id|tostring),(.tournament.id|tostring)]] | unique | length' "$out")"
+            echo "=== athleteId ${id}: rows=${rows} unique_pairs=${unique_pairs} ==="
+            [[ "$rows" == "$unique_pairs" ]] || { echo "ERROR: duplicate reverse membership pair for athlete ${id}"; exit 1; }
+            jq -e 'all(.[]; (keys|sort)==["team","tournament"])' "$out" >/dev/null
+
+            while IFS=$'\t' read -r team tournament teamName tournamentName season; do
+              total_pairs=$((total_pairs+1))
+              roster="$tmp/roster-${id}-${team}-${tournament}.json"
+              get_json "/athletes/athletesByTeam/${team}?tournamentId=${tournament}" "$roster"
+              if jq -e --arg id "$id" 'any(.[]; (.id|tostring)==$id)' "$roster" >/dev/null; then
+                verified_pairs=$((verified_pairs+1))
+                printf 'OK athlete=%s team=%s tournament=%s season=%s teamName=%s tournament=%s rosterCount=%s\n' \
+                  "$id" "$team" "$tournament" "$season" "$teamName" "$tournamentName" "$(jq 'length' "$roster")"
+              else
+                echo "ERROR: reverse pair ${id} -> ${team}/${tournament} does not contain athlete in forward roster"
+                exit 1
+              fi
+            done < <(jq -r '.[] | [(.team.id|tostring),(.tournament.id|tostring),.team.name,.tournament.name,.tournament.season.description] | @tsv' "$out")
           done
 
-          # Known reverse memberships must be present.
-          jq -e 'any(.[]; (.team.id|tostring)=="1843" and (.tournament.id|tostring)=="775")' "$tmp/16284.json" >/dev/null
-          jq -e 'any(.[]; (.team.id|tostring)=="1843" and (.tournament.id|tostring)=="1204")' "$tmp/16284.json" >/dev/null
-          jq -e 'any(.[]; (.team.id|tostring)=="1843" and (.tournament.id|tostring)=="775")' "$tmp/19480.json" >/dev/null
-
-          echo 'Reverse athlete membership controls passed.'
+          echo "bidirectional_membership_pairs=${verified_pairs}/${total_pairs}"
+          [[ "$verified_pairs" == "$total_pairs" ]] || exit 1
+          echo 'All reverse athlete memberships were confirmed by the exact forward roster endpoint.'
           echo 'Guest legítimo 1.1.3; sólo GET después de onboarding; sin Supabase ni producción.'
