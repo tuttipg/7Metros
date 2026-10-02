@@ -1,8 +1,8 @@
-# FEMEBAL / LarrySport 1.1.3 — PLANTELES
+# FEMEBAL / LarrySport 1.1.3 — PLANTELES Y PERFILES
 
 Handoff actual para Integración. Evidencia cerrada al 2026-10-02.
 
-## Contrato confirmado
+## Contrato confirmado de plantel
 
 ```text
 RosterMembership = (teamId, tournamentId, athleteId)
@@ -48,7 +48,7 @@ Ferro Carril Oeste
 clubId        335
 teamId        1843  Mayores A
 categoryId    100
- divisionId   421  LHC Hipotecario Seguros
+divisionId    421  LHC Hipotecario Seguros
 rama          Masculino
 tournamentId  775  Apertura 2026
 roster        16 / 16 athleteId únicos
@@ -64,9 +64,7 @@ roster        25 / 25 athleteId únicos
 
 ## Validación reverse
 
-Primero se verificaron 13/13 pares de atletas con múltiples pertenencias contra el roster forward correspondiente.
-
-Después se hizo cierre completo forward→reverse de dos rosters:
+Primero se verificaron 13/13 pares de atletas con múltiples pertenencias contra el roster forward correspondiente. Después se hizo cierre completo forward→reverse de dos rosters:
 
 ```text
 Ferro 1843/775      16/16, 0 faltantes
@@ -84,13 +82,7 @@ Usar el listado del equipo para resolver competencias expuestas, pero no descart
 
 ## Nunca usar roster sin `tournamentId`
 
-Para Ferro `teamId=1843`:
-
-```text
-GET /athletes/athletesByTeam/1843
-```
-
-dio 106 filas / 31 athleteId únicos.
+Para Ferro `teamId=1843`, `GET /athletes/athletesByTeam/1843` dio 106 filas / 31 athleteId únicos.
 
 Se demostró que es exactamente la concatenación multiconjunto de seis rosters reales:
 
@@ -106,41 +98,66 @@ TOTAL  106
 
 Coinciden también las multiplicidades de cada athleteId. La respuesta perdió el contexto `tournamentId` de cada fila.
 
-Por eso:
-
 ```text
-teamId solo                         -> NO RosterMembership
-dedupe(teamId solo)                 -> NO RosterMembership
-teamId + tournamentId exactos       -> SÍ fuente de roster
+teamId solo                   -> NO RosterMembership
+dedupe(teamId solo)           -> NO RosterMembership
+teamId + tournamentId exactos -> SÍ fuente de roster
 ```
 
 ## Un atleta puede estar en varios planteles
 
-En Ferro masculino 2026 se observaron:
-
-- 20 equipos;
-- 482 membresías `(teamId,tournamentId,athleteId)`;
-- 192 athleteId únicos;
-- 80 athleteId en más de un teamId;
-- 63 athleteId en más de una categoría.
+En Ferro masculino 2026 se observaron 20 equipos, 482 membresías y 192 athleteId únicos. Entre ellos, 80 athleteId aparecen en más de un teamId y 63 aparecen en más de una categoría.
 
 La pertenencia debe ser entidad propia; no guardar un único teamId/clubId permanente dentro de Athlete.
 
-## Perfil, dorsal y posición
+## Perfil de jugador: cobertura real
 
-Confirmados como superficies de atleta/perfil:
+Sobre los **16 jugadores completos de Ferro 1843/775** se midió cobertura sin registrar valores personales individuales:
+
+| Superficie/campo | Cobertura |
+| --- | ---: |
+| identidad Athlete | 16/16 |
+| fecha de nacimiento no nula en identidad | 16/16 |
+| foto no nula en identidad | 16/16 |
+| `/users/athlete-profile/{id}` accesible | 16/16 |
+| altura de perfil no nula | 10/16 |
+| posición de perfil no nula | 13/16 |
+| número de camiseta de perfil no nulo | 10/16 |
+| campo status de perfil presente | 16/16 |
+| ficha federativa accesible | 16/16 |
+| default-team accesible | 16/16 |
+| club-id accesible | 16/16 |
+| entrada en bulk `formation` | 16/16 |
+| posición en `formation` no nula | 13/16 |
+| shirtNumber en `formation` no nulo | 10/16 |
+
+Esto muestra que la identidad está completa en el control, mientras los enriquecimientos de perfil son parciales y deben aceptar `null`.
+
+## `formation` es enriquecimiento de perfil, no de plantel
+
+Se comparó atleta por atleta:
 
 ```text
-GET /athletes/{athleteId}
-GET /athletes/{athleteId}/default-team
-GET /athletes/{athleteId}/club-id
 GET /users/athlete-profile/{athleteId}
+vs
 GET /athletes/formation/positionAndNumber?athleteIds={ids}
 ```
 
-`formation` expone `shirtNumber` y `position`, pero no recibe `teamId+tournamentId`. El dorsal además ya fue comparado contra una planilla oficial y no resulta históricamente consistente para todos los jugadores.
+Resultado sobre los 16 jugadores:
 
-No promover `shirtNumber` o `position` de perfil/formación a atributos históricos de RosterMembership.
+```text
+position:    16/16 iguales incluyendo null
+              13 valores no-null iguales
+               0 diferencias
+
+shirtNumber: 16/16 iguales incluyendo null
+              10 valores no-null iguales
+               0 diferencias
+```
+
+Por lo tanto, en este control completo `formation.position` y `formation.shirtNumber` son un espejo exacto de esos campos de perfil. La interpretación segura es **bulk athlete-profile enrichment**, no metadata específica de `(teamId,tournamentId,athleteId)`.
+
+No convertirlos en dorsal o posición histórica de `RosterMembership`.
 
 ## Estadísticas por torneo: entidad separada
 
@@ -150,20 +167,7 @@ Confirmado:
 GET /athletes/{athleteId}/tournaments/{tournamentId}/stats
 ```
 
-Cada fila contiene:
-
-```text
-matchId
-goals
-sanctions.yellowCards
-sanctions.redCards
-sanctions.blueCards
-sanctions.twoMinuteSuspensions
-```
-
-Es rendimiento/participación por partido, no metadata del plantel.
-
-Modelo recomendado:
+Cada fila contiene `matchId`, `goals` y sanciones (`yellowCards`, `redCards`, `blueCards`, `twoMinuteSuspensions`). Es rendimiento/participación por partido, no metadata del plantel.
 
 ```text
 AthleteTournamentMatchStat(
@@ -175,17 +179,28 @@ AthleteTournamentMatchStat(
 )
 ```
 
-## Últimas superficies auxiliares cerradas
+## Superficies auxiliares
 
-Se inspeccionaron también las superficies que el APK expone para ficha federativa, socials y MVP.
+Confirmados como superficies de atleta/perfil:
 
-La ficha federativa contiene metadata de identidad/habilitación/categoría/club/estado, pero no `teamId` ni `tournamentId`; por tanto su estado no significa activo/baja de un plantel concreto. En esa sonda sólo se guardó estructura, no valores personales.
+```text
+GET /athletes/{athleteId}
+GET /athletes/{athleteId}/default-team
+GET /athletes/{athleteId}/club-id
+GET /users/athlete-profile/{athleteId}
+GET /athletes/formation/positionAndNumber?athleteIds={ids}
+GET /athletes/{athleteId}/federative-card
+GET /athletes/{athleteId}/socials
+GET /athletes/{athleteId}/mvp-awards
+```
 
-Socials y MVP tampoco contienen metadata de la relación de roster.
+La ficha federativa contiene metadata de identidad/habilitación/categoría/club/estado, pero no `teamId` ni `tournamentId`; su estado no significa activo/baja de un plantel concreto. Las sondas de cobertura guardaron sólo estructura y conteos, no valores personales.
+
+`default-team` es una asociación singular/default y `club-id` una asociación de perfil. Ninguno reemplaza el historial de `RosterMembership`.
 
 ## Frontera de metadata de membresía — cerrada para 1.1.3
 
-Después de análisis estático del bundle Hermes v96 y runtime de las superficies usadas por el cliente distribuido, los siguientes campos quedan como:
+Después del análisis estático del bundle Hermes v96 y runtime de las superficies usadas por el cliente distribuido, quedan como:
 
 ```text
 not_exposed_in_confirmed_1_1_3_client_surfaces
@@ -199,7 +214,7 @@ not_exposed_in_confirmed_1_1_3_client_surfaces
 - dorsal scopeado a team+tournament;
 - posición scopeada a team+tournament.
 
-Esto **no** significa que sea imposible que exista algún recurso interno/no usado por la app. Significa que Integración no debe inventarlo ni esperarlo del contrato confirmado 1.1.3.
+Esto no afirma que sea imposible que exista un recurso interno/no usado por la app. Significa que Integración no debe inventarlo ni esperarlo del contrato confirmado 1.1.3.
 
 ## Modelo recomendado
 
@@ -211,7 +226,12 @@ Athlete(
 
 AthleteProfile(
   athleteId,
-  profile/federative fields...,
+  height?,
+  position?,
+  shirtNumber?,
+  defaultTeamId?,
+  associatedClubId?,
+  federativeSportsMetadata?,
   provenance...
 )
 
@@ -231,9 +251,13 @@ AthleteTournamentMatchStat(
 )
 ```
 
+Los campos opcionales de AthleteProfile deben aceptar `null`. No promover status, position, shirtNumber, default-team o club-id a propiedades históricas de RosterMembership.
+
 ## Evidencia canónica
 
 - `data/femebal/discovery/rosters/roster-integration-contract-v1.json`
+- `data/femebal/discovery/rosters/player-profile-integration-contract-v1.json`
+- `data/femebal/discovery/rosters/player-profile-coverage-ferro-1843-775-2026-10-02.json`
 - `data/femebal/discovery/rosters/ferro-mayores-lhc-apertura-2026.json`
 - `data/femebal/discovery/rosters/sag-villa-ballester-mayores-lhc-apertura-2026.json`
 - `data/femebal/discovery/rosters/full-bidirectional-closure-2026-10-01.json`
@@ -248,8 +272,6 @@ AthleteTournamentMatchStat(
 
 ## Runtime permanente y seguridad
 
-La única Action específica de PLANTELES que debe quedar visible al terminar es:
-
-`.github/workflows/femebal-roster-runtime-safe.yml`
+La única Action específica de PLANTELES que debe quedar visible al terminar es `.github/workflows/femebal-roster-runtime-safe.yml`.
 
 Las sondas temporales se eliminan después de guardar sus resultados. Guest efímero, token enmascarado, GET-only después del onboarding; sin escrituras en Supabase ni producción.
