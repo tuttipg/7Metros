@@ -16,15 +16,22 @@
   },
   "reverseMembership": {
     "source": "GET /athletes/{athleteId}/tournaments",
-    "purpose": "discover or validate team+tournament memberships for one athlete",
+    "purpose": "discover or validate team+tournament memberships exposed for one athlete",
     "response": "array<{team,tournament}>",
     "rowKeysObserved": ["team", "tournament"],
     "confirmedAsReverseMembershipIndex": true,
+    "completeHistoricalIndexGlobally": false,
+    "completenessNote": "It closed 41/41 memberships for two complete 2026 Apertura rosters, but some athletes present in older exact team rosters did not expose the corresponding old team pair in the current reverse response. Treat it as a strong reverse index, not as a guaranteed exhaustive historical source.",
     "runtimeValidation": {
-      "athletesTested": 4,
-      "clubsTested": 2,
-      "reversePairs": 13,
-      "pairsConfirmedByForwardRoster": 13
+      "selectedMultiMembershipAthletes": 4,
+      "selectedReversePairs": 13,
+      "selectedPairsConfirmedByForwardRoster": 13,
+      "fullRosterClosure": {
+        "clubsTested": 2,
+        "forwardRosterMemberships": 41,
+        "reverseMembershipsPresent": 41,
+        "missing": 0
+      }
     },
     "membershipMetadataIncluded": false
   },
@@ -41,7 +48,7 @@
       "entity": "tournament",
       "source": "GET /teams/{teamId}/tournaments",
       "requiredScope": ["season", "tournament/competition", "category", "division", "gender"],
-      "note": "Use this listing to resolve the requested competition when it is exposed for the team. It is not guaranteed to be a complete historical membership index."
+      "note": "Use this listing to resolve the requested competition when exposed. It is not guaranteed to enumerate all historical valid team+tournament memberships."
     },
     {
       "step": 3,
@@ -51,13 +58,7 @@
       "response": "array<AthleteIdentity>"
     }
   ],
-  "athleteIdentityFieldsObserved": [
-    "id",
-    "firstName",
-    "lastName",
-    "birthDate",
-    "picture"
-  ],
+  "athleteIdentityFieldsObserved": ["id", "firstName", "lastName", "birthDate", "picture"],
   "validation": {
     "requireTournamentIdForExactRoster": true,
     "requireJsonArray": true,
@@ -65,9 +66,10 @@
     "requireUniqueAthleteIdWithinExactRoster": true,
     "http200AloneIsNotValidityProof": true,
     "failClosedOnKnownPairMismatchEmptyArray": true,
-    "rejectUnscopedAthletesByTeam": true,
+    "rejectUnscopedAthletesByTeamForMembershipFacts": true,
     "reversePairMayBeConfirmedByForwardRoster": true,
-    "requireEveryValidPairInTeamTournamentListing": false
+    "requireEveryValidPairInTeamTournamentListing": false,
+    "requireReverseEndpointToContainEveryHistoricalMembership": false
   },
   "teamTournamentListing": {
     "source": "GET /teams/{teamId}/tournaments",
@@ -83,64 +85,51 @@
       "forwardRosterCount": 16
     }
   },
+  "unscopedAthletesByTeam": {
+    "source": "GET /athletes/athletesByTeam/{teamId}",
+    "mayBeUsedForExactRoster": false,
+    "mayBeUsedForRosterMembershipAfterDeduplication": false,
+    "confirmedSemanticsForTeam1843": {
+      "teamId": "1843",
+      "unscopedRows": 106,
+      "unscopedUniqueAthleteIds": 31,
+      "exactTournamentIds": [218, 219, 526, 775, 776, 1204],
+      "exactRosterRows": [20, 16, 19, 16, 16, 19],
+      "sumExactRosterRows": 106,
+      "exactUnionUniqueAthleteIds": 31,
+      "setEquality": true,
+      "perAthleteMultiplicityEquality": true,
+      "multisetEquality": true,
+      "interpretation": "The unscoped response is exactly the multiset concatenation of these six tournament-scoped roster identity arrays after tournament context is erased."
+    },
+    "integrationRule": "Never create RosterMembership from this surface because each repeated identity row has lost the tournament that generated it."
+  },
   "runtimeControls": {
     "ferroMayoresA": {
-      "clubId": "335",
-      "teamId": "1843",
-      "tournamentId": 775,
-      "categoryId": "100",
-      "divisionId": "421",
-      "gender": "Masculino",
-      "season": "2026",
-      "scopedRosterRows": 16,
-      "scopedUniqueAthleteIds": 16,
-      "unscopedRows": 106,
-      "unscopedUniqueAthleteIds": 31
+      "clubId": "335", "teamId": "1843", "tournamentId": 775,
+      "categoryId": "100", "divisionId": "421", "gender": "Masculino", "season": "2026",
+      "scopedRosterRows": 16, "scopedUniqueAthleteIds": 16
     },
     "ferroMayoresB": {
-      "clubId": "335",
-      "teamId": "3256",
-      "tournamentId": 782,
-      "gender": "Masculino",
-      "season": "2026",
-      "scopedRosterRows": 26,
-      "scopedUniqueAthleteIds": 26,
-      "unscopedRows": 103,
-      "unscopedUniqueAthleteIds": 46
+      "clubId": "335", "teamId": "3256", "tournamentId": 782,
+      "gender": "Masculino", "season": "2026", "scopedRosterRows": 26, "scopedUniqueAthleteIds": 26
     },
     "ballesterMayoresA": {
-      "clubId": "334",
-      "teamId": "3291",
-      "tournamentId": 775,
-      "gender": "Masculino",
-      "season": "2026",
-      "scopedRosterRows": 25,
-      "scopedUniqueAthleteIds": 25,
-      "unscopedRows": 131,
-      "unscopedUniqueAthleteIds": 30
+      "clubId": "334", "teamId": "3291", "tournamentId": 775,
+      "gender": "Masculino", "season": "2026", "scopedRosterRows": 25, "scopedUniqueAthleteIds": 25
     },
     "reverseMembership": {
-      "verifiedPairs": "13/13",
-      "ferroAthleteIds": ["16284", "10565", "19480"],
-      "ballesterAthleteIds": ["21150"]
+      "selectedVerifiedPairs": "13/13",
+      "fullTwoRosterClosure": "41/41",
+      "fullTwoRosterMissing": 0
     }
   },
   "athleteProfileLevelSurfaces": {
     "defaultTeam": {
       "source": "GET /athletes/{athleteId}/default-team",
       "teamTournamentScoped": false,
-      "semantics": "singular default/profile-level team exposed by app; not a list of roster memberships",
-      "mayBeUsedAsRosterMembership": false,
-      "runtimeProof": {
-        "16284": {
-          "defaultTeamId": "369",
-          "alsoConfirmedInTeamId": "1843"
-        },
-        "10565": {
-          "defaultTeamId": "3715",
-          "alsoConfirmedInTeamIds": ["369", "3256"]
-        }
-      }
+      "semantics": "singular default/profile-level team; not a list of roster memberships",
+      "mayBeUsedAsRosterMembership": false
     },
     "clubId": {
       "source": "GET /athletes/{athleteId}/club-id",
@@ -190,18 +179,13 @@
     "formation.shirtNumber is historical roster dorsal",
     "user athlete profile shirtNumber is historical roster dorsal",
     "HTTP 200 from roster endpoint proves team+tournament compatibility",
-    "deduplicated unscoped athletesByTeam equals exact roster",
+    "deduplicated unscoped athletesByTeam equals an exact roster",
+    "unscoped duplicate count can be converted back to tournament membership without tournament context",
     "every valid team+tournament membership must appear in /teams/{teamId}/tournaments",
+    "reverse athlete tournaments is guaranteed to be a complete historical index for every old membership",
     "tournament display name alone determines season"
   ],
   "provenanceRequirement": {
-    "recommended": [
-      "sourceEndpoint",
-      "observedAt",
-      "appVersion",
-      "teamId",
-      "tournamentId",
-      "athleteId"
-    ]
+    "recommended": ["sourceEndpoint", "observedAt", "appVersion", "teamId", "tournamentId", "athleteId"]
   }
 }
