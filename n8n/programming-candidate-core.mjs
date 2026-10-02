@@ -45,5 +45,6 @@ export function extractTopDivisionProgrammingCandidates({ text, sourceUrl, clubC
     if (teamResolution.status !== 'resolved') errors.push({ stage: 'programming_parse', error: 'team_resolution_not_resolved', resolution_status: teamResolution.status, resolution_reason: teamResolution.reason ?? null, raw_line: line });
     candidates.push({ date: matchDate, category: 'Mayores', division, time: prefix[1], branch: prefix[2], raw_matchup_and_officials: rawMatchupAndOfficials, team_resolution: teamResolution, raw_line: line, source_url: canonicalSourceUrl, source_kind: 'official_programming_pdf', evidence_scope: 'scheduled_match_identity_only', result_evidence: false, score_evidence: false, player_statistics_evidence: false });
   }
-  return { safe: true, dry_run: true, write_enabled: false, auth_used: false, complete: errors.length === 0, source_url: canonicalSourceUrl, match_date: matchDate, candidates, errors };
+  if (candidates.length === 0 && errors.length === 0) errors.push({ stage: 'programming_parse', error: 'no_top_division_candidates' });
+  return { safe: true, dry_run: true, write_enabled: false, auth_used: false, complete: errors.length === 0 && candidates.length > 0, source_url: canonicalSourceUrl, match_date: matchDate, candidates, errors };
 }
