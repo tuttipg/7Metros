@@ -6,10 +6,10 @@
     "bundle": "base.apk/assets/index.android.bundle",
     "hermesBytecodeVersion": 96,
     "stringCount": 33681,
-    "method": "Static parse of Hermes HBC header + string table; targeted bytecode string-operand association for roster functions"
+    "method": "Static parse of Hermes HBC header/string table plus targeted bytecode string-operand and function-flow analysis"
   },
   "confirmed_code": {
-    "roster": {
+    "forwardRoster": {
       "methodNameString": "getAthletesByTeam",
       "methodNameStringId": 23445,
       "pathString": "/athletes/athletesByTeam/",
@@ -17,7 +17,14 @@
       "tournamentQueryString": "?tournamentId=",
       "tournamentQueryStringId": 5681,
       "implementationFunctionId": 21552,
-      "evidence": "Function 21552 references both pathStringId 5448 and tournamentQueryStringId 5681 as Hermes LoadConstString operands."
+      "evidence": "Function 21552 constructs an optional ?tournamentId= query and calls the athletesByTeam path; response rows are mapped as Athlete identities."
+    },
+    "reverseMembership": {
+      "methodNameString": "tournaments",
+      "pathTemplate": "/athletes/{athleteId}/tournaments",
+      "responseMappingFunctionId": 21542,
+      "mappedFields": ["team", "tournament"],
+      "evidence": "The Athlete API client calls the athlete tournaments route and maps each row to Team.fromJson + Tournament.fromJson. Runtime later confirmed these pairs bidirectionally against exact rosters."
     },
     "formation": {
       "methodNameString": "getPositionAndNumberByAthleteIds",
@@ -25,23 +32,48 @@
       "pathString": "/athletes/formation/positionAndNumber?athleteIds=",
       "pathStringId": 376,
       "implementationFunctionId": 21578,
-      "evidence": "Function 21578 references pathStringId 376 as a Hermes string operand."
+      "evidence": "Function 21578 references the formation path as a Hermes string operand."
     },
     "athleteIdentity": {
       "pathString": "/athletes/",
       "pathStringId": 5481
     },
+    "profileRelated": {
+      "routes": [
+        "/athletes/{athleteId}/default-team",
+        "/athletes/{athleteId}/club-id",
+        "/users/athlete-profile/{athleteId}"
+      ],
+      "note": "These are profile/default association surfaces, not tournament-scoped roster membership."
+    },
     "teamTournament": {
       "methodNameString": "getTeamTournaments",
       "methodNameStringId": 23645,
       "teamPathString": "/teams/",
-      "teamPathStringId": 5653
+      "teamPathStringId": 5653,
+      "note": "Useful for exposed competitions of a team, but runtime shows it is not guaranteed to enumerate all historical valid membership pairs."
+    },
+    "teamFormationUiFlow": {
+      "screen": "TeamFormationScreen",
+      "container": "TeamFormationContainer",
+      "scopeParameters": ["teamId", "tournamentId"],
+      "flow": [
+        "read teamId+tournamentId from route/container props",
+        "call getAthletesByTeam(teamId,tournamentId)",
+        "collect athleteIds",
+        "call getPositionAndNumberByAthleteIds as separate enrichment",
+        "render athletes plus enrichment map"
+      ],
+      "interpretation": "The shipped UI itself keeps tournament-scoped roster retrieval separate from athlete-level position/number enrichment."
     }
   },
   "athlete_api_path_strings_observed": [
     "/athletes/formation/positionAndNumber?athleteIds=",
     "/athletes/document/",
     "/athletes/athletesByTeam/",
+    "/athletes/{athleteId}/tournaments",
+    "/athletes/{athleteId}/default-team",
+    "/athletes/{athleteId}/club-id",
     "/athletes/",
     "/athletes/athlete-not-found-report",
     "/athletes/begin-verification",
@@ -57,7 +89,7 @@
     ],
     "plantel_occurrences": 1,
     "plantel_occurrence_is_ui_copy": true,
-    "interpretation": "The shipped 1.1.3 client exposes no second obvious roster-membership route in its Hermes string table. This does not prove the server has no undocumented/internal route; it only bounds what is evidenced by the shipped client."
+    "interpretation": "No additional obvious membership-management route was observed under these terms. This does not prove the server has no undocumented/internal route."
   },
   "membership_metadata_route_evidence": {
     "roleScopedRoute": "not_observed",
