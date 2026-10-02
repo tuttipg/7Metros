@@ -3,9 +3,7 @@
   "contract_name": "femebal_larrysport_1_1_3_player_profile",
   "observed_at": "2026-10-02",
   "status": "confirmed_code_and_runtime",
-  "identity": {
-    "athlete": ["athleteId"]
-  },
+  "identity": {"athlete": ["athleteId"]},
   "sources": {
     "athleteIdentity": {
       "source": "GET /athletes/{athleteId}",
@@ -36,12 +34,14 @@
     "defaultTeam": {
       "source": "GET /athletes/{athleteId}/default-team",
       "scope": "athlete_profile_default_association",
-      "mayBeUsedAsRosterMembership": false
+      "mayBeUsedAsRosterMembership": false,
+      "control": {"http200":16,"matchesExactRosterTeam":13,"otherTeam":3}
     },
     "associatedClub": {
       "source": "GET /athletes/{athleteId}/club-id",
       "scope": "athlete_profile_association",
-      "mayBeUsedAsRosterMembership": false
+      "mayBeUsedAsRosterMembership": false,
+      "control": {"http200":16,"matchesRosterClub":16}
     },
     "federativeCard": {
       "source": "GET /athletes/{athleteId}/federative-card",
@@ -49,6 +49,14 @@
       "sportsMetadataObserved": ["category", "clubName", "habilitationYear", "status", "picture"],
       "teamTournamentScoped": false,
       "statusMayBeUsedAsRosterActiveInactive": false,
+      "control": {
+        "http200":16,
+        "clubNameMatchesRosterClub":16,
+        "categoryStringNonNull":16,
+        "categoryExactlyMatchesTeamAgeCategory":0,
+        "statusNonNull":16,
+        "habilitationYearNonNull":16
+      },
       "dataMinimization": "Do not ingest document-like personal fields for 7Metros unless a product requirement explicitly needs them and their handling is separately reviewed."
     }
   },
@@ -70,9 +78,31 @@
     "formationPositionNonNull": 13,
     "formationShirtNumberNonNull": 10
   },
+  "normalization": {
+    "height": {
+      "sourceJsonTypeObserved": "string",
+      "nonNullControlRows": 10,
+      "numericLikeControlRows": 10,
+      "parsedRange1ToLessThan3": 10,
+      "parsedRange100To250": 0,
+      "observedScale": "meter_scale",
+      "recommendedRawField": "height_raw",
+      "recommendedNormalizedField": "height_cm",
+      "rule": "preserve raw; replace comma decimal separator with dot if present; parse numeric; accept meter-scale only when 1 <= value < 3; derive height_cm = value * 100; keep provenance and reject/flag values outside validation range",
+      "unitEvidence": "runtime scale evidence; no explicit unit token was required for the normalization decision"
+    },
+    "position": {"jsonTypeObservedWhenNonNull":"string","nonNullControlRows":13,"nullable":true},
+    "shirtNumber": {"jsonTypeObservedWhenNonNull":"number","nonNullControlRows":10,"nullable":true},
+    "federativeCategory": {
+      "jsonTypeObservedWhenNonNull":"string",
+      "nonNullControlRows":16,
+      "exactMatchesToTeamAgeCategoryInControl":0,
+      "rule":"do not join or equate federative category with team.ageCategory by literal text"
+    }
+  },
   "recommendedModel": {
     "Athlete": ["athleteId", "firstName", "lastName", "birthDate?", "picture?"],
-    "AthleteProfile": ["athleteId", "height?", "position?", "shirtNumber?", "defaultTeamId?", "associatedClubId?", "federativeSportsMetadata?", "provenance"],
+    "AthleteProfile": ["athleteId", "height_raw?", "height_cm?", "position?", "shirtNumber?", "defaultTeamId?", "associatedClubId?", "federativeSportsMetadata?", "provenance"],
     "RosterMembership": ["teamId", "tournamentId", "athleteId", "provenance"],
     "AthleteTournamentMatchStat": ["athleteId", "tournamentId", "matchId", "goals", "sanctions"]
   },
@@ -81,8 +111,9 @@
     "profileShirtNumber": "current/profile-level athlete enrichment; not proven historical team+tournament dorsal",
     "profileStatus": "profile-level state; not roster active/baja",
     "federativeStatus": "federative-card state; not roster active/baja",
-    "defaultTeam": "singular default/profile association; not complete roster history",
-    "associatedClub": "profile association; not sufficient to prove a roster membership"
+    "defaultTeam": "singular default/profile association; differs from the exact roster team for 3/16 control athletes",
+    "associatedClub": "profile association; consistent with roster club for 16/16 control athletes but still insufficient to prove a specific membership",
+    "federativeCategory": "federative classification vocabulary; not the same literal field as team.ageCategory"
   },
   "prohibitedInferences": [
     "profile.position is historical roster position",
@@ -92,7 +123,8 @@
     "profile status means roster active/baja",
     "federative status means roster active/baja",
     "default-team is the athlete's only team",
-    "club-id proves membership in a specific team+tournament"
+    "club-id proves membership in a specific team+tournament",
+    "federative-card category can be joined to team.ageCategory by literal text"
   ],
   "privacy": {
     "coverageEvidenceStoresAggregateCountsOnly": true,
