@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-01",
+  "source": "Femebal Community - LarrySport 1.1.3 split APK",
+  "analysis": {
+    "bundle": "base.apk/assets/index.android.bundle",
+    "hermesBytecodeVersion": 96,
+    "stringCount": 33681,
+    "method": "Static parse of Hermes HBC header + string table; targeted bytecode string-operand association for roster functions"
+  },
+  "confirmed_code": {
+    "roster": {
+      "methodNameString": "getAthletesByTeam",
+      "methodNameStringId": 23445,
+      "pathString": "/athletes/athletesByTeam/",
+      "pathStringId": 5448,
+      "tournamentQueryString": "?tournamentId=",
+      "tournamentQueryStringId": 5681,
+      "implementationFunctionId": 21552,
+      "evidence": "Function 21552 references both pathStringId 5448 and tournamentQueryStringId 5681 as Hermes LoadConstString operands."
+    },
+    "formation": {
+      "methodNameString": "getPositionAndNumberByAthleteIds",
+      "methodNameStringId": 32239,
+      "pathString": "/athletes/formation/positionAndNumber?athleteIds=",
+      "pathStringId": 376,
+      "implementationFunctionId": 21578,
+      "evidence": "Function 21578 references pathStringId 376 as a Hermes string operand."
+    },
+    "athleteIdentity": {
+      "pathString": "/athletes/",
+      "pathStringId": 5481
+    },
+    "teamTournament": {
+      "methodNameString": "getTeamTournaments",
+      "methodNameStringId": 23645,
+      "teamPathString": "/teams/",
+      "teamPathStringId": 5653
+    }
+  },
+  "athlete_api_path_strings_observed": [
+    "/athletes/formation/positionAndNumber?athleteIds=",
+    "/athletes/document/",
+    "/athletes/athletesByTeam/",
+    "/athletes/",
+    "/athletes/athlete-not-found-report",
+    "/athletes/begin-verification",
+    "/athletes/complete-verification",
+    "/athletes/topScorers/"
+  ],
+  "negative_static_evidence": {
+    "exact_or_semantic_route_terms_not_found": [
+      "roster",
+      "squad",
+      "membership",
+      "assignment"
+    ],
+    "plantel_occurrences": 1,
+    "plantel_occurrence_is_ui_copy": true,
+    "interpretation": "The shipped 1.1.3 client exposes no second obvious roster-membership route in its Hermes string table. This does not prove the server has no undocumented/internal route; it only bounds what is evidenced by the shipped client."
+  },
+  "membership_metadata_route_evidence": {
+    "roleScopedRoute": "not_observed",
+    "activeInactiveScopedRoute": "not_observed",
+    "membershipStartEndScopedRoute": "not_observed",
+    "rosterDorsalScopedRoute": "not_observed"
+  },
+  "status": "confirmed_code_static"
+}
