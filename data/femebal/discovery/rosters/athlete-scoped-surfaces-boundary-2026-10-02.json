@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-02",
+  "app_version": "1.1.3",
+  "status": "confirmed_code_and_runtime",
+  "scope": "PLANTELES: determine whether shipped athlete surfaces expose team+tournament-scoped membership metadata",
+  "tournamentStats": {
+    "source": "GET /athletes/{athleteId}/tournaments/{tournamentId}/stats",
+    "response": "array<AthleteTournamentMatchStat>",
+    "rowKeysObserved": ["matchId", "goals", "sanctions"],
+    "sanctionKeysObserved": ["yellowCards", "redCards", "blueCards", "twoMinuteSuspensions"],
+    "runtimeControls": [
+      {"athleteId":"16284","tournamentId":775,"rows":15},
+      {"athleteId":"16284","tournamentId":790,"rows":15},
+      {"athleteId":"16284","tournamentId":1204,"rows":8},
+      {"athleteId":"19480","tournamentId":776,"rows":1}
+    ],
+    "membershipMetadataObserved": false,
+    "interpretation": "Tournament-scoped performance/participation statistics by match; not a RosterMembership record."
+  },
+  "athleteIdentity": {
+    "source": "GET /athletes/{athleteId}",
+    "keysObserved": ["id", "firstName", "lastName", "birthDate", "picture"],
+    "teamTournamentScoped": false,
+    "membershipMetadataObserved": false
+  },
+  "formationEnrichment": {
+    "source": "GET /athletes/formation/positionAndNumber?athleteIds={ids}",
+    "keysObservedPerAthlete": ["shirtNumber", "position"],
+    "teamTournamentScoped": false,
+    "mayBeUsedAsRosterScopedDorsal": false,
+    "mayBeUsedAsRosterScopedPosition": false
+  },
+  "userAthleteProfile": {
+    "source": "GET /users/athlete-profile/{athleteId}",
+    "keysObserved": ["athlete", "avatarType", "avatarUrl", "height", "position", "shirtNumber", "socialMedia", "status", "useFederationPicture", "userId"],
+    "teamTournamentScoped": false,
+    "statusMayBeUsedAsRosterActiveInactive": false
+  },
+  "federativeCard": {
+    "source": "GET /athletes/{athleteId}/federative-card",
+    "controlsTested": ["16284", "19480"],
+    "keysObserved": ["athleteId", "birthDate", "category", "clubName", "documentNumber", "fullName", "habilitationYear", "picture", "status"],
+    "responseScalarValuesPersistedOrLogged": false,
+    "teamTournamentScoped": false,
+    "containsTeamId": false,
+    "containsTournamentId": false,
+    "statusMayBeUsedAsRosterActiveInactive": false,
+    "interpretation": "Federative-card/profile status and habilitation information, not a team+tournament membership state."
+  },
+  "socials": {
+    "source": "GET /athletes/{athleteId}/socials",
+    "keysObserved": ["followers", "links"],
+    "membershipMetadataObserved": false
+  },
+  "mvpAwards": {
+    "source": "GET /athletes/{athleteId}/mvp-awards",
+    "runtimeControlAthleteId": "16284",
+    "responseType": "array",
+    "runtimeRows": 0,
+    "membershipMetadataObserved": false
+  },
+  "teamIdentity": {
+    "source": "GET /teams/{teamId}",
+    "keysObserved": ["ageCategory", "club", "division", "gender", "id", "name"],
+    "membershipMetadataObserved": false
+  },
+  "membershipMetadataBoundary": {
+    "role": "not_exposed_in_confirmed_1_1_3_client_surfaces",
+    "explicitRosterActiveInactive": "not_exposed_in_confirmed_1_1_3_client_surfaces",
+    "membershipStartDate": "not_exposed_in_confirmed_1_1_3_client_surfaces",
+    "membershipEndDate": "not_exposed_in_confirmed_1_1_3_client_surfaces",
+    "membershipRelationId": "not_exposed_in_confirmed_1_1_3_client_surfaces",
+    "rosterScopedDorsal": "not_exposed_in_confirmed_1_1_3_client_surfaces",
+    "rosterScopedPosition": "not_exposed_in_confirmed_1_1_3_client_surfaces"
+  },
+  "modelSeparation": {
+    "RosterMembership": ["teamId", "tournamentId", "athleteId"],
+    "AthleteTournamentMatchStat": ["athleteId", "tournamentId", "matchId", "goals", "sanctions"],
+    "AthleteProfile": "athlete-level/profile fields such as position, shirtNumber, height/status when available; never silently promoted to roster-scoped history"
+  },
+  "boundary": "This proves absence from the confirmed surfaces used by the shipped 1.1.3 client. It does not claim that no undocumented/internal backend resource exists."
+}
