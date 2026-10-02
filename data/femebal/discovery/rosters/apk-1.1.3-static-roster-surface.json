@@ -1,10 +1,11 @@
 {
   "schema_version": 1,
-  "observed_at": "2026-10-01",
+  "observed_at": "2026-10-02",
   "source": "Femebal Community - LarrySport 1.1.3 split APK",
   "analysis": {
     "bundle": "base.apk/assets/index.android.bundle",
     "hermesBytecodeVersion": 96,
+    "functionCount": 32390,
     "stringCount": 33681,
     "method": "Static parse of Hermes HBC header/string table plus targeted bytecode string-operand and function-flow analysis"
   },
@@ -20,11 +21,15 @@
       "evidence": "Function 21552 constructs an optional ?tournamentId= query and calls the athletesByTeam path; response rows are mapped as Athlete identities."
     },
     "reverseMembership": {
-      "methodNameString": "tournaments",
       "pathTemplate": "/athletes/{athleteId}/tournaments",
       "responseMappingFunctionId": 21542,
       "mappedFields": ["team", "tournament"],
-      "evidence": "The Athlete API client calls the athlete tournaments route and maps each row to Team.fromJson + Tournament.fromJson. Runtime later confirmed these pairs bidirectionally against exact rosters."
+      "evidence": "The Athlete API client calls the athlete tournaments route and maps each row to Team.fromJson + Tournament.fromJson. Runtime confirmed these pairs against exact rosters."
+    },
+    "tournamentStats": {
+      "pathTemplate": "/athletes/{athleteId}/tournaments/{tournamentId}/stats",
+      "runtimeRowKeys": ["matchId", "goals", "sanctions"],
+      "interpretation": "Tournament-scoped match performance statistics; no membership relation metadata observed."
     },
     "formation": {
       "methodNameString": "getPositionAndNumberByAthleteIds",
@@ -38,13 +43,16 @@
       "pathString": "/athletes/",
       "pathStringId": 5481
     },
-    "profileRelated": {
+    "profileAndAuxiliaryRoutes": {
       "routes": [
         "/athletes/{athleteId}/default-team",
         "/athletes/{athleteId}/club-id",
+        "/athletes/{athleteId}/federative-card",
+        "/athletes/{athleteId}/socials",
+        "/athletes/{athleteId}/mvp-awards",
         "/users/athlete-profile/{athleteId}"
       ],
-      "note": "These are profile/default association surfaces, not tournament-scoped roster membership."
+      "note": "Runtime bounded these as athlete/profile/federative/social/award surfaces rather than tournament-scoped roster-membership metadata."
     },
     "teamTournament": {
       "methodNameString": "getTeamTournaments",
@@ -72,8 +80,12 @@
     "/athletes/document/",
     "/athletes/athletesByTeam/",
     "/athletes/{athleteId}/tournaments",
+    "/athletes/{athleteId}/tournaments/{tournamentId}/stats",
     "/athletes/{athleteId}/default-team",
     "/athletes/{athleteId}/club-id",
+    "/athletes/{athleteId}/federative-card",
+    "/athletes/{athleteId}/socials",
+    "/athletes/{athleteId}/mvp-awards",
     "/athletes/",
     "/athletes/athlete-not-found-report",
     "/athletes/begin-verification",
@@ -81,21 +93,18 @@
     "/athletes/topScorers/"
   ],
   "negative_static_evidence": {
-    "exact_or_semantic_route_terms_not_found": [
-      "roster",
-      "squad",
-      "membership",
-      "assignment"
-    ],
+    "exact_or_semantic_route_terms_not_found": ["roster", "squad", "membership", "assignment"],
     "plantel_occurrences": 1,
     "plantel_occurrence_is_ui_copy": true,
-    "interpretation": "No additional obvious membership-management route was observed under these terms. This does not prove the server has no undocumented/internal route."
+    "interpretation": "No additional obvious membership-management route was observed under these terms in the shipped client. This does not prove that the server has no undocumented/internal route."
   },
   "membership_metadata_route_evidence": {
-    "roleScopedRoute": "not_observed",
-    "activeInactiveScopedRoute": "not_observed",
-    "membershipStartEndScopedRoute": "not_observed",
-    "rosterDorsalScopedRoute": "not_observed"
+    "roleScopedRoute": "not_observed_in_shipped_1_1_3_client",
+    "activeInactiveScopedRoute": "not_observed_in_shipped_1_1_3_client",
+    "membershipStartEndScopedRoute": "not_observed_in_shipped_1_1_3_client",
+    "membershipRelationIdRoute": "not_observed_in_shipped_1_1_3_client",
+    "rosterDorsalScopedRoute": "not_observed_in_shipped_1_1_3_client",
+    "rosterPositionScopedRoute": "not_observed_in_shipped_1_1_3_client"
   },
-  "status": "confirmed_code_static"
+  "status": "confirmed_code_static_plus_runtime_boundary"
 }
