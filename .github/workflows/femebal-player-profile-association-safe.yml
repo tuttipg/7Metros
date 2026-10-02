@@ -1,0 +1,94 @@
+name: FEMEBAL player diagnostic — profile associations
+
+on:
+  push:
+    branches:
+      - research/femebal-rosters-1.1.3
+    paths:
+      - .github/workflows/femebal-player-profile-association-safe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      API_BASE: https://api.femebal.cam.larrysport.tecdata.net
+      TEAM_ID: '1843'
+      TOURNAMENT_ID: '775'
+    steps:
+      - name: Check player surfaces for weight or handedness keys only
+        shell: bash
+        run: |
+          set -euo pipefail
+          common=(
+            --silent --show-error --location --max-time 15
+            --header 'Accept: application/json'
+            --header 'X-App-Variant: cah'
+            --header 'X-App-Version: 1.1.3'
+          )
+          tmp="$(mktemp -d)"
+          cleanup(){ rm -rf "$tmp"; unset access || true; }
+          trap cleanup EXIT
+
+          onboarding="$tmp/onboarding.json"
+          code="$(curl "${common[@]}" --request POST --header 'Content-Type: application/json' --output "$onboarding" --write-out '%{http_code}' "${API_BASE}/init-onboarding")"
+          [[ "$code" == 200 ]] || exit 1
+          access="$(jq -r '.accessToken // empty' "$onboarding")"
+          [[ -n "$access" ]] || exit 1
+          echo "::add-mask::${access}"
+
+          get(){
+            local path="$1" out="$2"
+            curl "${common[@]}" --request GET --header "Authorization: Bearer ${access}" --output "$out" --write-out '%{http_code}' "${API_BASE}${path}"
+          }
+
+          roster="$tmp/roster.json"
+          [[ "$(get "/athletes/athletesByTeam/${TEAM_ID}?tournamentId=${TOURNAMENT_ID}" "$roster")" == 200 ]] || exit 1
+          [[ "$(jq 'length' "$roster")" == 16 ]] || exit 1
+
+          profile_files=()
+          identity_files=()
+          federative_files=()
+          while read -r id; do
+            p="$tmp/profile-${id}.json"
+            a="$tmp/athlete-${id}.json"
+            f="$tmp/fed-${id}.json"
+            [[ "$(get "/users/athlete-profile/${id}" "$p")" == 200 ]] || exit 1
+            [[ "$(get "/athletes/${id}" "$a")" == 200 ]] || exit 1
+            [[ "$(get "/athletes/${id}/federative-card" "$f")" == 200 ]] || exit 1
+            profile_files+=("$p")
+            identity_files+=("$a")
+            federative_files+=("$f")
+          done < <(jq -r '.[].id|tostring' "$roster")
+
+          jq -s '.' "${profile_files[@]}" > "$tmp/profiles.json"
+          jq -s '.' "${identity_files[@]}" > "$tmp/identities.json"
+          jq -s '.' "${federative_files[@]}" > "$tmp/federative.json"
+
+          pattern='weight|peso|handed|handedness|dominanthand|dominant_hand|laterality|lateralidad|lefthand|righthand|zurdo|zurda|diestro|diestra|mano|brazo'
+
+          count_matching_key_paths(){
+            local file="$1"
+            jq --arg re "$pattern" '[.[] | paths as $p | ($p[-1]|tostring) as $k | select($k|test($re;"i")) | ($p|map(tostring)|join("."))] | unique | length' "$file"
+          }
+
+          profile_matches="$(count_matching_key_paths "$tmp/profiles.json")"
+          identity_matches="$(count_matching_key_paths "$tmp/identities.json")"
+          federative_matches="$(count_matching_key_paths "$tmp/federative.json")"
+
+          echo "profiles_checked=16"
+          echo "identities_checked=16"
+          echo "federative_cards_checked=16"
+          echo "profile_weight_or_handedness_key_paths=${profile_matches}"
+          echo "identity_weight_or_handedness_key_paths=${identity_matches}"
+          echo "federative_weight_or_handedness_key_paths=${federative_matches}"
+
+          [[ "$profile_matches" == 0 ]]
+          [[ "$identity_matches" == 0 ]]
+          [[ "$federative_matches" == 0 ]]
+
+          echo 'No response scalar values were logged; only aggregate key-path counts were checked.'
+          echo 'Guest legítimo 1.1.3; GET-only; sin Supabase ni producción.'
