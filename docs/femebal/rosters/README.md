@@ -77,7 +77,15 @@ Ejemplos:
 - Schankula `19480`: `1843/776`, `1843/775`, `1843/1204`.
 - Simonet `21150`, SAG Villa Ballester: `3291/775`, `3291/1204`.
 
-Esto permite validar membresías sin joins por nombre.
+Además se validó el cierre completo forward→reverse de los dos planteles Apertura LHC usados como controles:
+
+```text
+Ferro 1843/775:       16/16 presentes en reverse, 0 faltantes
+Ballester 3291/775:   25/25 presentes en reverse, 0 faltantes
+TOTAL:                 41/41, 0 faltantes
+```
+
+Esto permite validar membresías por IDs sin joins por nombre y confirma el índice inverso sobre dos rosters completos.
 
 ## `/teams/{teamId}/tournaments` no es un historial exhaustivo
 
@@ -249,6 +257,7 @@ Guardar hechos e IDs originales. No inferir membresía desde nombres, default-te
 - `data/femebal/discovery/rosters/ferro-mayores-lhc-apertura-2026.json`
 - `data/femebal/discovery/rosters/sag-villa-ballester-mayores-lhc-apertura-2026.json`
 - `data/femebal/discovery/rosters/athlete-tournaments-reverse-membership-2026-10-01.json`
+- `data/femebal/discovery/rosters/full-bidirectional-closure-2026-10-01.json`
 - `data/femebal/discovery/rosters/ferro-2026-membership-diagnostic.json`
 - `data/femebal/discovery/rosters/default-team-vs-membership-2026-10-01.json`
 - `data/femebal/discovery/rosters/membership-metadata-boundary-2026-10-01.json`
