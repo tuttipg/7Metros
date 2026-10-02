@@ -13,14 +13,13 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 4
     env:
       API_BASE: https://api.femebal.cam.larrysport.tecdata.net
       TEAM_ID: '1843'
       TOURNAMENT_ID: '775'
-      CLUB_ID: '335'
     steps:
-      - name: Measure aggregate profile association and type semantics
+      - name: Infer profile height scale from aggregate ranges only
         shell: bash
         run: |
           set -euo pipefail
@@ -46,82 +45,33 @@ jobs:
             curl "${common[@]}" --request GET --header "Authorization: Bearer ${access}" --output "$out" --write-out '%{http_code}' "${API_BASE}${path}"
           }
 
-          team="$tmp/team.json"
-          [[ "$(get "/teams/${TEAM_ID}" "$team")" == 200 ]] || exit 1
-          target_club_name="$(jq -r '.club.name // empty' "$team")"
-          target_category_name="$(jq -r '.ageCategory.name // empty' "$team")"
-          [[ -n "$target_club_name" && -n "$target_category_name" ]] || exit 1
-
           roster="$tmp/roster.json"
           [[ "$(get "/athletes/athletesByTeam/${TEAM_ID}?tournamentId=${TOURNAMENT_ID}" "$roster")" == 200 ]] || exit 1
           [[ "$(jq 'length' "$roster")" == 16 ]] || exit 1
 
-          default_team_200=0; default_team_matches=0; default_team_other=0
-          club_id_200=0; club_id_matches=0
-          fed_200=0; fed_club_matches=0; fed_category_matches=0; fed_category_string_nonnull=0; fed_status_nonnull=0; fed_habilitation_nonnull=0
-          profile_200=0; height_nonnull=0; height_number=0; height_string=0; height_string_numeric_like=0; position_string_nonnull=0; shirt_number_numeric_nonnull=0
-
+          files=()
           while read -r id; do
-            d="$tmp/d-${id}.json"
-            code="$(get "/athletes/${id}/default-team" "$d")"
-            if [[ "$code" == 200 ]]; then
-              default_team_200=$((default_team_200+1))
-              did="$(jq -r '.id // .team.id // empty' "$d" 2>/dev/null || true)"
-              [[ "$did" == "$TEAM_ID" ]] && default_team_matches=$((default_team_matches+1)) || default_team_other=$((default_team_other+1))
-            fi
-
-            c="$tmp/c-${id}.json"
-            code="$(get "/athletes/${id}/club-id" "$c")"
-            if [[ "$code" == 200 ]]; then
-              club_id_200=$((club_id_200+1))
-              cid="$(jq -r 'if type=="number" or type=="string" then tostring elif type=="object" then ((.clubId // .id // .club.id // empty)|tostring) else empty end' "$c" 2>/dev/null || true)"
-              [[ "$cid" == "$CLUB_ID" ]] && club_id_matches=$((club_id_matches+1)) || true
-            fi
-
-            f="$tmp/f-${id}.json"
-            code="$(get "/athletes/${id}/federative-card" "$f")"
-            if [[ "$code" == 200 ]] && jq -e 'type=="object"' "$f" >/dev/null 2>&1; then
-              fed_200=$((fed_200+1))
-              jq -e --arg v "$target_club_name" '.clubName == $v' "$f" >/dev/null && fed_club_matches=$((fed_club_matches+1)) || true
-              jq -e --arg v "$target_category_name" '.category == $v' "$f" >/dev/null && fed_category_matches=$((fed_category_matches+1)) || true
-              jq -e '.category != null and (.category|type)=="string" and .category!=""' "$f" >/dev/null && fed_category_string_nonnull=$((fed_category_string_nonnull+1)) || true
-              jq -e '.status != null and .status != ""' "$f" >/dev/null && fed_status_nonnull=$((fed_status_nonnull+1)) || true
-              jq -e '.habilitationYear != null' "$f" >/dev/null && fed_habilitation_nonnull=$((fed_habilitation_nonnull+1)) || true
-            fi
-
-            p="$tmp/p-${id}.json"
-            code="$(get "/users/athlete-profile/${id}" "$p")"
-            if [[ "$code" == 200 ]] && jq -e 'type=="object"' "$p" >/dev/null 2>&1; then
-              profile_200=$((profile_200+1))
-              if jq -e '.height != null' "$p" >/dev/null; then
-                height_nonnull=$((height_nonnull+1))
-                jq -e '(.height|type)=="number"' "$p" >/dev/null && height_number=$((height_number+1)) || true
-                jq -e '(.height|type)=="string"' "$p" >/dev/null && height_string=$((height_string+1)) || true
-                jq -e '(.height|type)=="string" and (.height|test("^[[:space:]]*[0-9]+([.,][0-9]+)?[[:space:]]*$"))' "$p" >/dev/null && height_string_numeric_like=$((height_string_numeric_like+1)) || true
-              fi
-              jq -e '.position != null and (.position|type)=="string"' "$p" >/dev/null && position_string_nonnull=$((position_string_nonnull+1)) || true
-              jq -e '.shirtNumber != null and (.shirtNumber|type)=="number"' "$p" >/dev/null && shirt_number_numeric_nonnull=$((shirt_number_numeric_nonnull+1)) || true
-            fi
+            p="$tmp/profile-${id}.json"
+            [[ "$(get "/users/athlete-profile/${id}" "$p")" == 200 ]] || exit 1
+            files+=("$p")
           done < <(jq -r '.[].id|tostring' "$roster")
 
-          echo "roster=16"
-          echo "default_team_http_200=${default_team_200}"
-          echo "default_team_matches_roster_team=${default_team_matches}"
-          echo "default_team_other=${default_team_other}"
-          echo "club_id_http_200=${club_id_200}"
-          echo "club_id_matches_target=${club_id_matches}"
-          echo "federative_card_http_200=${fed_200}"
-          echo "federative_club_matches_target=${fed_club_matches}"
-          echo "federative_category_string_nonnull=${fed_category_string_nonnull}"
-          echo "federative_category_exactly_matches_team_ageCategory=${fed_category_matches}"
-          echo "federative_status_nonnull=${fed_status_nonnull}"
-          echo "federative_habilitationYear_nonnull=${fed_habilitation_nonnull}"
-          echo "user_profile_http_200=${profile_200}"
-          echo "profile_height_nonnull=${height_nonnull}"
-          echo "profile_height_json_number=${height_number}"
-          echo "profile_height_json_string=${height_string}"
-          echo "profile_height_string_numeric_like=${height_string_numeric_like}"
-          echo "profile_position_string_nonnull=${position_string_nonnull}"
-          echo "profile_shirtNumber_numeric_nonnull=${shirt_number_numeric_nonnull}"
-          echo 'No athlete IDs, names, dates, club/category names, height values, positions, shirt numbers, or federative scalar values were logged.'
+          jq -s '.' "${files[@]}" > "$tmp/profiles.json"
+
+          total="$(jq 'length' "$tmp/profiles.json")"
+          nonnull="$(jq '[.[] | select(.height != null)] | length' "$tmp/profiles.json")"
+          string_count="$(jq '[.[] | select(.height != null and (.height|type)=="string")] | length' "$tmp/profiles.json")"
+          parseable="$(jq '[.[] | select(.height != null and (.height|type)=="string") | (.height|gsub(",";".")|tonumber?)] | map(select(. != null)) | length' "$tmp/profiles.json")"
+          meters_range="$(jq '[.[] | select(.height != null and (.height|type)=="string") | (.height|gsub(",";".")|tonumber?) | select(. != null and . >= 1 and . < 3)] | length' "$tmp/profiles.json")"
+          centimeters_range="$(jq '[.[] | select(.height != null and (.height|type)=="string") | (.height|gsub(",";".")|tonumber?) | select(. != null and . >= 100 and . <= 250)] | length' "$tmp/profiles.json")"
+          other_range="$(jq '[.[] | select(.height != null and (.height|type)=="string") | (.height|gsub(",";".")|tonumber?) | select(. != null and ((. < 1) or (. >= 3 and . < 100) or (. > 250)))] | length' "$tmp/profiles.json")"
+
+          echo "profiles=${total}"
+          echo "height_nonnull=${nonnull}"
+          echo "height_string=${string_count}"
+          echo "height_parseable_numeric=${parseable}"
+          echo "height_in_1_to_lt3_range=${meters_range}"
+          echo "height_in_100_to_250_range=${centimeters_range}"
+          echo "height_other_numeric_range=${other_range}"
+          echo 'No athlete IDs, names, height values, or other profile scalar values were logged.'
           echo 'Guest legítimo 1.1.3; GET-only; sin Supabase ni producción.'
