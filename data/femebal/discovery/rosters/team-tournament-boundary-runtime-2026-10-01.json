@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-01",
+  "source": "FEMEBAL Community / LarrySport 1.1.3 runtime guest",
+  "endpoint": "/athletes/athletesByTeam/{teamId}?tournamentId={tournamentId}",
+  "scope": "Ferro Carril Oeste",
+  "cases": [
+    {
+      "label": "valid Mayores A LHC Apertura 2026",
+      "teamId": "1843",
+      "tournamentId": 775,
+      "http": 200,
+      "responseType": "array",
+      "count": 16
+    },
+    {
+      "label": "tournamentId omitted",
+      "teamId": "1843",
+      "tournamentId": null,
+      "http": 200,
+      "responseType": "array",
+      "count": 106
+    },
+    {
+      "label": "mismatch Mayores A team + Junior Apertura tournament",
+      "teamId": "1843",
+      "tournamentId": 790,
+      "http": 200,
+      "responseType": "array",
+      "count": 0
+    },
+    {
+      "label": "mismatch Mayores B team + LHC Apertura tournament",
+      "teamId": "3256",
+      "tournamentId": 775,
+      "http": 200,
+      "responseType": "array",
+      "count": 0
+    },
+    {
+      "label": "valid Mayores B Plata Apertura 2026",
+      "teamId": "3256",
+      "tournamentId": 782,
+      "http": 200,
+      "responseType": "array",
+      "count": 26
+    }
+  ],
+  "confirmed_runtime": {
+    "mismatchedKnownIdsReturnEmptyArray": true,
+    "missingTournamentIdIsNotRejected": true,
+    "missingTournamentIdBroadensResult": true
+  },
+  "integration_rule": "For an exact roster, tournamentId must be supplied and must have been resolved as belonging to the selected team. Never treat HTTP 200 alone as proof of a valid team+tournament roster; validate the pair and fail closed on an empty mismatch or on omitted tournamentId.",
+  "pending": "Determine the exact semantics of the 106-athlete response when tournamentId is omitted."
+}
