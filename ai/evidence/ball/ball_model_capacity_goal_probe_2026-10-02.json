@@ -1,8 +1,9 @@
 {
-  "status": "REAL_GOAL_WINDOW_MODEL_CAPACITY_PROBE_COMPLETE",
+  "status": "SCORING_ACTION_WINDOW_MODEL_CAPACITY_PROBE_CORRECTED",
   "fixture": "Ferro - N. S. de Lujan",
-  "fixture_frames": [360, 376],
-  "frames": 16,
+  "fixture_frames": [326, 341],
+  "frames": 15,
+  "window_note": "Frame-by-frame review shows 360:376 is post-action transition; 326:341 contains the attack and goalkeeper reaction. Broadcast score update is delayed and is not used as exact shot timing.",
   "ultralytics": "8.4.163",
   "class_id": 32,
   "class_name": "sports ball",
@@ -19,44 +20,43 @@
   "models": {
     "yolo11n": {
       "sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
-      "raw_candidates": 34,
-      "candidate_frames": 15,
-      "max_confidence": 0.10859189927577972,
-      "ge_0_10": 1,
-      "ge_0_05": 2,
-      "ge_0_02": 5,
-      "tracker_selected": 1,
-      "longest_contiguous_run": 1,
-      "usable_flight": false,
-      "selected": [{"frame": 371, "stage": "strong", "confidence": 0.10859189927577972, "center": [902.65673828125, 298.59092712402344]}]
+      "raw_candidates": 44,
+      "candidate_frames": 14,
+      "max_confidence": 0.03376557305455208,
+      "ge_0_10": 0,
+      "ge_0_05": 0,
+      "ge_0_02": 2,
+      "tracker_selected": 0,
+      "longest_contiguous_run": 0,
+      "usable_ball_flight_after_visual_qc": false
     },
     "yolo11s": {
       "sha256": "85a76fe86dd8afe384648546b56a7a78580c7cb7b404fc595f97969322d502d5",
-      "raw_candidates": 30,
-      "candidate_frames": 14,
-      "max_confidence": 0.11519332230091095,
-      "ge_0_10": 1,
-      "ge_0_05": 1,
-      "ge_0_02": 5,
-      "tracker_selected": 1,
-      "longest_contiguous_run": 1,
-      "usable_flight": false,
-      "selected": [{"frame": 367, "stage": "strong", "confidence": 0.11519332230091095, "center": [214.88416290283203, 373.6073760986328]}]
+      "raw_candidates": 89,
+      "candidate_frames": 15,
+      "max_confidence": 0.2159598469734192,
+      "ge_0_10": 3,
+      "ge_0_05": 6,
+      "ge_0_02": 16,
+      "tracker_selected": 4,
+      "longest_contiguous_run": 4,
+      "visual_qc": "persistent dotted-6m-line false positive around x=445,y=267",
+      "usable_ball_flight_after_visual_qc": false
     },
     "yolo11m": {
       "sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
-      "raw_candidates": 33,
-      "candidate_frames": 15,
-      "max_confidence": 0.027979936450719833,
-      "ge_0_10": 0,
-      "ge_0_05": 0,
-      "ge_0_02": 1,
-      "tracker_selected": 0,
-      "longest_contiguous_run": 0,
-      "usable_flight": false,
-      "selected": []
+      "raw_candidates": 15,
+      "candidate_frames": 10,
+      "max_confidence": 0.12024165689945221,
+      "ge_0_10": 1,
+      "ge_0_05": 2,
+      "ge_0_02": 6,
+      "tracker_selected": 5,
+      "longest_contiguous_run": 4,
+      "visual_qc": "persistent dotted-6m-line false positive around x=445,y=267",
+      "usable_ball_flight_after_visual_qc": false
     }
   },
-  "decision": "REJECT_LARGER_COCO_MODEL_AS_BALL_FLIGHT_FIX",
-  "next_step": "temporal_or_ball_specific_detector_on_same_positive_goal_window_and_GT1_negative_controls"
+  "decision": "REJECT_LARGER_COCO_MODEL_AS_FAST_BALL_FIX",
+  "next_step": "temporal_motion_or_ball_specific_detector_on_326_341_plus_GT1_ball-flight_controls"
 }

@@ -1,20 +1,22 @@
-# Capacidad del detector COCO de pelota — primer gol real — 02/10/2026
+# Capacidad del detector COCO de pelota — acción del primer gol — 02/10/2026
 
-## Objetivo
+## Corrección de ventana
 
-Después de comprobar que subir `imgsz` de YOLO11n no genera una trayectoria usable en el primer gol real, se probó si aumentar la **capacidad del mismo detector COCO** (`sports ball`, clase 32) resuelve el cuello.
+La corrida inicial usó fixture frames `360:376` y los describió como la acción del primer gol. Una revisión cuadro a cuadro posterior mostró que esa ventana ya pertenece a la transición posterior: los jugadores están volviendo y no es una ventana válida para estudiar la trayectoria del lanzamiento.
 
-La comparación mantiene fija la ventana, la resolución de inferencia y la política de continuidad de pelota. Sólo cambia el tamaño del modelo.
+La acción ofensiva al arco izquierdo sigue activa en `326:340`; el arquero de Luján reacciona alrededor de `331:335` y a continuación los jugadores empiezan la transición. Por eso la comparación se repitió sobre fixture frames **`326:341`** (15 frames). El marcador del broadcast todavía muestra 0–0 durante esa secuencia y se actualiza después, por lo que no se usa el overlay como timestamp exacto del tiro.
 
-## Ventana y runtime
+La antigua `360:376` se conserva únicamente como evidencia histórica de una corrida post-acción y **no** como control positivo de lanzamiento.
+
+## Runtime fijo
 
 - fixture: Ferro – N. S. de Luján;
-- ventana real de primer gol: fixture frames `360:376` (16 frames);
-- MP4 fuente: el mismo archivo real usado por el pipeline;
-- Ultralytics: `8.4.163`;
-- clase: COCO 32 `sports ball`;
+- ventana: fixture frames `326:341`;
+- fuente: mismo MP4 real del pipeline;
+- Ultralytics `8.4.163`;
+- clase COCO 32 `sports ball`;
 - `imgsz=960`;
-- inferencia: `conf=0.005`;
+- inferencia `conf=0.005`;
 - continuidad: `BallObservationTracker(low=.02, high=.10, max_missed=3, max_speed=70 px/frame, max_size_ratio=3.0, velocity_alpha=.4)`.
 
 Pesos oficiales:
@@ -22,22 +24,20 @@ Pesos oficiales:
 - YOLO11s SHA256 `85a76fe86dd8afe384648546b56a7a78580c7cb7b404fc595f97969322d502d5`;
 - YOLO11m SHA256 `d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95`.
 
-## Resultados
+## Resultado corregido
 
-| modelo | candidatos crudos | frames con candidato | max conf | >=.10 | >=.05 | >=.02 | seleccionados tracker | run máximo | vuelo usable >=3 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| YOLO11n | 34 | 15/16 | 0.108592 | 1 | 2 | 5 | 1 | 1 | no |
-| YOLO11s | 30 | 14/16 | 0.115193 | 1 | 1 | 5 | 1 | 1 | no |
-| YOLO11m | 33 | 15/16 | 0.027980 | 0 | 0 | 1 | 0 | 0 | no |
+| modelo | candidatos | frames con candidato | max conf | >=.10 | >=.05 | >=.02 | seleccionados | run máximo |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| YOLO11n | 44 | 14/15 | 0.033766 | 0 | 0 | 2 | 0 | 0 |
+| YOLO11s | 89 | 15/15 | 0.215960 | 3 | 6 | 16 | 4 | 4 |
+| YOLO11m | 15 | 10/15 | 0.120242 | 1 | 2 | 6 | 5 | 4 |
 
-YOLO11n selecciona una única observación en frame 371; YOLO11s una única observación en frame 367; YOLO11m no puede iniciar segmento fuerte. Ninguno construye una trayectoria detector-backed de tres cuadros.
+A primera vista `s/m` parecen mejorar continuidad. La inspección visual de todas las observaciones seleccionadas demuestra lo contrario: ambos modelos siguen durante varios cuadros **el mismo segmento de la línea punteada de 6 m**, alrededor de `(x≈445, y≈267)`, prácticamente inmóvil. No es pelota.
 
-La inspección visual de las observaciones seleccionadas muestra evidencia de pelota durante la transición posterior a la acción, pero **no** una secuencia del lanzamiento al arco. Por lo tanto más capacidad COCO no recupera el dato que falta.
+Por tanto un run detector-backed de ≥3 cuadros por sí solo no demuestra una trayectoria de pelota si la clase COCO se fija en marcas de cancha.
 
 ## Decisión
 
-**REJECT aumentar n → s/m como solución del cuello de pelota rápida.**
+**REJECT aumentar YOLO11n → YOLO11s/m como solución del lanzamiento.**
 
-No se cambia el baseline de pelota por un modelo más pesado: en esta ventana real no agrega continuidad y `m` incluso pierde la única observación fuerte.
-
-El siguiente experimento deja de exprimir el detector COCO por frame y pasa a una señal **temporal/específica de pelota** (movimiento entre frames o detector entrenado para pelota deportiva pequeña), manteniendo como control negativo los dos `BALL FLIGHT?` de GT1 y como control positivo la ventana real del primer gol.
+El detector más grande aumenta confianza sobre un falso positivo persistente, no recupera la pelota rápida. El siguiente experimento debe explotar información temporal/movimiento o usar un detector específico de pelota pequeña, y debe validarse contra la misma ventana `326:341` más los vuelos reales ya conocidos de GT1.
