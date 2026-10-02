@@ -1,324 +1,223 @@
 # FEMEBAL Community / LarrySport 1.1.3 — contrato de planteles
 
-Fecha de evidencia: 2026-10-01
+Estado actualizado: 2026-10-02.
 
-Rama de investigación: `research/femebal-rosters-1.1.3`
+Rama: `research/femebal-rosters-1.1.3`.
 
-Este documento cubre únicamente planteles. No se cargaron datos en Supabase y no se modificó el PR #34.
+Este documento cubre únicamente PLANTELES. Toda validación runtime usó el guest legítimo de la app 1.1.3 y lecturas GET. No se escribió en Supabase ni producción.
 
-## Resultado E2E confirmado
+## Contrato principal
 
-La identidad correcta de una pertenencia deportiva no es `athleteId -> clubId` ni `athleteId -> teamId`.
+La identidad de una pertenencia deportiva observada es:
 
-Para la API 1.1.3, el plantel observado queda determinado por la combinación:
+```text
+(teamId, tournamentId, athleteId)
+```
 
-`club -> teamId -> tournamentId -> roster -> athleteId`
+No modelar `athleteId -> clubId` ni `athleteId -> teamId` como relaciones permanentes 1:1.
 
-La identidad lógica mínima de una membresía es:
+### Forward: enumerar roster exacto
 
-`(teamId, tournamentId, athleteId)`
+```text
+GET /athletes/athletesByTeam/{teamId}?tournamentId={tournamentId}
+```
 
-Para Ferro Carril Oeste, Mayores A, Liga de Honor Hipotecario Seguros, masculino, Apertura 2026:
+Respuesta: array directo de identidades Athlete con `id`, `firstName`, `lastName`, `birthDate`, `picture`.
 
-- `clubId = 335`
-- `teamId = 1843`
-- `tournamentId = 775`
-- roster: 16 atletas
-- athleteIds únicos: 16
+`tournamentId` es semánticamente obligatorio para producir hechos `RosterMembership`.
 
-Endpoint exacto:
+### Reverse: descubrir/validar pertenencias expuestas
 
-`GET /athletes/athletesByTeam/1843?tournamentId=775`
+```text
+GET /athletes/{athleteId}/tournaments
+```
 
-Respuesta observada: array JSON directo de objetos Athlete. Cada elemento contiene `id`, `firstName`, `lastName`, `birthDate` y `picture`.
+Respuesta observada: array de filas `{team,tournament}`.
 
-## Hallazgos confirmados en código 1.1.3
+Se validaron 13/13 pares seleccionados contra el roster forward y luego el cierre completo de dos rosters Apertura 2026:
 
-### Resolver equipo
+```text
+Ferro 1843/775      16/16
+Ballester 3291/775  25/25
+TOTAL               41/41, 0 faltantes
+```
 
-El cliente lista equipos con `GET /teams` y filtros de lectura que incluyen `club`, `category`, `gender` y opcionalmente `division`.
+El reverse es un índice fuerte de membresías, pero no debe asumirse como historial global exhaustivo para toda asociación antigua.
 
-El endpoint de equipos sí está paginado y devuelve `count`, `limit`, `skip` e `items`.
+## Resolución del scope
 
-Para el ejemplo objetivo, la consulta runtime `club=335`, `category=100`, `gender=M` devolvió tres equipos Mayores masculinos de Ferro, cada uno con división distinta. Esto permite seleccionar LHC por metadata, no por nombre aproximado.
+Para:
 
-### Resolver torneos del equipo
+```text
+club + temporada + categoría + división + rama
+```
 
-El cliente implementa:
+resolver:
 
-`GET /teams/{teamId}/tournaments`
+```text
+clubId
+ -> teamId
+ -> tournamentId
+ -> GET /athletes/athletesByTeam/{teamId}?tournamentId={tournamentId}
+ -> athleteId[]
+```
 
-La respuesta contiene el objeto tournament con `id`, `name`, `ageCategory`, `season`, `gender`, `startDate`, `status` y `division`, suficiente para distinguir Apertura/Clausura y temporada.
+Usar IDs y metadata estructurada. Si existen A/B/C/D con el mismo scope humano, fallar cerrado y conservar el discriminador de equipo.
 
-El `status` observado aquí pertenece al torneo. No debe interpretarse como estado activo/baja de un jugador.
-
-### Resolver plantel
-
-El cliente implementa `getAthletesByTeam(teamId, tournamentId)` como:
-
-`GET /athletes/athletesByTeam/{teamId}?tournamentId={tournamentId}`
-
-No se observaron parámetros de paginación en este método del cliente. Runtime devuelve un array directo.
-
-### Resolver perfil individual
-
-El cliente implementa:
-
-`GET /athletes/{athleteId}`
-
-### Formación / posición y número
-
-El cliente implementa:
-
-`GET /athletes/formation/positionAndNumber?athleteIds={ids separados por coma}`
-
-Antes de llamar, el cliente deduplica IDs y filtra valores no finitos. La respuesta es un mapa por athleteId con, al menos, `shirtNumber` y `position`.
-
-Importante: este endpoint recibe solamente athleteIds. No recibe teamId ni tournamentId. Por eso `shirtNumber` y `position` no quedan demostrados como atributos de una membresía histórica concreta.
-
-### Guest onboarding legítimo
-
-La app 1.1.3 implementa `POST /init-onboarding` sin body y con `skipAuth`. La respuesta aporta el access token que usa el cliente para las lecturas autenticadas posteriores.
-
-En todas las pruebas runtime de esta investigación el token fue efímero, enmascarado en GitHub Actions y eliminado al terminar. No se guardaron tokens, cookies ni credenciales.
-
-## Hallazgos confirmados runtime
+## Controles E2E
 
 ### Ferro Carril Oeste
 
-`GET /teams?club=335&category=100&gender=M` devolvió:
+```text
+clubId       335
+teamId       1843
+team         Mayores A
+categoryId   100
+divisionId   421
+rama         Masculino
+tournamentId 775  (Apertura 2026)
+roster       16 athleteId únicos
+```
 
-| teamId | equipo | división | rama |
-| --- | --- | --- | --- |
-| 1843 | Mayores A | LHC Hipotecario Seguros | Masculino |
-| 3256 | Mayores B | Liga de Honor Plata | Masculino |
-| 3257 | Mayores C | 1º División | Masculino |
+### S.A.G. Villa Ballester
 
-Por lo tanto, Ferro + Mayores + LHC + Caballeros resuelve inequívocamente a `teamId=1843`.
+```text
+clubId       334
+teamId       3291
+team         Mayores A
+tournamentId 775  (Apertura 2026)
+roster       25 athleteId únicos
+```
 
-`GET /teams/1843/tournaments` devolvió, entre otros:
+## Un atleta puede integrar varios planteles
 
-| tournamentId | torneo | temporada | división | rama | estado del torneo |
-| --- | --- | --- | --- | --- | --- |
-| 775 | Torneo Metropolitano Apertura | 2026 | LHC Hipotecario Seguros | Masculino | finished |
-| 1204 | Torneo Metropolitano Clausura | 2026 | LHC Hipotecario Seguros | Masculino | active |
+En Ferro masculino 2026 se observaron 20 equipos, 482 membresías `(teamId,tournamentId,athleteId)` y 192 athleteId únicos. Entre ellos, 80 athleteId aparecen en más de un teamId y 63 cruzan categoría.
 
-Por lo tanto, Apertura 2026 resuelve a `tournamentId=775`.
+Por eso Athlete y RosterMembership deben ser entidades separadas.
 
-### Plantel Ferro Apertura 2026
+## `/teams/{teamId}/tournaments` no es historial exhaustivo
 
-`GET /athletes/athletesByTeam/1843?tournamentId=775` respondió HTTP 200 con 16 filas y 16 athleteIds únicos:
+Para `teamId=1843`, el listado normal expuso `775` y `1204`, pero se confirmaron también pares válidos de otros torneos, entre ellos `776` y torneos 2025 (`218`, `219`, `526`).
 
-`16284, 16299, 16355, 19470, 19472, 19475, 19477, 19479, 19480, 19483, 19484, 28365, 28398, 28403, 57796, 66223`
+No descartar un par reverse válido sólo porque no aparezca en `/teams/{teamId}/tournaments`.
 
-Nombres:
+## Semántica del endpoint sin torneo
 
-- 16284 — Juan Martín Bartolomeo
-- 16299 — Matias Jacquemin
-- 16355 — Ivan Luca Umansky Gavi
-- 19470 — Juan Pablo Aguero
-- 19472 — Mariano Bustamante
-- 19475 — Santiago Duhau
-- 19477 — Martín Fariña
-- 19479 — Julián Santos
-- 19480 — Valentín Schankula
-- 19483 — Agustín Unzner
-- 19484 — Fausto Vázquez Palmieri
-- 28365 — Juan Francisco Ceccardi
-- 28398 — Ignacio Goñi
-- 28403 — Emiliano Rubio
-- 57796 — Atilio Cocco
-- 66223 — Federico Agustin Pallero
+```text
+GET /athletes/athletesByTeam/1843
+```
 
-Los 16 IDs se consultaron además contra `GET /athletes/{athleteId}`. Los 16 coincidieron exactamente en id, nombre y apellido con el roster.
+produjo 106 filas / 31 IDs únicos.
 
-La ejecución manual de GitHub Actions fue además re-ejecutada y validada visualmente: `clubId=335`, `teamId=1843`, categoría 100, división 421, rama Masculino, `tournamentId=775`, 16 jugadores y 16 athleteIds únicos.
+Se demostró que esas 106 filas son exactamente la concatenación multiconjunto de seis rosters exactos:
 
-El fixture de control ya existente en el repo para Argentinos Juniors 20–27 Ferro del 2026-03-21 contiene los mismos 16 nombres de Ferro, lo que aporta una validación adicional de que atletas de este roster aparecen en una planilla oficial de la competencia. Esto no convierte una planilla de partido en fuente de plantel.
+```text
+218  -> 20
+219  -> 16
+526  -> 19
+775  -> 16
+776  -> 16
+1204 -> 19
+TOTAL  106
+```
 
-### Relación temporal demostrada
+Coinciden tanto el conjunto de athleteIds como la multiplicidad individual de cada athleteId. El contexto `tournamentId` se pierde en la respuesta sin scope.
 
-Para el mismo `teamId=1843`:
+Regla: nunca crear `RosterMembership` desde la variante sin tournamentId, ni siquiera después de deduplicar.
 
-- Apertura (`tournamentId=775`): 16 atletas.
-- Clausura (`tournamentId=1204`): 19 atletas.
-- comunes: 14.
-- sólo Apertura: `16299`, `19483`.
-- sólo Clausura: `16285`, `16306`, `19481`, `22197`, `22199`.
+## Dorsal y posición
 
-Esto demuestra en runtime que la pertenencia debe modelarse por torneo. La ausencia de un atleta en otro torneo no debe interpretarse por sí sola como baja: el endpoint no devuelve motivo ni estado de baja.
+```text
+GET /athletes/formation/positionAndNumber?athleteIds={ids}
+```
 
-### Segundo club: S.A.G. Villa Ballester
+expone `shirtNumber` y `position`, pero no recibe `teamId` ni `tournamentId`.
 
-`clubId=334`.
+Además, el dorsal de formación ya fue comparado contra una planilla oficial y no es históricamente consistente para todos los jugadores. Tratar esos valores como enriquecimiento/perfil del atleta, no como propiedades históricas de `RosterMembership`.
 
-Para Mayores masculino:
+## Estadísticas de atleta por torneo
 
-- `teamId=3291` — Mayores A — LHC Hipotecario Seguros.
-- `teamId=3292` — Mayores B — Liga de Honor Plata.
-- `teamId=3293` — Mayores C — 2º División.
-- `teamId=3294` — Mayores D — 3º División.
+```text
+GET /athletes/{athleteId}/tournaments/{tournamentId}/stats
+```
 
-El equipo LHC `3291` participa en el mismo Apertura 2026 `tournamentId=775`.
+está confirmado código + runtime. Cada fila contiene:
 
-`GET /athletes/athletesByTeam/3291?tournamentId=775` devolvió 25 atletas y 25 athleteIds únicos. No hubo athleteIds compartidos con el roster Ferro 1843/775 en esta comparación concreta.
+```text
+matchId
+goals
+sanctions.yellowCards
+sanctions.redCards
+sanctions.blueCards
+sanctions.twoMinuteSuspensions
+```
 
-## Membresías múltiples dentro de Ferro 2026
+Es performance/participación por partido. Debe modelarse aparte:
 
-Se hizo un recorrido runtime adicional, acotado únicamente a Ferro masculino y temporada 2026, usando el guest legítimo y llamadas GET.
+```text
+AthleteTournamentMatchStat(athleteId,tournamentId,matchId,goals,sanctions)
+```
 
-Se paginó `GET /teams?club=335&gender=M`, se resolvieron los torneos 2026 de cada teamId y se consultó el roster exacto de cada combinación teamId+tournamentId.
+No contiene rol, dorsal de roster, posición de roster, altas/bajas ni ID de membresía.
 
-Resultados:
+## Perfil y superficies auxiliares
 
-| Medida | Resultado |
-| --- | ---: |
-| equipos masculinos de Ferro descubiertos | 20 |
-| filas de membresía `(teamId,tournamentId,athleteId)` | 482 |
-| athleteId únicos | 192 |
-| athleteId en más de una membresía | 170 |
-| athleteId en más de un teamId distinto | 80 |
-| athleteId en más de una categoría etaria | 63 |
-| athleteId en varios teamId dentro de una sola categoría | 17 |
-| athleteId en dos teamId distintos dentro del mismo tournamentId | 0 |
-| athleteId repetidos sólo entre torneos de un único teamId | 90 |
+Confirmados:
 
-### Consecuencia de modelado
+```text
+GET /athletes/{athleteId}
+GET /athletes/{athleteId}/default-team
+GET /athletes/{athleteId}/club-id
+GET /users/athlete-profile/{athleteId}
+GET /athletes/{athleteId}/federative-card
+GET /athletes/{athleteId}/socials
+GET /athletes/{athleteId}/mvp-awards
+```
 
-Está confirmado que `athleteId -> teamId` **no es 1:1**.
+Ninguna representa una relación `(teamId,tournamentId,athleteId)`.
 
-Un mismo atleta puede integrar varios planteles reales del mismo club durante una temporada, incluso:
+La ficha federativa puede exponer categoría, club, año de habilitación y estado, pero no está scopeada por team+tournament. Su estado no debe convertirse en activo/baja de roster. La sonda de PLANTELES registró sólo estructura de esa respuesta, no valores personales.
 
-- distintas categorías;
-- distintos equipos de una misma categoría;
-- Apertura y Clausura;
-- una combinación de los anteriores.
+## Frontera cerrada de metadata de membresía
 
-Por ejemplo, `athleteId=16284` Juan Martín Bartolomeo aparece en:
+Después de análisis estático del bundle Hermes v96 y runtime sobre las superficies utilizadas por el cliente 1.1.3, estos campos quedan como:
 
-- Mayores A `teamId=1843`, Apertura `775`;
-- Mayores A `teamId=1843`, Clausura `1204`;
-- Junior A `teamId=369`, Apertura `790`;
-- Junior A `teamId=369`, Clausura `1213`.
+```text
+not_exposed_in_confirmed_1_1_3_client_surfaces
+```
 
-Otro caso, `athleteId=10565` Tonko Simunovic Granero, aparece en dos `teamId` diferentes dentro de categoría Junior —`369` y `3715`— en distintos torneos, además de Mayores B `3256`.
+- rol de membresía;
+- activo/inactivo/baja en un plantel concreto;
+- fecha de alta;
+- fecha de baja/fin;
+- ID propio de la relación;
+- dorsal scopeado por team+tournament;
+- posición scopeada por team+tournament.
 
-Por lo tanto:
+Esto es una frontera sobre el **cliente distribuido 1.1.3 y sus superficies confirmadas**. No afirma que no exista alguna API interna/no usada por la app.
 
-- `athleteId` identifica a la persona/deportista;
-- `teamId` identifica un equipo;
-- `tournamentId` aporta el contexto competitivo/temporal;
-- la pertenencia deportiva debe materializarse como una entidad separada.
+## Modelo recomendado
 
-La temporada 2026 por sí sola tampoco alcanza para identificar un plantel.
+```text
+Athlete(athleteId, identidad...)
+AthleteProfile(athleteId, profile/federative fields..., provenance...)
+RosterMembership(teamId, tournamentId, athleteId, provenance...)
+AthleteTournamentMatchStat(athleteId, tournamentId, matchId, goals, sanctions...)
+```
 
-No se observó, dentro de este alcance Ferro masculino 2026, un mismo athleteId en dos teamId distintos dentro del mismo tournamentId. Esto es evidencia de este scope, no una regla global de FEMEBAL.
+No inferir atributos de RosterMembership desde default-team, club-id, profile status, estado federativo, fechas del torneo, `formation.shirtNumber`, `formation.position` ni ausencia en otro torneo.
 
-## Dorsal y posición: frontera actual
+## Fuentes canónicas del repo
 
-La llamada de formación para los 16 athleteIds de Ferro devolvió valores como:
+- `data/femebal/discovery/rosters/roster-integration-contract-v1.json`
+- `data/femebal/discovery/rosters/athlete-scoped-surfaces-boundary-2026-10-02.json`
+- `data/femebal/discovery/rosters/apk-1.1.3-static-roster-surface.json`
+- `data/femebal/discovery/rosters/full-bidirectional-closure-2026-10-01.json`
+- `data/femebal/discovery/rosters/ferro-1843-unscoped-multiset-semantics-2026-10-01.json`
+- `docs/femebal/rosters/membership-metadata-boundary.md`
+- `docs/femebal/rosters/reverse-membership.md`
+- `docs/femebal/rosters/unscoped-roster-semantics.md`
 
-- athleteId 16284, Juan Martín Bartolomeo: `shirtNumber=16`, `position=Arquero`.
-- athleteId 19480, Valentín Schankula: `shirtNumber=8`, `position=Extremo Izquierdo`.
-- athleteId 19483, Agustín Unzner: `shirtNumber=17`, `position=Lateral Derecho`.
+## Seguridad
 
-Sin embargo, el endpoint de formación no recibe teamId/tournamentId y el número puede diferir del dorsal usado en una planilla de partido. Por ejemplo, Bartolomeo aparece con dorsal 1 en el fixture de control existente, mientras formación devuelve 16.
-
-Conclusión:
-
-- `position`: disponible, pero su semántica temporal/de plantel no está demostrada; tratar como snapshot de formación del atleta hasta nueva evidencia.
-- `shirtNumber`: disponible, pero NO debe mapearse como dorsal histórico del plantel.
-- dorsal específico de la relación team+tournament+athlete: pendiente.
-
-## Paginación, duplicados y jugadores compartidos
-
-- `GET /teams`: paginado con `count`, `limit`, `skip`, `items`; la prueba de Ferro recorrió todas las páginas.
-- roster endpoint: respuesta array directa; no se observó envelope `count/limit/skip` ni parámetros de paginación en el método del cliente.
-- Ferro 1843/775: 16 filas / 16 IDs únicos; sin duplicados.
-- Ballester 3291/775: 25 filas / 25 IDs únicos; sin duplicados.
-- Ferro vs Ballester en 775: 0 athleteIds compartidos en este par.
-- Dentro de Ferro masculino 2026: 80 athleteIds estuvieron en más de un teamId; 63 cruzaron categoría; 17 estuvieron en varios teamId manteniendo una sola categoría.
-- No se observaron casos en Ferro masculino 2026 de un athleteId en dos teamId dentro del mismo tournamentId.
-
-## Modelo recomendado para Integración
-
-Separar identidad de atleta, equipo/competencia y membresía.
-
-### Athlete
-
-Identidad estable del deportista:
-
-- athleteId
-- firstName
-- lastName
-- birthDate/picture sólo si el producto realmente los necesita
-
-No guardar un único `clubId`, `teamId`, categoría o división como atributos permanentes de Athlete.
-
-### RosterMembership
-
-La pertenencia concreta debe tener como identidad lógica, como mínimo:
-
-`(teamId, tournamentId, athleteId)`
-
-Y conservar por join/proveniencia:
-
-- clubId
-- teamId
-- tournamentId
-- athleteId
-- seasonId / season
-- categoryId
-- divisionId
-- gender/rama
-- source endpoint
-- observedAt
-
-Una implementación relacional futura debería permitir múltiples RosterMembership para el mismo athleteId, incluso en la misma temporada.
-
-No inferir automáticamente:
-
-- `active=true` por aparecer;
-- `baja=true` por desaparecer de otro torneo;
-- fechas de alta/baja a partir de fechas del torneo;
-- dorsal histórico a partir de `formation/positionAndNumber`.
-
-## Estado de cada requisito
-
-| Requisito | Estado |
-| --- | --- |
-| endpoint exacto roster | CONFIRMADO CÓDIGO + RUNTIME |
-| parámetros teamId+tournamentId | CONFIRMADO CÓDIGO + RUNTIME |
-| clubId -> teamId exacto | CONFIRMADO RUNTIME |
-| teamId -> tournamentId exacto | CONFIRMADO CÓDIGO + RUNTIME |
-| athleteId del plantel | CONFIRMADO CÓDIGO + RUNTIME |
-| plantel completo Ferro | CONFIRMADO RUNTIME + VALIDACIÓN VISUAL |
-| segundo club | CONFIRMADO RUNTIME |
-| athleteId coincide con perfil individual | CONFIRMADO RUNTIME, 16/16 Ferro |
-| paginación de equipos | CONFIRMADA RUNTIME (`count/limit/skip`) |
-| paginación del roster | NO OBSERVADA; cliente no expone params de paginación |
-| duplicados dentro de un roster | NO OBSERVADOS en 16/16 Ferro ni 25/25 Ballester |
-| relación temporal por tournamentId | CONFIRMADA RUNTIME |
-| mismo athleteId en varios teamId | CONFIRMADO RUNTIME: 80 casos en Ferro masculino 2026 |
-| mismo athleteId en varias categorías | CONFIRMADO RUNTIME: 63 casos en Ferro masculino 2026 |
-| mismo athleteId en varios teamId de una misma categoría | CONFIRMADO RUNTIME: 17 casos en Ferro masculino 2026 |
-| mismo athleteId en varios teamId dentro del mismo tournamentId | NO OBSERVADO en Ferro masculino 2026; no generalizar |
-| posición | CONFIRMADA como dato de formación; alcance temporal DE PLANTEL PENDIENTE |
-| dorsal histórico de plantel | PENDIENTE; `shirtNumber` no está team/tournament-scoped |
-| rol de membresía | PENDIENTE |
-| activo/baja explícito | PENDIENTE |
-| fecha alta/baja de membresía | PENDIENTE |
-| ID propio de la relación de membresía | PENDIENTE / no observado en roster endpoint |
-
-## Artefactos
-
-- `data/femebal/discovery/rosters/ferro-mayores-lhc-apertura-2026.json`
-- `data/femebal/discovery/rosters/sag-villa-ballester-mayores-lhc-apertura-2026.json`
-- `data/femebal/discovery/rosters/ferro-2026-membership-diagnostic.json`
-- `.github/workflows/femebal-roster-runtime-safe.yml` — reproducción mínima Ferro LHC Apertura 2026.
-- `.github/workflows/femebal-roster-shared-athletes-safe.yml` — diagnóstico read-only de membresías múltiples Ferro 2026.
-- `docs/femebal/rosters/runtime-one-click.md`
-
-## Intervención
-
-No se requiere intervención de Tomás para reproducir la cadena validada mientras el guest onboarding siga disponible con el contrato observado en 1.1.3.
+No se persistieron tokens de guest, cookies ni credenciales. Las sondas temporales se retiran al terminar y se conserva únicamente el workflow permanente de validación simple del roster.
