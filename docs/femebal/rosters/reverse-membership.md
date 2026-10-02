@@ -52,9 +52,9 @@ athleteId
   -> (team,tournament)[]
 ```
 
-## Validación bidireccional
+## Validación bidireccional seleccionada
 
-Se probaron cuatro atletas de dos clubes. Para cada par devuelto por el endpoint reverse se llamó al roster forward exacto y se comprobó que contuviera al mismo athleteId.
+Se probaron cuatro atletas de dos clubes con múltiples pertenencias. Para cada par devuelto por el endpoint reverse se llamó al roster forward exacto y se comprobó que contuviera al mismo athleteId.
 
 Resultado:
 
@@ -64,14 +64,35 @@ Resultado:
 13/13 OK
 ```
 
-Controles principales:
+Controles:
 
 - Bartolomeo `16284`: `369/790`, `1843/775`, `369/1213`, `1843/1204`.
 - Tonko Simunovic Granero `10565`: `3715/834`, `3715/1223`, `3256/1205`, `369/1213`.
 - Schankula `19480`: `1843/776`, `1843/775`, `1843/1204`.
 - Sebastian Alejandro Simonet `21150`, SAG Villa Ballester: `3291/775`, `3291/1204`.
 
-Todos fueron confirmados por el endpoint forward correspondiente.
+## Cierre completo de dos planteles
+
+También se hizo la prueba inversa para **cada jugador** de dos rosters reales completos:
+
+| Plantel forward | Jugadores | Par encontrado en reverse | Faltantes |
+| --- | ---: | ---: | ---: |
+| Ferro `1843/775` | 16 | 16 | 0 |
+| SAG Villa Ballester `3291/775` | 25 | 25 | 0 |
+| **Total** | **41** | **41** | **0** |
+
+Resultado:
+
+```text
+full_forward_to_reverse_closure = 41/41
+missing = 0
+```
+
+Esto confirma, para estos dos planteles completos, que cada hecho forward `(teamId,tournamentId,athleteId)` también está representado por el índice inverso.
+
+Artefacto reproducible de evidencia:
+
+`data/femebal/discovery/rosters/full-bidirectional-closure-2026-10-01.json`
 
 ## Límite de `/teams/{teamId}/tournaments`
 
@@ -112,7 +133,7 @@ club + temporada + categoría + división + rama
 
 se puede usar `/teams/{teamId}/tournaments` para localizar el torneo solicitado cuando éste aparece allí, y luego verificar el roster exacto.
 
-Pero para descubrir o validar pertenencias ya asociadas a un atleta:
+Pero para descubrir o validar pertenencias asociadas a un atleta:
 
 1. usar `GET /athletes/{athleteId}/tournaments`;
 2. conservar cada `teamId+tournamentId` original;
