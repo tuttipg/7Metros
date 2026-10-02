@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 import hashlib
+from math import hypot
 from pathlib import Path
 
 
@@ -111,3 +112,74 @@ def validate_ball_ground_truth(document, *, source_video=None):
         visibility_fraction=visible / total,
         evaluable_localisation=visible > 0,
     )
+
+
+def bbox_iou(first, second):
+    ax1, ay1, ax2, ay2 = map(float, first)
+    bx1, by1, bx2, by2 = map(float, second)
+    intersection = max(0.0, min(ax2, bx2) - max(ax1, bx1)) * max(
+        0.0, min(ay2, by2) - max(ay1, by1)
+    )
+    union = (ax2 - ax1) * (ay2 - ay1) + (bx2 - bx1) * (by2 - by1) - intersection
+    return intersection / union if union > 0 else 0.0
+
+
+def evaluate_visible_ball_frames(annotations, predictions_by_frame, *, iou_threshold=.5):
+    """Score detections only where a human supplied a visible ball box.
+
+    Ambiguous, occluded and out-of-frame rows are ignored rather than treated as
+    detector negatives.  The result is sequence-local agreement, not a claim of
+    whole-match detector accuracy.
+    """
+    if not 0 < float(iou_threshold) <= 1:
+        raise ValueError("iou_threshold must be in (0,1]")
+    visible = [row for row in annotations if row.get("state") == "visible"]
+    if not visible:
+        raise ValueError("no visible human ball boxes are available for evaluation")
+    matched = false_negatives = false_positives = 0
+    best_ious = []
+    center_errors = []
+    frames = []
+    for row in visible:
+        frame = int(row["frame_index"])
+        gt = row["bbox_xyxy"]
+        candidates = list(predictions_by_frame.get(frame, []))
+        ranked = sorted(
+            ((bbox_iou(gt, candidate["bbox_xyxy"]), candidate) for candidate in candidates),
+            key=lambda item: item[0], reverse=True,
+        )
+        best_iou = ranked[0][0] if ranked else 0.0
+        is_match = best_iou >= iou_threshold
+        matched += int(is_match)
+        false_negatives += int(not is_match)
+        false_positives += len(candidates) - int(is_match)
+        if ranked:
+            prediction = ranked[0][1]["bbox_xyxy"]
+            gcx, gcy = (gt[0] + gt[2]) / 2, (gt[1] + gt[3]) / 2
+            pcx, pcy = ((prediction[0] + prediction[2]) / 2,
+                        (prediction[1] + prediction[3]) / 2)
+            center_errors.append(hypot(gcx - pcx, gcy - pcy))
+        best_ious.append(best_iou)
+        frames.append({
+            "frame_index": frame,
+            "candidates": len(candidates),
+            "best_iou": best_iou,
+            "matched_iou_threshold": is_match,
+        })
+    precision = matched / (matched + false_positives) if matched + false_positives else 0.0
+    recall = matched / (matched + false_negatives)
+    return {
+        "status": "VISIBLE_POSITIVE_FRAMES_ONLY_NOT_MATCH_ACCURACY",
+        "iou_threshold": float(iou_threshold),
+        "visible_gt_frames": len(visible),
+        "matched": matched,
+        "false_negatives_on_visible_frames": false_negatives,
+        "false_positives_on_visible_frames": false_positives,
+        "precision_on_reviewed_positive_frames": precision,
+        "recall_on_reviewed_positive_frames": recall,
+        "mean_best_iou": sum(best_ious) / len(best_ious),
+        "mean_center_error_px": (
+            sum(center_errors) / len(center_errors) if center_errors else None
+        ),
+        "frames": frames,
+    }

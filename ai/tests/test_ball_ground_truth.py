@@ -1,7 +1,10 @@
 import copy
 import unittest
 
-from sevenmetros_ai.ball_ground_truth import validate_ball_ground_truth
+from sevenmetros_ai.ball_ground_truth import (
+    evaluate_visible_ball_frames,
+    validate_ball_ground_truth,
+)
 
 
 def sample_document():
@@ -62,6 +65,38 @@ class BallGroundTruthTests(unittest.TestCase):
         document["annotations"][0]["note"] = ""
         with self.assertRaisesRegex(ValueError, "requires a review note"):
             validate_ball_ground_truth(document)
+
+    def test_evaluation_ignores_ambiguous_frames(self):
+        rows = [
+            {"frame_index": 1, "state": "visible", "bbox_xyxy": [10, 10, 20, 20]},
+            {"frame_index": 2, "state": "ambiguous", "bbox_xyxy": None},
+        ]
+        predictions = {
+            1: [{"bbox_xyxy": [10, 10, 20, 20]}],
+            2: [{"bbox_xyxy": [100, 100, 120, 120]}],
+        }
+        result = evaluate_visible_ball_frames(rows, predictions)
+        self.assertEqual(result["visible_gt_frames"], 1)
+        self.assertEqual(result["matched"], 1)
+        self.assertEqual(result["false_positives_on_visible_frames"], 0)
+
+    def test_evaluation_counts_unmatched_candidates_and_missing_ball(self):
+        rows = [
+            {"frame_index": 1, "state": "visible", "bbox_xyxy": [10, 10, 20, 20]},
+            {"frame_index": 2, "state": "visible", "bbox_xyxy": [30, 30, 40, 40]},
+        ]
+        predictions = {1: [
+            {"bbox_xyxy": [10, 10, 20, 20]},
+            {"bbox_xyxy": [100, 100, 120, 120]},
+        ]}
+        result = evaluate_visible_ball_frames(rows, predictions)
+        self.assertEqual(result["matched"], 1)
+        self.assertEqual(result["false_negatives_on_visible_frames"], 1)
+        self.assertEqual(result["false_positives_on_visible_frames"], 1)
+
+    def test_evaluation_requires_visible_ground_truth(self):
+        with self.assertRaisesRegex(ValueError, "no visible"):
+            evaluate_visible_ball_frames(sample_document()["annotations"], {})
 
 
 if __name__ == "__main__":

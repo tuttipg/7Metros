@@ -1,0 +1,199 @@
+{
+  "status": "VISIBLE_POSITIVE_FRAMES_ONLY_NOT_MATCH_ACCURACY",
+  "iou_threshold": 0.5,
+  "visible_gt_frames": 10,
+  "matched": 9,
+  "false_negatives_on_visible_frames": 1,
+  "false_positives_on_visible_frames": 1,
+  "precision_on_reviewed_positive_frames": 0.9,
+  "recall_on_reviewed_positive_frames": 0.9,
+  "mean_best_iou": 0.7257925522173986,
+  "mean_center_error_px": 1.1312809134122843,
+  "frames": [
+    {
+      "frame_index": 108,
+      "candidates": 1,
+      "best_iou": 0.742760131939337,
+      "matched_iou_threshold": true
+    },
+    {
+      "frame_index": 109,
+      "candidates": 1,
+      "best_iou": 0.7297859625968062,
+      "matched_iou_threshold": true
+    },
+    {
+      "frame_index": 110,
+      "candidates": 1,
+      "best_iou": 0.657271444636377,
+      "matched_iou_threshold": true
+    },
+    {
+      "frame_index": 111,
+      "candidates": 1,
+      "best_iou": 0.4439747680984803,
+      "matched_iou_threshold": false
+    },
+    {
+      "frame_index": 112,
+      "candidates": 1,
+      "best_iou": 0.6634032982342133,
+      "matched_iou_threshold": true
+    },
+    {
+      "frame_index": 156,
+      "candidates": 1,
+      "best_iou": 0.8360826073149387,
+      "matched_iou_threshold": true
+    },
+    {
+      "frame_index": 157,
+      "candidates": 1,
+      "best_iou": 0.7351036841404187,
+      "matched_iou_threshold": true
+    },
+    {
+      "frame_index": 158,
+      "candidates": 1,
+      "best_iou": 0.9152304239387052,
+      "matched_iou_threshold": true
+    },
+    {
+      "frame_index": 159,
+      "candidates": 1,
+      "best_iou": 0.8371181693676061,
+      "matched_iou_threshold": true
+    },
+    {
+      "frame_index": 160,
+      "candidates": 1,
+      "best_iou": 0.697195031907104,
+      "matched_iou_threshold": true
+    }
+  ],
+  "inference": "NEW_NEURAL_INFERENCE_ON_LISTED_VISIBLE_FRAMES",
+  "inputs": {
+    "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+    "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+    "ground_truth_files": [
+      "ai/evidence/ball/visible_flight_108_112_gt_2026-10-02.json",
+      "ai/evidence/ball/visible_flight_156_160_gt_2026-10-02.json"
+    ]
+  },
+  "settings": {
+    "confidence": 0.05,
+    "imgsz": 960
+  },
+  "predictions": {
+    "108": [
+      {
+        "confidence": 0.12117824703454971,
+        "bbox_xyxy": [
+          527.8159790039062,
+          286.28656005859375,
+          538.119140625,
+          297.41766357421875
+        ]
+      }
+    ],
+    "109": [
+      {
+        "confidence": 0.5466348528862,
+        "bbox_xyxy": [
+          487.6869812011719,
+          291.28466796875,
+          498.8974609375,
+          302.2854309082031
+        ]
+      }
+    ],
+    "110": [
+      {
+        "confidence": 0.5155624747276306,
+        "bbox_xyxy": [
+          473.8226013183594,
+          293.5623474121094,
+          486.0674743652344,
+          304.7449645996094
+        ]
+      }
+    ],
+    "111": [
+      {
+        "confidence": 0.20786736905574799,
+        "bbox_xyxy": [
+          446.2310791015625,
+          291.9412536621094,
+          459.3170166015625,
+          309.1534729003906
+        ]
+      }
+    ],
+    "112": [
+      {
+        "confidence": 0.0780908614397049,
+        "bbox_xyxy": [
+          405.251708984375,
+          305.80023193359375,
+          418.0116271972656,
+          316.4322814941406
+        ]
+      }
+    ],
+    "156": [
+      {
+        "confidence": 0.5361756086349487,
+        "bbox_xyxy": [
+          425.8776550292969,
+          346.2130432128906,
+          439.3352966308594,
+          359.9307861328125
+        ]
+      }
+    ],
+    "157": [
+      {
+        "confidence": 0.5482379794120789,
+        "bbox_xyxy": [
+          424.59259033203125,
+          356.008056640625,
+          438.4503479003906,
+          369.78314208984375
+        ]
+      }
+    ],
+    "158": [
+      {
+        "confidence": 0.05393408238887787,
+        "bbox_xyxy": [
+          422.5260314941406,
+          367.78143310546875,
+          436.4220886230469,
+          380.9273376464844
+        ]
+      }
+    ],
+    "159": [
+      {
+        "confidence": 0.2026640921831131,
+        "bbox_xyxy": [
+          421.4333190917969,
+          379.5793151855469,
+          434.2375793457031,
+          392.2509765625
+        ]
+      }
+    ],
+    "160": [
+      {
+        "confidence": 0.6325821280479431,
+        "bbox_xyxy": [
+          419.4176025390625,
+          392.3086853027344,
+          433.2152099609375,
+          404.414306640625
+        ]
+      }
+    ]
+  }
+}
