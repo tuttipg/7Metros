@@ -18,7 +18,7 @@ jobs:
       API_BASE: https://api.femebal.cam.larrysport.tecdata.net
       TEAM_ID: '1843'
     steps:
-      - name: Resolve unscoped-only athletes through reverse memberships
+      - name: Compare unscoped identities with exact historical roster union
         shell: bash
         run: |
           set -euo pipefail
@@ -52,36 +52,26 @@ jobs:
           get_array "/athletes/athletesByTeam/${TEAM_ID}" "$unscoped"
           jq -r '.[].id|tostring' "$unscoped" | sort -u > "$tmp/unscoped.ids"
 
-          : > "$tmp/known.raw"
-          for tid in 775 1204 776; do
+          : > "$tmp/union.raw"
+          for tid in 218 219 526 775 776 1204; do
             r="$tmp/${tid}.json"
             get_array "/athletes/athletesByTeam/${TEAM_ID}?tournamentId=${tid}" "$r"
-            jq -r '.[].id|tostring' "$r" >> "$tmp/known.raw"
-            echo "known tournament=${tid} roster=$(jq 'length' "$r")"
+            jq -r '.[].id|tostring' "$r" >> "$tmp/union.raw"
+            echo "tournament=${tid} rows=$(jq 'length' "$r") unique=$(jq '[.[].id|tostring]|unique|length' "$r")"
           done
-          sort -u "$tmp/known.raw" > "$tmp/known.ids"
-          comm -23 "$tmp/unscoped.ids" "$tmp/known.ids" > "$tmp/remaining.ids"
+          sort -u "$tmp/union.raw" > "$tmp/union.ids"
 
-          echo "unscoped_rows=$(jq 'length' "$unscoped") unique=$(wc -l < "$tmp/unscoped.ids" | xargs)"
-          echo "known_775_1204_776_union=$(wc -l < "$tmp/known.ids" | xargs)"
-          echo "remaining=$(wc -l < "$tmp/remaining.ids" | xargs)"
-          echo '--- remaining athleteIds ---'
-          cat "$tmp/remaining.ids"
+          comm -23 "$tmp/unscoped.ids" "$tmp/union.ids" > "$tmp/only-unscoped.ids"
+          comm -13 "$tmp/unscoped.ids" "$tmp/union.ids" > "$tmp/only-union.ids"
 
-          : > "$tmp/discovered-tournaments.raw"
-          echo '--- reverse memberships on team 1843 for remaining athletes ---'
-          while read -r id; do
-            [[ -n "$id" ]] || continue
-            reverse="$tmp/reverse-${id}.json"
-            get_array "/athletes/${id}/tournaments" "$reverse"
-            name="$(jq -r --arg id "$id" '[.[]|select(.team.id!=null)][0].team.club.name // ""' "$reverse")"
-            echo "athleteId=${id}"
-            jq -r --arg team "$TEAM_ID" '.[] | select((.team.id|tostring)==$team) | [(.tournament.id|tostring),.tournament.name,.tournament.season.description,.tournament.status] | @tsv' "$reverse" | tee "$tmp/pairs-${id}.tsv"
-            cut -f1 "$tmp/pairs-${id}.tsv" >> "$tmp/discovered-tournaments.raw" || true
-          done < "$tmp/remaining.ids"
-
-          sort -u "$tmp/discovered-tournaments.raw" | sed '/^$/d' > "$tmp/discovered-tournaments.ids"
-          echo '--- additional tournamentIds discovered ---'
-          cat "$tmp/discovered-tournaments.ids"
+          echo "unscoped_rows=$(jq 'length' "$unscoped")"
+          echo "unscoped_unique=$(wc -l < "$tmp/unscoped.ids" | xargs)"
+          echo "six_tournament_union_unique=$(wc -l < "$tmp/union.ids" | xargs)"
+          echo "only_unscoped=$(wc -l < "$tmp/only-unscoped.ids" | xargs)"
+          echo "only_union=$(wc -l < "$tmp/only-union.ids" | xargs)"
+          echo '--- only unscoped ---'
+          cat "$tmp/only-unscoped.ids"
+          echo '--- only exact-roster union ---'
+          cat "$tmp/only-union.ids"
 
           echo 'Guest legítimo 1.1.3; read-only; sin Supabase ni producción.'
