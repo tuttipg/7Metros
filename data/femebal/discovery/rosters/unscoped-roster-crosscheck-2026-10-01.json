@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-01",
+  "source": "FEMEBAL Community / LarrySport 1.1.3 runtime guest",
+  "status": "confirmed_runtime",
+  "cases": [
+    {
+      "club": "Ferro Carril Oeste",
+      "teamId": "1843",
+      "team": "Mayores A",
+      "controlTournamentId": 775,
+      "controlTournament": "Apertura 2026 LHC",
+      "scopedRows": 16,
+      "scopedUniqueAthleteIds": 16,
+      "unscopedRows": 106,
+      "unscopedUniqueAthleteIds": 31,
+      "unscopedUniqueJsonObjects": 31
+    },
+    {
+      "club": "Ferro Carril Oeste",
+      "teamId": "3256",
+      "team": "Mayores B",
+      "controlTournamentId": 782,
+      "controlTournament": "Apertura 2026 Liga de Honor Plata",
+      "scopedRows": 26,
+      "scopedUniqueAthleteIds": 26,
+      "unscopedRows": 103,
+      "unscopedUniqueAthleteIds": 46,
+      "unscopedUniqueJsonObjects": 46
+    },
+    {
+      "club": "S.A.G. Villa Ballester",
+      "teamId": "3291",
+      "team": "Mayores A",
+      "controlTournamentId": 775,
+      "controlTournament": "Apertura 2026 LHC",
+      "scopedRows": 25,
+      "scopedUniqueAthleteIds": 25,
+      "unscopedRows": 131,
+      "unscopedUniqueAthleteIds": 30,
+      "unscopedUniqueJsonObjects": 30
+    }
+  ],
+  "confirmed": {
+    "unscopedCallReturnsHttp200": true,
+    "unscopedCallCanContainDuplicateAthleteRows": true,
+    "unscopedCallBroadensBeyondExactTournamentRoster": true,
+    "deduplicatingUnscopedResponseDoesNotRecoverExactRoster": true
+  },
+  "integrationRule": "Treat tournamentId as semantically mandatory. Never import an exact roster from /athletes/athletesByTeam/{teamId} without tournamentId, even when HTTP 200. Resolve team->tournament first and call the tournament-scoped endpoint."
+}
