@@ -1,0 +1,37 @@
+{
+  "status": "REAL_GOAL_WINDOW_RESOLUTION_PROBE_COMPLETE",
+  "fixture": "Ferro - N. S. de Lujan",
+  "fixture_frames": [360, 376],
+  "frames": 16,
+  "detector": {
+    "model": "yolo11n.pt",
+    "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+    "ultralytics": "8.4.163",
+    "class_id": 32,
+    "inference_confidence": 0.005
+  },
+  "results": {
+    "960": {
+      "raw_candidates": 34,
+      "candidate_frames": 15,
+      "max_confidence": 0.10859189927577972,
+      "ge_0_10": 1,
+      "ge_0_05": 2,
+      "ge_0_02": 5,
+      "tracker_selected": 1,
+      "usable_flight": false
+    },
+    "1280": {
+      "raw_candidates": 166,
+      "candidate_frames": 16,
+      "max_confidence": 0.05288171023130417,
+      "ge_0_10": 0,
+      "ge_0_05": 2,
+      "ge_0_02": 33,
+      "tracker_selected": 0,
+      "usable_flight": false
+    }
+  },
+  "decision": "REJECT_RESOLUTION_ONLY_FIX_AND_TEST_HIGHER_CAPACITY_OR_TEMPORAL_BALL_MODEL",
+  "accuracy_metrics": null
+}
