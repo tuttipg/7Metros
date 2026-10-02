@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-01",
+  "app_version": "1.1.3",
+  "status": "confirmed_runtime",
+  "team": {
+    "clubId": "335",
+    "club": "Ferro Carril Oeste",
+    "teamId": "1843",
+    "team": "Mayores A"
+  },
+  "unscoped_endpoint": "/athletes/athletesByTeam/1843",
+  "unscoped_response": {
+    "rows": 106,
+    "uniqueAthleteIds": 31,
+    "rowShape": ["id", "firstName", "lastName", "birthDate", "picture"]
+  },
+  "exact_rosters": [
+    {"tournamentId":218,"season":"2025","name":"Torneo Metropolitano Apertura","rows":20,"uniqueAthleteIds":20},
+    {"tournamentId":219,"season":"2025","name":"Super 8 Hipotecario Seguros Liga Honor Caballeros","rows":16,"uniqueAthleteIds":16},
+    {"tournamentId":526,"season":"2025","name":"Torneo Metropolitano Clausura","rows":19,"uniqueAthleteIds":19},
+    {"tournamentId":775,"season":"2026","name":"Torneo Metropolitano Apertura","rows":16,"uniqueAthleteIds":16},
+    {"tournamentId":776,"season":"2026","name":"Super 8 Liga Hipotecario Seguros Masculino 2025","rows":16,"uniqueAthleteIds":16},
+    {"tournamentId":1204,"season":"2026","name":"Torneo Metropolitano Clausura","rows":19,"uniqueAthleteIds":19}
+  ],
+  "proof": {
+    "sumExactRosterRows": 106,
+    "unscopedRows": 106,
+    "unionUniqueAthleteIds": 31,
+    "unscopedUniqueAthleteIds": 31,
+    "setEquality": true,
+    "perAthleteMultiplicityEquality": true,
+    "multisetEquality": true
+  },
+  "athleteMultiplicity": {
+    "16283":2,"16284":3,"16285":1,"16299":5,"16306":1,"16311":1,"16355":4,"16357":1,
+    "17060":3,"19470":6,"19471":1,"19472":6,"19475":5,"19477":4,"19478":2,"19479":6,
+    "19480":6,"19481":5,"19483":4,"19484":6,"22197":1,"22199":1,"28362":3,"28365":4,
+    "28378":2,"28380":2,"28398":4,"28403":6,"51006":1,"57796":5,"66223":5
+  },
+  "semantics": "For teamId 1843 at this runtime, GET athletesByTeam without tournamentId is exactly the multiset concatenation of the six discovered tournament-scoped rosters, after the tournament/membership context has been erased from each row.",
+  "integration_consequence": {
+    "safeForExactRoster": false,
+    "safeAfterDeduplication": false,
+    "reason": "The response mixes memberships from multiple tournaments/seasons and exposes only athlete identity. Neither duplicate count nor deduplication preserves which team+tournament membership produced each row.",
+    "requiredRule": "Exact RosterMembership facts must come from a known teamId+tournamentId pair, not from the unscoped response."
+  },
+  "historical_discovery_note": {
+    "teamTournamentListingFor1843DidNotExposeAllTheseTournaments": true,
+    "additionalTournamentIdsRecoveredThroughReverseMembershipEvidence": [218,219,526,776],
+    "reverseMembershipIsGloballyExhaustiveHistoricalIndex": "not_proven"
+  }
+}
