@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-02",
+  "app_version": "1.1.3",
+  "status": "confirmed_runtime",
+  "control_scope": {
+    "clubId": "335",
+    "teamId": "1843",
+    "tournamentId": 775,
+    "rosterAthletes": 16
+  },
+  "defaultTeam": {
+    "http200": 16,
+    "matchesRosterTeamId": 13,
+    "otherTeamId": 3,
+    "interpretation": "default-team is a profile/default association and cannot represent the exact roster team for every member of a roster"
+  },
+  "associatedClubId": {
+    "http200": 16,
+    "matchesRosterClubId": 16,
+    "otherOrUnparsed": 0,
+    "interpretation": "strong profile-level club association on this control roster; still insufficient to prove a specific team+tournament membership"
+  },
+  "federativeCard": {
+    "http200": 16,
+    "clubNameMatchesRosterClub": 16,
+    "categoryStringNonNull": 16,
+    "categoryExactlyMatchesTeamAgeCategory": 0,
+    "statusNonNull": 16,
+    "habilitationYearNonNull": 16,
+    "interpretation": "club association is consistent in this control; federative category uses a different representation/vocabulary from team.ageCategory and must not be joined by literal text",
+    "personalScalarValuesPersistedOrLogged": false
+  },
+  "profileTypes": {
+    "http200": 16,
+    "height": {
+      "nonNull": 10,
+      "jsonNumber": 0,
+      "jsonString": 10,
+      "numericLikeString": 10,
+      "parsedInRange1ToLessThan3": 10,
+      "parsedInRange100To250": 0,
+      "otherNumericRange": 0,
+      "observedScale": "meter_scale",
+      "normalizationRule": "preserve raw string; replace comma decimal separator if present; parse numeric; only derive centimeters after validating 1 <= value < 3; derived centimeters = value * 100"
+    },
+    "position": {
+      "nonNullString": 13
+    },
+    "shirtNumber": {
+      "nonNullJsonNumber": 10
+    }
+  },
+  "privacy": {
+    "athleteIdsLoggedByAggregateDiagnostics": false,
+    "namesLogged": false,
+    "datesLogged": false,
+    "clubOrCategoryNamesLogged": false,
+    "heightValuesLogged": false,
+    "positionValuesLogged": false,
+    "shirtNumberValuesLogged": false,
+    "federativeScalarValuesLogged": false
+  },
+  "scopeCaveat": "Counts and type/scale semantics are confirmed on the complete Ferro 1843/775 control roster. Preserve provenance and validate when generalizing to other competitions or future app versions."
+}
