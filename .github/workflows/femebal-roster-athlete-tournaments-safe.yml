@@ -1,0 +1,80 @@
+name: FEMEBAL roster diagnostic — athlete tournaments reverse membership
+
+on:
+  push:
+    branches:
+      - research/femebal-rosters-1.1.3
+    paths:
+      - .github/workflows/femebal-roster-athlete-tournaments-safe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      API_BASE: https://api.femebal.cam.larrysport.tecdata.net
+    steps:
+      - name: Validate athlete -> team+tournament relations
+        shell: bash
+        run: |
+          set -euo pipefail
+          common=(
+            --silent --show-error --location --max-time 15
+            --header 'Accept: application/json'
+            --header 'X-App-Variant: cah'
+            --header 'X-App-Version: 1.1.3'
+          )
+          tmp="$(mktemp -d)"
+          cleanup(){ rm -rf "$tmp"; unset access || true; }
+          trap cleanup EXIT
+
+          onboarding="$tmp/onboarding.json"
+          code="$(curl "${common[@]}" --request POST --header 'Content-Type: application/json' \
+            --output "$onboarding" --write-out '%{http_code}' "${API_BASE}/init-onboarding")"
+          [[ "$code" == 200 ]] || { echo "init-onboarding HTTP $code"; exit 1; }
+          access="$(jq -r '.accessToken // empty' "$onboarding")"
+          [[ -n "$access" ]] || { echo 'guest accessToken missing'; exit 1; }
+          echo "::add-mask::${access}"
+
+          get_json(){
+            local path="$1" out="$2" code
+            code="$(curl "${common[@]}" --request GET --header "Authorization: Bearer ${access}" \
+              --output "$out" --write-out '%{http_code}' "${API_BASE}${path}")"
+            [[ "$code" == 200 ]] || { echo "GET ${path} -> HTTP ${code}"; exit 1; }
+            jq -e . "$out" >/dev/null
+          }
+
+          for id in 16284 10565 19480; do
+            out="$tmp/${id}.json"
+            get_json "/athletes/${id}/tournaments" "$out"
+            echo "=== athleteId ${id} ==="
+            echo "rows=$(jq 'length' "$out") unique_pairs=$(jq '[.[] | [(.team.id|tostring),(.tournament.id|tostring)]] | unique | length' "$out")"
+            echo 'key-shapes:'
+            jq '[.[]|keys|sort]|unique' "$out"
+            echo 'pairs:'
+            jq '[.[] | {
+              teamId:(.team.id|tostring),
+              teamName:.team.name,
+              clubId:(.team.club.id|tostring),
+              categoryId:(.team.ageCategory.id|tostring),
+              category:.team.ageCategory.name,
+              divisionId:(.team.division.id|tostring),
+              division:.team.division.name,
+              gender:.team.gender,
+              tournamentId:.tournament.id,
+              tournament:.tournament.name,
+              season:.tournament.season.description,
+              tournamentStatus:.tournament.status
+            }]' "$out"
+          done
+
+          # Known reverse memberships must be present.
+          jq -e 'any(.[]; (.team.id|tostring)=="1843" and (.tournament.id|tostring)=="775")' "$tmp/16284.json" >/dev/null
+          jq -e 'any(.[]; (.team.id|tostring)=="1843" and (.tournament.id|tostring)=="1204")' "$tmp/16284.json" >/dev/null
+          jq -e 'any(.[]; (.team.id|tostring)=="1843" and (.tournament.id|tostring)=="775")' "$tmp/19480.json" >/dev/null
+
+          echo 'Reverse athlete membership controls passed.'
+          echo 'Guest legítimo 1.1.3; sólo GET después de onboarding; sin Supabase ni producción.'
