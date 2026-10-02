@@ -18,7 +18,7 @@ jobs:
       API_BASE: https://api.femebal.cam.larrysport.tecdata.net
       TEAM_ID: '1843'
     steps:
-      - name: Compare unscoped identities with exact historical roster union
+      - name: Prove unscoped response is exact roster multiset without tournament context
         shell: bash
         run: |
           set -euo pipefail
@@ -50,28 +50,42 @@ jobs:
 
           unscoped="$tmp/unscoped.json"
           get_array "/athletes/athletesByTeam/${TEAM_ID}" "$unscoped"
-          jq -r '.[].id|tostring' "$unscoped" | sort -u > "$tmp/unscoped.ids"
+          jq -r '.[].id|tostring' "$unscoped" | sort > "$tmp/unscoped.raw"
+          sort -u "$tmp/unscoped.raw" > "$tmp/unscoped.ids"
+          uniq -c "$tmp/unscoped.raw" | awk '{print $2"\t"$1}' > "$tmp/unscoped.freq"
 
           : > "$tmp/union.raw"
+          sum_rows=0
           for tid in 218 219 526 775 776 1204; do
             r="$tmp/${tid}.json"
             get_array "/athletes/athletesByTeam/${TEAM_ID}?tournamentId=${tid}" "$r"
+            rows="$(jq 'length' "$r")"
+            sum_rows=$((sum_rows + rows))
             jq -r '.[].id|tostring' "$r" >> "$tmp/union.raw"
-            echo "tournament=${tid} rows=$(jq 'length' "$r") unique=$(jq '[.[].id|tostring]|unique|length' "$r")"
+            echo "tournament=${tid} rows=${rows} unique=$(jq '[.[].id|tostring]|unique|length' "$r")"
           done
+          sort "$tmp/union.raw" -o "$tmp/union.raw"
           sort -u "$tmp/union.raw" > "$tmp/union.ids"
+          uniq -c "$tmp/union.raw" | awk '{print $2"\t"$1}' > "$tmp/union.freq"
 
-          comm -23 "$tmp/unscoped.ids" "$tmp/union.ids" > "$tmp/only-unscoped.ids"
-          comm -13 "$tmp/unscoped.ids" "$tmp/union.ids" > "$tmp/only-union.ids"
+          unscoped_rows="$(jq 'length' "$unscoped")"
+          unscoped_unique="$(wc -l < "$tmp/unscoped.ids" | xargs)"
+          union_unique="$(wc -l < "$tmp/union.ids" | xargs)"
 
-          echo "unscoped_rows=$(jq 'length' "$unscoped")"
-          echo "unscoped_unique=$(wc -l < "$tmp/unscoped.ids" | xargs)"
-          echo "six_tournament_union_unique=$(wc -l < "$tmp/union.ids" | xargs)"
-          echo "only_unscoped=$(wc -l < "$tmp/only-unscoped.ids" | xargs)"
-          echo "only_union=$(wc -l < "$tmp/only-union.ids" | xargs)"
-          echo '--- only unscoped ---'
-          cat "$tmp/only-unscoped.ids"
-          echo '--- only exact-roster union ---'
-          cat "$tmp/only-union.ids"
+          echo "unscoped_rows=${unscoped_rows}"
+          echo "sum_exact_roster_rows=${sum_rows}"
+          echo "unscoped_unique=${unscoped_unique}"
+          echo "six_tournament_union_unique=${union_unique}"
 
+          diff -u "$tmp/unscoped.ids" "$tmp/union.ids"
+          echo 'SET_EQUALITY=true'
+          diff -u "$tmp/unscoped.freq" "$tmp/union.freq"
+          echo 'MULTISET_FREQUENCY_EQUALITY=true'
+
+          [[ "$unscoped_rows" == "$sum_rows" ]]
+          [[ "$unscoped_unique" == "$union_unique" ]]
+
+          echo '--- per-athlete multiplicities ---'
+          cat "$tmp/unscoped.freq"
+          echo 'CONFIRMED: for teamId 1843, the unscoped response is exactly the multiset concatenation of rosters 218,219,526,775,776,1204 after tournament context is erased.'
           echo 'Guest legítimo 1.1.3; read-only; sin Supabase ni producción.'
