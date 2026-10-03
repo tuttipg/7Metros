@@ -1,0 +1,36 @@
+{
+  "status": "FIXTURE_SPECIFIC_SCOREBOARD_GOAL_CONFIRMATION",
+  "source_video_sha256": "84a94f6e5526d94afc67dc8ee99cc9b390265482d6f0250f2d8a12080e437ed2",
+  "source_offset_frames": 900,
+  "fixture_frames_scanned": 3600,
+  "fps": 30.0,
+  "frame_size": [936, 524],
+  "settings": {
+    "threshold": 140,
+    "change_fraction": 0.05,
+    "same_state_fraction": 0.02,
+    "stable_frames": 5,
+    "initial_stable_frames": 30,
+    "top_roi": [176, 36, 191, 58],
+    "bottom_roi": [176, 71, 191, 90]
+  },
+  "events": [
+    {
+      "team": "Ferro",
+      "side": "top",
+      "scoreboard_change_frame": 431,
+      "confirmation_frame": 435,
+      "changed_fraction": 0.14242424242424243,
+      "stable_frames": 5,
+      "semantic_label": "GOAL_CONFIRMED?_SCOREBOARD_UPDATE_NOT_SHOT_FRAME"
+    }
+  ],
+  "bottom_team_changes": 0,
+  "known_goal_action_review_window": [326, 341],
+  "accuracy_metrics": null,
+  "reason_accuracy_unavailable": "The 120 s fixture contains only one reviewed score transition; this is reproducible event evidence, not match-level goal accuracy.",
+  "artifacts": {
+    "replay_json_sha256": "18398f048178ef5af30a81f70b07adf5106cf87d754849957a8a389b4078f5ca",
+    "demo_video_sha256": "3780b67cfe5b998b299dc804405489b5bc99a894795542e1d3ecb63c6863276c"
+  }
+}
