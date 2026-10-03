@@ -41,6 +41,28 @@ RUNTIME_PROVENANCE_KEYS = {
 }
 
 
+def _resolved_model_sha256(model, expected_model_sha256=None):
+    model = Path(model)
+    expected = expected_model_sha256
+    if expected is not None:
+        if (
+            not isinstance(expected, str)
+            or len(expected) != 64
+            or any(char not in "0123456789abcdef" for char in expected)
+        ):
+            raise ValueError("expected_model_sha256 must be 64 lowercase hex characters")
+    if model.is_file():
+        actual = sha256_file(model)
+        if expected is not None and actual != expected:
+            raise ValueError("model file does not match expected_model_sha256")
+        return actual
+    if expected is None:
+        raise ValueError(
+            "model file is unavailable; expected_model_sha256 is required for replay"
+        )
+    return expected
+
+
 def _serialized(detection):
     return {
         "confidence": float(detection.confidence),
@@ -48,6 +70,45 @@ def _serialized(detection):
             float(detection.x1), float(detection.y1),
             float(detection.x2), float(detection.y2),
         ],
+    }
+
+
+def filter_detection_geometry(rows, width, height, max_side_fraction):
+    """Drop implausibly large ball boxes using a resolution-normalized limit."""
+    if max_side_fraction is None:
+        count = sum(len(detections) for detections in rows.values())
+        return rows, {
+            "mode": "DISABLED",
+            "input_detections": count,
+            "retained_detections": count,
+            "dropped_detections": 0,
+        }
+    fraction = float(max_side_fraction)
+    if not 0 < fraction <= 1:
+        raise ValueError("max_detection_side_fraction must be in (0,1]")
+    if not isinstance(width, int) or not isinstance(height, int) or min(width, height) <= 0:
+        raise ValueError("ground-truth dimensions must be positive integers")
+    max_side_px = min(width, height) * fraction
+    filtered = {
+        frame_index: [
+            detection for detection in detections
+            if max(
+                detection.x2 - detection.x1,
+                detection.y2 - detection.y1,
+            ) <= max_side_px
+        ]
+        for frame_index, detections in rows.items()
+    }
+    input_count = sum(len(detections) for detections in rows.values())
+    retained_count = sum(len(detections) for detections in filtered.values())
+    return filtered, {
+        "mode": "MAX_DETECTION_SIDE_FRACTION",
+        "max_side_fraction": fraction,
+        "reference_short_side_px": min(width, height),
+        "max_side_px": max_side_px,
+        "input_detections": input_count,
+        "retained_detections": retained_count,
+        "dropped_detections": input_count - retained_count,
     }
 
 
@@ -188,6 +249,7 @@ def load_ball_detection_cache(
     low_threshold,
     imgsz,
     class_id=COCO_SPORTS_BALL_CLASS_ID,
+    expected_model_sha256=None,
 ):
     class_id = normalize_ball_class_id(class_id)
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -200,7 +262,7 @@ def load_ball_detection_cache(
         raise ValueError("legacy cache must not contain v2 runtime provenance")
     expected_source = {
         "video_sha256": sha256_file(video),
-        "model_sha256": sha256_file(model),
+        "model_sha256": _resolved_model_sha256(model, expected_model_sha256),
         "model_name": Path(model).name,
     }
     if payload.get("source") != expected_source:
@@ -333,6 +395,8 @@ def benchmark(
     cache_input=None,
     cache_output=None,
     ball_class_id=COCO_SPORTS_BALL_CLASS_ID,
+    max_detection_side_fraction=None,
+    expected_model_sha256=None,
 ):
     ball_class_id = normalize_ball_class_id(ball_class_id)
     if not 0 < float(low_threshold) <= float(high_threshold) <= 1:
@@ -350,6 +414,13 @@ def benchmark(
         validate_ball_ground_truth(document, source_video=video)
         documents.append(document)
         annotations.extend(document["annotations"])
+    dimensions = {
+        (document["source"]["width"], document["source"]["height"])
+        for document in documents
+    }
+    if len(dimensions) != 1:
+        raise ValueError("ground-truth documents must share one frame size")
+    width, height = dimensions.pop()
     evaluable = [
         row["frame_index"] for row in annotations
         if row["state"] in {"visible", "out_of_frame"}
@@ -369,6 +440,7 @@ def benchmark(
             low_threshold=low_threshold,
             imgsz=imgsz,
             class_id=ball_class_id,
+            expected_model_sha256=expected_model_sha256,
         )
         cache_metadata = _cache_metadata(
             json.loads(Path(cache_input).read_text(encoding="utf-8")),
@@ -415,6 +487,10 @@ def benchmark(
             cache_output.parent.mkdir(parents=True, exist_ok=True)
             with cache_output.open("x", encoding="utf-8") as stream:
                 stream.write(json.dumps(cache_document, indent=2) + "\n")
+    inference_rows, geometry_filter = filter_detection_geometry(
+        inference_rows, width, height, max_detection_side_fraction,
+    )
+    resolved_model_sha256 = _resolved_model_sha256(model, expected_model_sha256)
     control_predictions = {}
     guarded_predictions = {}
     temporal_predictions = {}
@@ -509,10 +585,11 @@ def benchmark(
             ),
             "comparisons": "SAME_RUN_PERSISTED_BOX_THRESHOLD_GUARD_AND_TEMPORAL_SELECTION",
             "synthetic_ball_positions": 0,
+            "geometry_filter": geometry_filter,
         },
         "inputs": {
             "video_sha256": sha256_file(video),
-            "model_sha256": sha256_file(model),
+            "model_sha256": resolved_model_sha256,
             "ground_truth_files": [str(path) for path in ground_truth_paths],
             "detection_cache": (
                 {
@@ -535,6 +612,10 @@ def benchmark(
             "ball_class_id": int(ball_class_id),
             "max_missed": int(max_missed),
             "min_largest_blue_court_fraction": float(min_court_fraction),
+            "max_detection_side_fraction": (
+                None if max_detection_side_fraction is None
+                else float(max_detection_side_fraction)
+            ),
         },
         "requirements": {
             "matched_delta_vs_guard_min": 0,
@@ -568,6 +649,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--video", required=True)
     parser.add_argument("--model", required=True)
+    parser.add_argument(
+        "--expected-model-sha256",
+        help=(
+            "Pinned model hash for strict cache replay when the checkpoint is "
+            "unavailable; an available model must match it"
+        ),
+    )
     parser.add_argument("--ground-truth", action="append", required=True)
     parser.add_argument("--low-threshold", type=float, default=.02)
     parser.add_argument("--high-threshold", type=float, default=.05)
@@ -578,6 +666,14 @@ def main():
     )
     parser.add_argument("--max-missed", type=int, default=4)
     parser.add_argument("--min-court-fraction", type=float, default=.15)
+    parser.add_argument(
+        "--max-detection-side-fraction",
+        type=float,
+        help=(
+            "Optional maximum detection width or height as a fraction of the "
+            "frame short side; disabled by default"
+        ),
+    )
     cache_group = parser.add_mutually_exclusive_group()
     cache_group.add_argument("--cache-input")
     cache_group.add_argument("--cache-output")
@@ -594,8 +690,10 @@ def main():
         high_threshold=args.high_threshold,
         imgsz=args.imgsz,
         ball_class_id=args.ball_class_id,
+        expected_model_sha256=args.expected_model_sha256,
         max_missed=args.max_missed,
         min_court_fraction=args.min_court_fraction,
+        max_detection_side_fraction=args.max_detection_side_fraction,
         cache_input=args.cache_input,
         cache_output=args.cache_output,
     )

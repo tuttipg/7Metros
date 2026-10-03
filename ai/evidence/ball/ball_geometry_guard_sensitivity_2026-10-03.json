@@ -1,0 +1,48 @@
+{
+  "schema": "sevenmetros.ball-geometry-guard-sensitivity/v1",
+  "status": "EXPLORATORY_REPLAY_ON_REVIEWED_SAMPLE_NOT_MATCH_ACCURACY",
+  "processing": {
+    "detector": "STRICT_DETECTION_CACHE_REPLAY_NO_NEURAL_INFERENCE",
+    "synthetic_ball_positions": 0,
+    "reference_short_side_px": 524
+  },
+  "evaluation_scope": {
+    "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+    "visible_gt_frames": 53,
+    "out_of_frame_negative_frames": 60,
+    "low_threshold": 0.1,
+    "high_threshold": 0.25,
+    "imgsz": 960,
+    "max_missed": 4
+  },
+  "selected_candidate_fraction": 0.028,
+  "selected_candidate_max_side_px": 14.672,
+  "selection_status": "TUNED_ON_THIS_REVIEWED_SAMPLE_NOT_APPROVED_AS_DEFAULT",
+  "sensitivity": {
+    "generic": {
+      "0.025": {"retained": 37, "matched": 28, "false_positive_candidates": 0, "precision": 1.0, "recall": 0.5283018867924528, "per_sequence_non_regression": true},
+      "0.028": {"retained": 41, "matched": 33, "false_positive_candidates": 0, "precision": 1.0, "recall": 0.6226415094339622, "per_sequence_non_regression": true},
+      "0.030": {"retained": 41, "matched": 33, "false_positive_candidates": 0, "precision": 1.0, "recall": 0.6226415094339622, "per_sequence_non_regression": true},
+      "0.031": {"retained": 41, "matched": 33, "false_positive_candidates": 0, "precision": 1.0, "recall": 0.6226415094339622, "per_sequence_non_regression": true},
+      "0.032": {"retained": 41, "matched": 33, "false_positive_candidates": 0, "precision": 1.0, "recall": 0.6226415094339622, "per_sequence_non_regression": true},
+      "0.035": {"retained": 42, "matched": 33, "false_positive_candidates": 1, "precision": 0.9705882352941176, "recall": 0.6226415094339622, "per_sequence_non_regression": false},
+      "0.040": {"retained": 43, "matched": 33, "false_positive_candidates": 1, "precision": 0.9705882352941176, "recall": 0.6226415094339622, "per_sequence_non_regression": false},
+      "0.050": {"retained": 43, "matched": 33, "false_positive_candidates": 1, "precision": 0.9705882352941176, "recall": 0.6226415094339622, "per_sequence_non_regression": false}
+    },
+    "specialized": {
+      "0.025": {"retained": 25, "matched": 13, "false_positive_candidates": 2, "precision": 0.8666666666666667, "recall": 0.24528301886792453, "per_sequence_non_regression": true},
+      "0.028": {"retained": 45, "matched": 17, "false_positive_candidates": 2, "precision": 0.8947368421052632, "recall": 0.32075471698113206, "per_sequence_non_regression": true},
+      "0.030": {"retained": 65, "matched": 19, "false_positive_candidates": 7, "precision": 0.7307692307692307, "recall": 0.3584905660377358, "per_sequence_non_regression": false},
+      "0.031": {"retained": 75, "matched": 19, "false_positive_candidates": 8, "precision": 0.7037037037037037, "recall": 0.3584905660377358, "per_sequence_non_regression": false},
+      "0.032": {"retained": 80, "matched": 19, "false_positive_candidates": 10, "precision": 0.6551724137931034, "recall": 0.3584905660377358, "per_sequence_non_regression": false},
+      "0.035": {"retained": 95, "matched": 19, "false_positive_candidates": 11, "precision": 0.6333333333333333, "recall": 0.3584905660377358, "per_sequence_non_regression": false},
+      "0.040": {"retained": 161, "matched": 16, "false_positive_candidates": 23, "precision": 0.41025641025641024, "recall": 0.3018867924528302, "per_sequence_non_regression": false},
+      "0.050": {"retained": 221, "matched": 16, "false_positive_candidates": 27, "precision": 0.37209302325581395, "recall": 0.3018867924528302, "per_sequence_non_regression": false}
+    }
+  },
+  "decision": {
+    "production_default_changed": false,
+    "specialized_model_promoted": false,
+    "reason": "The threshold was selected on the same reviewed sample and must be validated on an independent match or sequence."
+  }
+}

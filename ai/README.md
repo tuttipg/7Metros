@@ -202,6 +202,13 @@ El estado `ADMITTED_FOR_HELDOUT_EVALUATION_NOT_ACCURACY` habilita únicamente el
 benchmark; no afirma precisión. Un `.pt` de PyTorch debe provenir además de una
 fuente confiable, porque cargar checkpoints no confiables puede ejecutar código.
 
+El benchmark permite replay fail-closed aunque el binario admitido ya no esté
+localmente disponible: `--expected-model-sha256` debe coincidir con la fuente
+de la caché y con el archivo si éste existe. La guardia experimental
+`--max-detection-side-fraction` limita el ancho o alto de una caja como fracción
+del lado corto del cuadro. Está desactivada por defecto; cualquier valor debe
+validarse en datos independientes antes de cambiar producción.
+
 Los 113 cuadros reservados para evaluar pelota tienen además una huella de
 píxeles reproducible. Se regenera únicamente con el MP4 cuyo hash coincide con
 la caché v2:

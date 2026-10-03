@@ -8,6 +8,7 @@ from benchmark_ball_temporal_ground_truth import (
     benchmark,
     build_ball_detection_cache,
     evaluate_visible_sequences,
+    filter_detection_geometry,
     is_non_regressive,
     load_ball_detection_cache,
     replay_sequence,
@@ -31,6 +32,22 @@ RUNTIME = {
 
 
 class TemporalBallGroundTruthBenchmarkTests(unittest.TestCase):
+    def test_geometry_filter_is_optional_normalized_and_fail_closed(self):
+        rows = {
+            0: [ball(0, .8), Detection(0, 0, 40, 10, confidence=.7, label="ball")],
+            1: [],
+        }
+        unchanged, disabled = filter_detection_geometry(rows, 100, 80, None)
+        self.assertIs(unchanged, rows)
+        self.assertEqual(disabled["dropped_detections"], 0)
+
+        filtered, evidence = filter_detection_geometry(rows, 100, 80, .2)
+        self.assertEqual(len(filtered[0]), 1)
+        self.assertEqual(evidence["max_side_px"], 16)
+        self.assertEqual(evidence["dropped_detections"], 1)
+        with self.assertRaisesRegex(ValueError, "must be in"):
+            filter_detection_geometry(rows, 100, 80, 0)
+
     def test_bridge_selects_returning_true_box_without_interpolation(self):
         rows = {
             0: [ball(0, .2)],
@@ -284,6 +301,9 @@ class TemporalBallGroundTruthBenchmarkTests(unittest.TestCase):
             )
             self.assertEqual(result["blue_court_plus_temporal"]["matched"], 1)
             self.assertEqual(result["settings"]["ball_class_id"], 32)
+            self.assertEqual(
+                result["processing"]["geometry_filter"]["mode"], "DISABLED",
+            )
 
     def test_cache_round_trip_supports_specialized_single_class_model(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -306,6 +326,21 @@ class TemporalBallGroundTruthBenchmarkTests(unittest.TestCase):
             )
             self.assertEqual(payload["detector"]["class_id"], 0)
             self.assertEqual(rows[5][0].label, "ball")
+
+            expected_sha = hashlib.sha256(b"specialized-model").hexdigest()
+            model.unlink()
+            rows, _ = load_ball_detection_cache(
+                cache, video=video, model=model, documents=documents,
+                low_threshold=.10, imgsz=640, class_id=0,
+                expected_model_sha256=expected_sha,
+            )
+            self.assertEqual(rows[5][0].label, "ball")
+            with self.assertRaisesRegex(ValueError, "source video/model mismatch"):
+                load_ball_detection_cache(
+                    cache, video=video, model=model, documents=documents,
+                    low_threshold=.10, imgsz=640, class_id=0,
+                    expected_model_sha256="0" * 64,
+                )
 
     def test_cache_output_collision_fails_before_inference(self):
         with tempfile.TemporaryDirectory() as directory:
