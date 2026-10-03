@@ -1,0 +1,27 @@
+name: Bootstrap sports-ball model
+
+on:
+  push:
+    branches:
+      - tmp/ball-model-bootstrap-20261002
+
+jobs:
+  fetch-model:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download ONNX model
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 3 \
+            'https://huggingface.co/acatorcini/yolov9-soccer-ball/resolve/main/v9b_best.onnx?download=true' \
+            -o v9b_best.onnx
+          sha256sum v9b_best.onnx | tee sha256.txt
+          test "$(cut -d' ' -f1 sha256.txt)" = "9fd2031e5bced9dff47a48bae8c6809dd56493124ef8924ae28a3ce26a17a441"
+      - name: Upload model artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: soccer-ball-onnx
+          path: |
+            v9b_best.onnx
+            sha256.txt
+          retention-days: 1
