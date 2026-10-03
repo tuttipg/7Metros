@@ -216,6 +216,22 @@ python build_ball_holdout_manifest.py \
 Esta lista permite rechazar copias pixel-idénticas en futuros datasets de
 training. No detecta por sí sola cuadros recortados o recodificados.
 
+Antes de entrenar, `validate_ball_training_dataset.py` exige un dataset YOLO
+local con splits `train`/`val`/`test`, una sola clase pelota, pares completos de
+imagen/label, geometría normalizada válida, al menos una caja positiva de
+training y ausencia de imágenes duplicadas o píxeles held-out:
+
+```bash
+python validate_ball_training_dataset.py \
+  --data-yaml /ruta/dataset/data.yaml \
+  --holdout-manifest evidence/ball/ball_holdout_pixel_manifest_2026-10-03.json \
+  --output /ruta/dataset-validation.json
+```
+
+El estado `STRUCTURALLY_VALID_AND_HOLDOUT_EXCLUDED_NOT_MODEL_ACCURACY` sólo
+habilita el próximo paso del pipeline. No valida la calidad de las anotaciones,
+la licencia del dataset ni el rendimiento de un modelo entrenado.
+
 ## Ground truth humano
 
 `prepare_mot_annotation.py` convierte un intervalo y un JSONL de tracker en una tarea MOTChallenge revisable. El seed automático nunca se considera ground truth.
