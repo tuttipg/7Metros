@@ -9,22 +9,20 @@ jobs:
   fetch-model:
     runs-on: ubuntu-latest
     steps:
-      - name: Download football-ball YOLO11n model and runtime wheel
+      - name: Download exact stock YOLO11n control
         run: |
           set -euxo pipefail
           curl -L --fail --retry 3 \
-            'https://huggingface.co/martinjolif/yolo-football-ball-detection/resolve/main/yolo-football-ball-detection.pt?download=true' \
-            -o yolo-football-ball-detection.pt
-          echo 'fb37942448e7de08745e8aab148d0794f680a738ddd55e5f17abe9ab2d6313fb  yolo-football-ball-detection.pt' > expected.sha256
+            'https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt' \
+            -o yolo11n.pt
+          echo '0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1  yolo11n.pt' > expected.sha256
           sha256sum -c expected.sha256
-          python -m pip download --no-deps 'ultralytics==8.4.163' -d wheelhouse
-          sha256sum yolo-football-ball-detection.pt wheelhouse/* > sha256.txt
+          sha256sum yolo11n.pt > sha256.txt
       - name: Upload model artifact
         uses: actions/upload-artifact@v4
         with:
-          name: football-ball-yolo11n
+          name: stock-yolo11n-control
           path: |
-            yolo-football-ball-detection.pt
-            wheelhouse/
+            yolo11n.pt
             sha256.txt
           retention-days: 1
