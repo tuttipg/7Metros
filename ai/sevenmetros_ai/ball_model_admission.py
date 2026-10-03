@@ -59,7 +59,7 @@ def admit_ball_model(model_path, provenance_path, evaluation_video_sha256, *, mo
         "schema": "sevenmetros.ball-model-admission/v1",
         "status": REJECTED,
         "accuracy_status": "NOT_EVALUATED",
-        "model_path": str(model_path),
+        "model_name": model_path.name,
         "provenance_path": str(provenance_path),
         "evaluation_video_sha256": evaluation_video_sha256,
     }

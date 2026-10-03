@@ -88,7 +88,7 @@
   },
   "inspected_task": "detect",
   "model_bytes": 5613764,
-  "model_path": "/workspace/scratch/c01ac3b0618e/yolo11n.pt",
+  "model_name": "yolo11n.pt",
   "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
   "provenance_path": "evidence/ball/yolo11n_negative_control_provenance_2026-10-03.json",
   "provenance_sha256": "8ad40c1821c4ace645e35c7a9124dee71238ba6d22c6b7a08002d46a4a8683f0",
