@@ -4,7 +4,10 @@ import argparse
 import json
 from pathlib import Path
 
-from sevenmetros_ai.ball_holdout import build_holdout_manifest
+from sevenmetros_ai.ball_holdout import (
+    build_holdout_manifest,
+    build_perceptual_holdout_manifest,
+)
 
 
 def main():
@@ -12,11 +15,16 @@ def main():
     parser.add_argument("--video", required=True)
     parser.add_argument("--detection-cache", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--perceptual", action="store_true",
+        help="also store strict dHash/pHash fingerprints for recoded/resized copies",
+    )
     args = parser.parse_args()
     output = Path(args.output)
     if output.exists():
         raise FileExistsError(f"Refusing to overwrite: {output}")
-    manifest = build_holdout_manifest(args.video, args.detection_cache)
+    builder = build_perceptual_holdout_manifest if args.perceptual else build_holdout_manifest
+    manifest = builder(args.video, args.detection_cache)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({

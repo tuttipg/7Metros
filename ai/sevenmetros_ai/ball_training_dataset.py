@@ -9,14 +9,23 @@ import unicodedata
 from pathlib import Path
 
 from .ball_ground_truth import sha256_file
-from .ball_holdout import SCHEMA as HOLDOUT_SCHEMA, pixel_sha256
+from .ball_holdout import (
+    DHASH64_MAX_DISTANCE,
+    PHASH64_MAX_DISTANCE,
+    PERCEPTUAL_SCHEMA,
+    SCHEMA as HOLDOUT_SCHEMA,
+    perceptual_hashes,
+    pixel_sha256,
+)
 
 
 SCHEMA = "sevenmetros.ball-training-dataset-validation/v1"
 STATUS = "STRUCTURALLY_VALID_AND_HOLDOUT_EXCLUDED_NOT_MODEL_ACCURACY"
+PERCEPTUAL_STATUS = "STRUCTURALLY_VALID_AND_HOLDOUT_EXCLUDED_EXACT_AND_PERCEPTUAL_NOT_MODEL_ACCURACY"
 IMAGE_SUFFIXES = {".bmp", ".jpeg", ".jpg", ".png", ".webp"}
 BALL_NAMES = {"ball", "ballon", "balon", "pelota", "handball"}
 HEX_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+HEX64 = re.compile(r"^[0-9a-f]{16}$")
 
 
 def _canonical_ball_name(value):
@@ -108,14 +117,28 @@ def _parse_label(path):
     return boxes
 
 
-def _holdout_hashes(payload):
-    if not isinstance(payload, dict) or payload.get("schema_version") != HOLDOUT_SCHEMA:
-        raise ValueError(f"holdout manifest schema must be {HOLDOUT_SCHEMA}")
+def _holdout_contract(payload):
+    if not isinstance(payload, dict) or payload.get("schema_version") not in {
+        HOLDOUT_SCHEMA, PERCEPTUAL_SCHEMA,
+    }:
+        raise ValueError(
+            f"holdout manifest schema must be {HOLDOUT_SCHEMA} or {PERCEPTUAL_SCHEMA}"
+        )
+    perceptual_mode = payload["schema_version"] == PERCEPTUAL_SCHEMA
+    if perceptual_mode:
+        match = payload.get("perceptual_match")
+        if not isinstance(match, dict) or (
+            match.get("logic") != "dhash64_distance_lte_AND_phash64_distance_lte"
+            or match.get("dhash64_max_hamming") != DHASH64_MAX_DISTANCE
+            or match.get("phash64_max_hamming") != PHASH64_MAX_DISTANCE
+        ):
+            raise ValueError("perceptual holdout thresholds differ from the validated contract")
     frames = payload.get("frames")
     if not isinstance(frames, list) or not frames:
         raise ValueError("holdout manifest frames must be a non-empty list")
     hashes = []
     indexes = []
+    perceptual = []
     for row in frames:
         if not isinstance(row, dict):
             raise ValueError("holdout frame rows must be objects")
@@ -126,11 +149,40 @@ def _holdout_hashes(payload):
             raise ValueError("holdout pixel hashes must be lowercase SHA-256")
         indexes.append(index)
         hashes.append(digest)
+        if perceptual_mode:
+            dhash64, phash64 = row.get("dhash64"), row.get("phash64")
+            if not isinstance(dhash64, str) or not HEX64.fullmatch(dhash64):
+                raise ValueError("holdout dHash values must be lowercase 64-bit hex")
+            if not isinstance(phash64, str) or not HEX64.fullmatch(phash64):
+                raise ValueError("holdout pHash values must be lowercase 64-bit hex")
+            perceptual.append({
+                "frame_index": index,
+                "dhash64": dhash64,
+                "phash64": phash64,
+            })
     if len(indexes) != len(set(indexes)) or len(hashes) != len(set(hashes)):
         raise ValueError("holdout frame indexes and hashes must be unique")
     if payload.get("frame_count") != len(frames):
         raise ValueError("holdout frame_count does not match frames")
-    return set(hashes)
+    if perceptual_mode:
+        fingerprint = hashlib.sha256(
+            json.dumps(frames, sort_keys=True, separators=(",", ":")).encode("ascii")
+        ).hexdigest()
+        if payload.get("frames_fingerprint_sha256") != fingerprint:
+            raise ValueError("perceptual holdout frames fingerprint does not match rows")
+    return {
+        "schema_version": payload["schema_version"],
+        "exact_hashes": set(hashes),
+        "perceptual": perceptual,
+    }
+
+
+def hamming_hex64(first, second):
+    if not isinstance(first, str) or not HEX64.fullmatch(first):
+        raise ValueError("first perceptual hash must be lowercase 64-bit hex")
+    if not isinstance(second, str) or not HEX64.fullmatch(second):
+        raise ValueError("second perceptual hash must be lowercase 64-bit hex")
+    return (int(first, 16) ^ int(second, 16)).bit_count()
 
 
 def opencv_pixel_hasher(path):
@@ -145,6 +197,18 @@ def opencv_pixel_hasher(path):
     return pixel_sha256(frame)
 
 
+def opencv_perceptual_hasher(path):
+    """Decode one image and calculate the validated dHash/pHash pair."""
+    try:
+        import cv2
+    except ImportError as exc:  # pragma: no cover - environment-specific
+        raise RuntimeError("OpenCV is required for perceptual holdout comparison") from exc
+    frame = cv2.imread(str(path), cv2.IMREAD_COLOR)
+    if frame is None:
+        raise ValueError(f"could not decode image: {path}")
+    return perceptual_hashes(frame, cv2_module=cv2)
+
+
 def load_dataset_yaml(path):
     """Load a YAML file lazily so importing the validator needs no PyYAML."""
     try:
@@ -157,7 +221,10 @@ def load_dataset_yaml(path):
     return payload
 
 
-def validate_yolo_dataset(config, yaml_path, holdout_manifest, *, image_pixel_hasher=None):
+def validate_yolo_dataset(
+    config, yaml_path, holdout_manifest, *, image_pixel_hasher=None,
+    image_perceptual_hasher=None,
+):
     """Validate layout, labels, duplicates and exact held-out pixel exclusion."""
     if not isinstance(config, dict):
         raise ValueError("dataset configuration must be a mapping")
@@ -174,8 +241,10 @@ def validate_yolo_dataset(config, yaml_path, holdout_manifest, *, image_pixel_ha
         raise ValueError(f"dataset root does not exist: {dataset_root}")
 
     class_name = _validate_class_schema(config)
-    heldout = _holdout_hashes(holdout_manifest)
+    heldout = _holdout_contract(holdout_manifest)
     hasher = image_pixel_hasher or opencv_pixel_hasher
+    perceptual_hasher = image_perceptual_hasher or opencv_perceptual_hasher
+    use_perceptual = bool(heldout["perceptual"])
     seen_file_hashes = {}
     seen_pixel_hashes = {}
     rows = []
@@ -217,14 +286,14 @@ def validate_yolo_dataset(config, yaml_path, holdout_manifest, *, image_pixel_ha
             pixel_hash = hasher(image)
             if not isinstance(pixel_hash, str) or not HEX_SHA256.fullmatch(pixel_hash):
                 raise ValueError(f"pixel hasher returned invalid SHA-256 for {image}")
-            if pixel_hash in heldout:
+            if pixel_hash in heldout["exact_hashes"]:
                 raise ValueError(f"held-out pixel contamination detected: {image}")
             if pixel_hash in seen_pixel_hashes:
                 raise ValueError(
                     f"duplicate decoded pixels across dataset: {seen_pixel_hashes[pixel_hash]} and {image}"
                 )
             seen_pixel_hashes[pixel_hash] = image
-            rows.append({
+            row = {
                 "split": split,
                 "image": image.relative_to(dataset_root).as_posix(),
                 "label": label.relative_to(dataset_root).as_posix(),
@@ -232,7 +301,31 @@ def validate_yolo_dataset(config, yaml_path, holdout_manifest, *, image_pixel_ha
                 "label_sha256": sha256_file(label),
                 "pixel_sha256": pixel_hash,
                 "box_count": len(boxes),
-            })
+            }
+            if use_perceptual:
+                image_perceptual = perceptual_hasher(image)
+                if not isinstance(image_perceptual, dict):
+                    raise ValueError(f"perceptual hasher returned invalid result for {image}")
+                dhash64 = image_perceptual.get("dhash64")
+                phash64 = image_perceptual.get("phash64")
+                if not isinstance(dhash64, str) or not HEX64.fullmatch(dhash64):
+                    raise ValueError(f"perceptual hasher returned invalid dHash for {image}")
+                if not isinstance(phash64, str) or not HEX64.fullmatch(phash64):
+                    raise ValueError(f"perceptual hasher returned invalid pHash for {image}")
+                for reference in heldout["perceptual"]:
+                    dhash_distance = hamming_hex64(dhash64, reference["dhash64"])
+                    phash_distance = hamming_hex64(phash64, reference["phash64"])
+                    if (
+                        dhash_distance <= DHASH64_MAX_DISTANCE
+                        and phash_distance <= PHASH64_MAX_DISTANCE
+                    ):
+                        raise ValueError(
+                            "held-out perceptual contamination detected: "
+                            f"{image} matches frame {reference['frame_index']} "
+                            f"(dHash={dhash_distance}, pHash={phash_distance})"
+                        )
+                row.update({"dhash64": dhash64, "phash64": phash64})
+            rows.append(row)
         split_reports[split] = {
             "image_count": len(images),
             "label_count": len(images),
@@ -249,7 +342,7 @@ def validate_yolo_dataset(config, yaml_path, holdout_manifest, *, image_pixel_ha
     ).hexdigest()
     return {
         "schema_version": SCHEMA,
-        "status": STATUS,
+        "status": PERCEPTUAL_STATUS if use_perceptual else STATUS,
         "accuracy_status": "NOT_EVALUATED",
         "dataset": {
             "root": str(dataset_root),
@@ -266,10 +359,15 @@ def validate_yolo_dataset(config, yaml_path, holdout_manifest, *, image_pixel_ha
             "negative_image_count": sum(value["negative_image_count"] for value in split_reports.values()),
         },
         "holdout": {
-            "schema_version": HOLDOUT_SCHEMA,
-            "frame_count": len(heldout),
+            "schema_version": heldout["schema_version"],
+            "frame_count": len(heldout["exact_hashes"]),
             "frames_fingerprint_sha256": holdout_manifest.get("frames_fingerprint_sha256"),
             "pixel_overlap_count": 0,
+            "perceptual_match_count": 0 if use_perceptual else None,
+            "perceptual_thresholds": {
+                "dhash64_max_hamming": DHASH64_MAX_DISTANCE,
+                "phash64_max_hamming": PHASH64_MAX_DISTANCE,
+            } if use_perceptual else None,
         },
         "files": rows,
     }

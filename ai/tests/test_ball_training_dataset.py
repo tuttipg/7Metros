@@ -1,14 +1,24 @@
 import hashlib
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from sevenmetros_ai.ball_holdout import SCHEMA as HOLDOUT_SCHEMA
-from sevenmetros_ai.ball_training_dataset import STATUS, validate_yolo_dataset
+from sevenmetros_ai.ball_holdout import PERCEPTUAL_SCHEMA, SCHEMA as HOLDOUT_SCHEMA
+from sevenmetros_ai.ball_training_dataset import (
+    PERCEPTUAL_STATUS,
+    STATUS,
+    validate_yolo_dataset,
+)
 
 
 def fake_pixel_hash(path):
     return hashlib.sha256(b"decoded:" + Path(path).read_bytes()).hexdigest()
+
+
+def fake_perceptual_hash(path):
+    digest = hashlib.sha256(b"perceptual:" + Path(path).read_bytes()).hexdigest()
+    return {"dhash64": digest[:16], "phash64": digest[16:32]}
 
 
 class BallTrainingDatasetTests(unittest.TestCase):
@@ -29,6 +39,26 @@ class BallTrainingDatasetTests(unittest.TestCase):
             "frames": [{"frame_index": 7, "pixel_sha256": "a" * 64}],
         }
         return config, root / "data.yaml", holdout
+
+    def perceptual_holdout(self, holdout, dhash64="ffffffffffffffff", phash64="ffffffffffffffff"):
+        frames = [{
+            **holdout["frames"][0],
+            "dhash64": dhash64,
+            "phash64": phash64,
+        }]
+        holdout.update({
+            "schema_version": PERCEPTUAL_SCHEMA,
+            "perceptual_match": {
+                "logic": "dhash64_distance_lte_AND_phash64_distance_lte",
+                "dhash64_max_hamming": 3,
+                "phash64_max_hamming": 2,
+            },
+            "frames": frames,
+            "frames_fingerprint_sha256": hashlib.sha256(
+                json.dumps(frames, sort_keys=True, separators=(",", ":")).encode("ascii")
+            ).hexdigest(),
+        })
+        return holdout
 
     def test_accepts_complete_single_class_dataset_deterministically(self):
         with tempfile.TemporaryDirectory() as root:
@@ -89,6 +119,46 @@ class BallTrainingDatasetTests(unittest.TestCase):
             holdout["frames"][0]["pixel_sha256"] = fake_pixel_hash(collision)
             with self.assertRaisesRegex(ValueError, "held-out pixel contamination"):
                 validate_yolo_dataset(config, yaml_path, holdout, image_pixel_hasher=fake_pixel_hash)
+
+    def test_accepts_perceptual_contract_and_records_hashes(self):
+        with tempfile.TemporaryDirectory() as root:
+            config, yaml_path, holdout = self.dataset(root)
+            self.perceptual_holdout(holdout)
+            report = validate_yolo_dataset(
+                config, yaml_path, holdout,
+                image_pixel_hasher=fake_pixel_hash,
+                image_perceptual_hasher=fake_perceptual_hash,
+            )
+            self.assertEqual(report["status"], PERCEPTUAL_STATUS)
+            self.assertEqual(report["holdout"]["perceptual_match_count"], 0)
+            self.assertIn("dhash64", report["files"][0])
+
+    def test_rejects_near_perceptual_heldout_collision(self):
+        with tempfile.TemporaryDirectory() as root:
+            config, yaml_path, holdout = self.dataset(root)
+            target = Path(root) / "images/val/sample-2.jpg"
+            target_hash = fake_perceptual_hash(target)
+            near_dhash = f"{int(target_hash['dhash64'], 16) ^ 0b111:016x}"
+            near_phash = f"{int(target_hash['phash64'], 16) ^ 0b11:016x}"
+            self.perceptual_holdout(holdout, near_dhash, near_phash)
+            with self.assertRaisesRegex(ValueError, "perceptual contamination.*dHash=3, pHash=2"):
+                validate_yolo_dataset(
+                    config, yaml_path, holdout,
+                    image_pixel_hasher=fake_pixel_hash,
+                    image_perceptual_hasher=fake_perceptual_hash,
+                )
+
+    def test_rejects_perceptual_threshold_drift(self):
+        with tempfile.TemporaryDirectory() as root:
+            config, yaml_path, holdout = self.dataset(root)
+            self.perceptual_holdout(holdout)
+            holdout["perceptual_match"]["dhash64_max_hamming"] = 4
+            with self.assertRaisesRegex(ValueError, "thresholds differ"):
+                validate_yolo_dataset(
+                    config, yaml_path, holdout,
+                    image_pixel_hasher=fake_pixel_hash,
+                    image_perceptual_hasher=fake_perceptual_hash,
+                )
 
     def test_rejects_training_split_with_only_negatives(self):
         with tempfile.TemporaryDirectory() as root:

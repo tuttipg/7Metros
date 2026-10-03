@@ -216,6 +216,20 @@ python build_ball_holdout_manifest.py \
 Esta lista permite rechazar copias pixel-idénticas en futuros datasets de
 training. No detecta por sí sola cuadros recortados o recodificados.
 
+La variante perceptual agrega dHash/pHash con umbrales fijos, medidos sobre los
+113 cuadros reales, para bloquear también copias JPEG o redimensionadas:
+
+```bash
+python build_ball_holdout_manifest.py \
+  --video fixture120.mp4 \
+  --detection-cache evidence/ball/yolo11n_ball_gt_cache_v2_runtime_002_960_2026-10-03.json \
+  --perceptual \
+  --output evidence/ball/ball_holdout_perceptual_manifest.json
+```
+
+El match exige simultáneamente distancia dHash ≤3 y pHash ≤2. Es un guard de
+contaminación conservador, no un clasificador de imágenes; no cubre recortes.
+
 Antes de entrenar, `validate_ball_training_dataset.py` exige un dataset YOLO
 local con splits `train`/`val`/`test`, una sola clase pelota, pares completos de
 imagen/label, geometría normalizada válida, al menos una caja positiva de
@@ -224,7 +238,7 @@ training y ausencia de imágenes duplicadas o píxeles held-out:
 ```bash
 python validate_ball_training_dataset.py \
   --data-yaml /ruta/dataset/data.yaml \
-  --holdout-manifest evidence/ball/ball_holdout_pixel_manifest_2026-10-03.json \
+  --holdout-manifest evidence/ball/ball_holdout_perceptual_manifest_2026-10-03.json \
   --output /ruta/dataset-validation.json
 ```
 

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from sevenmetros_ai.ball_holdout import (
     build_holdout_manifest,
+    build_perceptual_holdout_manifest,
     extract_pixel_hashes,
     load_cache_contract,
     pixel_sha256,
@@ -99,6 +100,22 @@ class BallHoldoutTests(unittest.TestCase):
             self.assertEqual(result["frame_count"], 2)
             self.assertEqual(result["status"], "HELDOUT_PIXEL_FINGERPRINTS_NOT_MODEL_ACCURACY")
             self.assertEqual(len(result["frames_fingerprint_sha256"]), 64)
+
+    def test_builds_perceptual_manifest_with_fixed_thresholds(self):
+        with tempfile.TemporaryDirectory() as root:
+            video, cache = self.files(root)
+            frames = [FakeFrame(value) for value in range(3)]
+            def fake_perceptual(frame):
+                value = frame.pixels[0]
+                return {"dhash64": f"{value:016x}", "phash64": f"{value + 10:016x}"}
+            result = build_perceptual_holdout_manifest(
+                video, cache, cv2_module=FakeCV2(frames),
+                perceptual_hasher=fake_perceptual,
+            )
+            self.assertEqual(result["frame_count"], 2)
+            self.assertEqual(result["perceptual_match"]["dhash64_max_hamming"], 3)
+            self.assertEqual(result["perceptual_match"]["phash64_max_hamming"], 2)
+            self.assertTrue(result["status"].endswith("NOT_MODEL_ACCURACY"))
 
 
 if __name__ == "__main__":
