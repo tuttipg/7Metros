@@ -34,3 +34,18 @@ class FilterTests(unittest.TestCase):
             self.skipTest('optional vision dependencies not installed')
         from sevenmetros_ai.fixture_filter import BlueCourtClassifier
         self.assertEqual(BlueCourtClassifier().classify(np.zeros((100,100,3),dtype=np.uint8),[Detection(0,0,20,40)]),[])
+
+    def test_blue_court_presence_reuses_classifier_threshold(self):
+        try:
+            import cv2
+            import numpy as np
+        except ImportError:
+            self.skipTest('optional vision dependencies not installed')
+        from sevenmetros_ai.fixture_filter import blue_court_fraction, blue_court_present
+        image = np.zeros((100, 100, 3), dtype=np.uint8)
+        image[20:, :] = (220, 150, 70)
+        self.assertGreater(blue_court_fraction(image), .15)
+        self.assertTrue(blue_court_present(image))
+        self.assertFalse(blue_court_present(np.zeros_like(image)))
+        with self.assertRaises(ValueError):
+            blue_court_present(image, min_fraction=0)

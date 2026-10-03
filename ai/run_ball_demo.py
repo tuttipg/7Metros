@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 
 from sevenmetros_ai.ball import YoloSportsBallDetector
+from sevenmetros_ai.fixture_filter import blue_court_present
 
 
 def sha256_file(path):
@@ -35,7 +36,8 @@ def load_track_window(path, start_frame, end_frame):
 
 
 def run(video, player_tracks, model, output_video, output_jsonl, *, start_frame=0,
-        frames=105, confidence=.05, imgsz=640, expected_model_sha256=None):
+        frames=105, confidence=.05, imgsz=640, expected_model_sha256=None,
+        require_blue_court=False, min_blue_court_fraction=.15):
     try:
         import cv2
     except ImportError as exc:  # pragma: no cover - optional vision runtime
@@ -72,7 +74,7 @@ def run(video, player_tracks, model, output_video, output_jsonl, *, start_frame=
         cap.release()
         raise RuntimeError(f"Could not open video writer: {output_video}")
 
-    candidate_count = candidate_frames = 0
+    candidate_count = candidate_frames = scene_guard_removed = 0
     try:
         with output_jsonl.open("w", encoding="utf-8") as stream:
             for frame_index in range(start_frame, end_frame):
@@ -81,6 +83,14 @@ def run(video, player_tracks, model, output_video, output_jsonl, *, start_frame=
                     raise RuntimeError(f"Video ended at frame {frame_index}")
                 clean = frame.copy()
                 candidates = detector.detect(clean)
+                court_present = None
+                if require_blue_court:
+                    court_present = blue_court_present(
+                        clean, min_fraction=min_blue_court_fraction,
+                    )
+                    if not court_present:
+                        scene_guard_removed += len(candidates)
+                        candidates = []
                 if candidates:
                     candidate_frames += 1
                     candidate_count += len(candidates)
@@ -127,6 +137,10 @@ def run(video, player_tracks, model, output_video, output_jsonl, *, start_frame=
                     "frame_index": frame_index,
                     "timestamp_ms": round(frame_index * 1000.0 / fps, 3),
                     "ball_candidates": serialized,
+                    "blue_court_guard": {
+                        "enabled": bool(require_blue_court),
+                        "court_present": court_present,
+                    },
                 }) + "\n")
     finally:
         cap.release(); writer.release()
@@ -139,6 +153,11 @@ def run(video, player_tracks, model, output_video, output_jsonl, *, start_frame=
         "imgsz": int(imgsz),
         "candidate_frames": candidate_frames,
         "candidates": candidate_count,
+        "blue_court_guard_enabled": bool(require_blue_court),
+        "min_blue_court_fraction": (
+            float(min_blue_court_fraction) if require_blue_court else None
+        ),
+        "scene_guard_removed_candidates": scene_guard_removed,
         "model_sha256": model_sha,
         "output_video": str(output_video),
         "output_jsonl": str(output_jsonl),
@@ -157,6 +176,8 @@ def main():
     parser.add_argument("--confidence", type=float, default=.05)
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--expected-model-sha256")
+    parser.add_argument("--require-blue-court", action="store_true")
+    parser.add_argument("--min-blue-court-fraction", type=float, default=.15)
     args = parser.parse_args()
     print(json.dumps(run(**vars(args)), indent=2))
 

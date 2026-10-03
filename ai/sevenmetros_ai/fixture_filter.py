@@ -1,5 +1,6 @@
-"""Opt-in heuristic for this blue-floor fixture; not a general court model."""
+"""Opt-in heuristics for this blue-floor fixture; not a general court model."""
 from dataclasses import replace
+from math import isfinite
 from .tracking import bbox_iou
 from .teams import representative_jersey_rgb, classify_rgb
 
@@ -12,16 +13,40 @@ def suppress_duplicates(detections, threshold=.55):
     return kept
 
 
+def _largest_blue_court_contour(frame):
+    import cv2
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv, (85, 60, 95), (120, 255, 255))
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return None, 0.0
+    contour = max(contours, key=cv2.contourArea)
+    pixels = int(frame.shape[0]) * int(frame.shape[1])
+    if pixels <= 0:
+        raise ValueError("frame must have positive width and height")
+    return contour, float(cv2.contourArea(contour)) / pixels
+
+
+def blue_court_fraction(frame):
+    """Return the largest connected blue-court contour as a frame fraction."""
+    return _largest_blue_court_contour(frame)[1]
+
+
+def blue_court_present(frame, *, min_fraction=.15):
+    """Apply the fixture's existing fail-closed court-presence criterion."""
+    threshold = float(min_fraction)
+    if not isfinite(threshold) or not 0 < threshold <= 1:
+        raise ValueError("min_fraction must be in (0,1]")
+    return blue_court_fraction(frame) >= threshold
+
+
 class BlueCourtClassifier:
     def classify(self, frame, detections):
         import cv2
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(hsv, (85, 60, 95), (120, 255, 255))
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if not contours:
+        contour, fraction = _largest_blue_court_contour(frame)
+        if contour is None:
             return []  # no court evidence: fail closed
-        contour = max(contours, key=cv2.contourArea)
-        if cv2.contourArea(contour) < frame.shape[0]*frame.shape[1]*.15:
+        if fraction < .15:
             return []
         hull = cv2.convexHull(contour)
         result = []
