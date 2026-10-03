@@ -1,8 +1,15 @@
+import hashlib
+import json
+from pathlib import Path
+import tempfile
 import unittest
 
 from benchmark_ball_temporal_ground_truth import (
+    benchmark,
+    build_ball_detection_cache,
     evaluate_visible_sequences,
     is_non_regressive,
+    load_ball_detection_cache,
     replay_sequence,
 )
 from sevenmetros_ai.tracking import Detection
@@ -79,6 +86,117 @@ class TemporalBallGroundTruthBenchmarkTests(unittest.TestCase):
         }
         with self.assertRaisesRegex(ValueError, "duplicate visible sequence name"):
             evaluate_visible_sequences([document, document], {"candidate": {}})
+
+    def test_strict_cache_round_trip_preserves_detections_and_court_fraction(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            video, model, cache = root / "clip.mp4", root / "model.pt", root / "cache.json"
+            video.write_bytes(b"video")
+            model.write_bytes(b"model")
+            documents = [{
+                "sequence": {"name": "flight", "start_frame": 5, "end_frame_exclusive": 7},
+            }]
+            payload = build_ball_detection_cache(
+                video,
+                model,
+                documents,
+                {5: [ball(10, .2)], 6: []},
+                {5: .6, 6: .7},
+                low_threshold=.02,
+                imgsz=960,
+            )
+            cache.write_text(json.dumps(payload), encoding="utf-8")
+            rows, fractions = load_ball_detection_cache(
+                cache,
+                video=video,
+                model=model,
+                documents=documents,
+                low_threshold=.02,
+                imgsz=960,
+            )
+            self.assertEqual(rows[5][0].label, "ball")
+            self.assertEqual([
+                rows[5][0].x1, rows[5][0].y1, rows[5][0].x2, rows[5][0].y2,
+            ], [10.0, 10.0, 20.0, 20.0])
+            self.assertEqual(rows[6], [])
+            self.assertEqual(fractions, {5: .6, 6: .7})
+
+    def test_strict_cache_rejects_configuration_or_frame_mismatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            video, model, cache = root / "clip.mp4", root / "model.pt", root / "cache.json"
+            video.write_bytes(b"video")
+            model.write_bytes(b"model")
+            documents = [{
+                "sequence": {"name": "flight", "start_frame": 5, "end_frame_exclusive": 7},
+            }]
+            payload = build_ball_detection_cache(
+                video, model, documents, {5: [], 6: []}, {5: .6, 6: .7},
+                low_threshold=.02, imgsz=960,
+            )
+            cache.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "configuration mismatch"):
+                load_ball_detection_cache(
+                    cache, video=video, model=model, documents=documents,
+                    low_threshold=.03, imgsz=960,
+                )
+            payload["frames"].pop()
+            cache.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "incomplete, duplicated, or out of order"):
+                load_ball_detection_cache(
+                    cache, video=video, model=model, documents=documents,
+                    low_threshold=.02, imgsz=960,
+                )
+
+    def test_benchmark_replays_cache_without_neural_inference(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            video, model = root / "clip.mp4", root / "model.pt"
+            ground_truth, cache = root / "gt.json", root / "cache.json"
+            video.write_bytes(b"video")
+            model.write_bytes(b"model")
+            document = {
+                "schema_version": "sevenmetros.ball-gt/v1",
+                "source": {
+                    "video_sha256": hashlib.sha256(b"video").hexdigest(),
+                    "width": 100,
+                    "height": 100,
+                },
+                "sequence": {
+                    "name": "flight", "start_frame": 0, "end_frame_exclusive": 2,
+                },
+                "annotations": [
+                    {"frame_index": 0, "state": "visible", "bbox_xyxy": [10, 10, 20, 20]},
+                    {"frame_index": 1, "state": "out_of_frame", "bbox_xyxy": None,
+                     "note": "human-confirmed negative"},
+                ],
+            }
+            ground_truth.write_text(json.dumps(document), encoding="utf-8")
+            cache.write_text(json.dumps(build_ball_detection_cache(
+                video,
+                model,
+                [document],
+                {0: [ball(10, .2)], 1: []},
+                {0: .6, 1: .6},
+                low_threshold=.02,
+                imgsz=960,
+            )), encoding="utf-8")
+            result = benchmark(
+                video, model, [ground_truth], cache_input=cache,
+            )
+            self.assertEqual(
+                result["processing"]["detector"],
+                "STRICT_DETECTION_CACHE_REPLAY_NO_NEURAL_INFERENCE",
+            )
+            self.assertEqual(result["blue_court_plus_temporal"]["matched"], 1)
+
+    def test_cache_output_collision_fails_before_inference(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cache = Path(directory) / "existing.json"
+            cache.write_text("do not overwrite", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "already exists"):
+                benchmark("missing.mp4", "missing.pt", [], cache_output=cache)
+            self.assertEqual(cache.read_text(encoding="utf-8"), "do not overwrite")
 
 
 if __name__ == "__main__":
