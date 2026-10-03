@@ -202,6 +202,20 @@ El estado `ADMITTED_FOR_HELDOUT_EVALUATION_NOT_ACCURACY` habilita únicamente el
 benchmark; no afirma precisión. Un `.pt` de PyTorch debe provenir además de una
 fuente confiable, porque cargar checkpoints no confiables puede ejecutar código.
 
+Los 113 cuadros reservados para evaluar pelota tienen además una huella de
+píxeles reproducible. Se regenera únicamente con el MP4 cuyo hash coincide con
+la caché v2:
+
+```bash
+python build_ball_holdout_manifest.py \
+  --video fixture120.mp4 \
+  --detection-cache evidence/ball/yolo11n_ball_gt_cache_v2_runtime_002_960_2026-10-03.json \
+  --output evidence/ball/ball_holdout_pixel_manifest.json
+```
+
+Esta lista permite rechazar copias pixel-idénticas en futuros datasets de
+training. No detecta por sí sola cuadros recortados o recodificados.
+
 ## Ground truth humano
 
 `prepare_mot_annotation.py` convierte un intervalo y un JSONL de tracker en una tarea MOTChallenge revisable. El seed automático nunca se considera ground truth.
