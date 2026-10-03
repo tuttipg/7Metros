@@ -6,23 +6,34 @@ on:
       - tmp/ball-model-bootstrap-20261002
 
 jobs:
-  fetch-model:
+  fetch-handball-data:
     runs-on: ubuntu-latest
     steps:
-      - name: Download exact stock YOLO11n control
+      - name: Install public-dataset client
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'roboflow==1.1.48'
+      - name: Download public handball dataset without private credentials
         run: |
           set -euxo pipefail
-          curl -L --fail --retry 3 \
-            'https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt' \
-            -o yolo11n.pt
-          echo '0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1  yolo11n.pt' > expected.sha256
-          sha256sum -c expected.sha256
-          sha256sum yolo11n.pt > sha256.txt
-      - name: Upload model artifact
+          python - <<'PY'
+          import roboflow
+          ds = roboflow.download_dataset(
+              dataset_url='https://universe.roboflow.com/ahmeds-workspace-fbvwb/handball-ball-player-detection/dataset/2',
+              model_format='yolov8',
+              location='handball_dataset',
+          )
+          print(ds.location)
+          PY
+          find handball_dataset -maxdepth 3 -type f | sort | head -100
+          find handball_dataset -type f | wc -l | tee file_count.txt
+          sha256sum handball_dataset/data.yaml > dataset_yaml.sha256
+      - name: Upload dataset artifact
         uses: actions/upload-artifact@v4
         with:
-          name: stock-yolo11n-control
+          name: public-handball-dataset-v2
           path: |
-            yolo11n.pt
-            sha256.txt
+            handball_dataset/
+            file_count.txt
+            dataset_yaml.sha256
           retention-days: 1
