@@ -3,9 +3,6 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
-
-import numpy as np
 
 from sevenmetros_ai.ball_holdout import (
     build_holdout_manifest,
@@ -13,6 +10,22 @@ from sevenmetros_ai.ball_holdout import (
     load_cache_contract,
     pixel_sha256,
 )
+
+
+class FakeFrame:
+    shape = (2, 2, 3)
+    dtype = "uint8"
+    def __init__(self, value=0, *, shape=None):
+        if shape is not None:
+            self.shape = shape
+        size = 1
+        for dimension in self.shape:
+            size *= dimension
+        self.pixels = bytes([value]) * size
+    def tobytes(self, order="C"):
+        if order != "C":
+            raise ValueError("unexpected order")
+        return self.pixels
 
 
 class FakeCapture:
@@ -45,11 +58,11 @@ class BallHoldoutTests(unittest.TestCase):
         return video, cache
 
     def test_pixel_hash_binds_shape_dtype_and_bytes(self):
-        first = np.zeros((2, 3, 3), dtype=np.uint8)
-        changed = first.copy(); changed[0, 0, 0] = 1
+        first = FakeFrame(0)
+        changed = FakeFrame(1)
         self.assertNotEqual(pixel_sha256(first), pixel_sha256(changed))
         with self.assertRaisesRegex(ValueError, "HxWx3"):
-            pixel_sha256(np.zeros((2, 3), dtype=np.uint8))
+            pixel_sha256(FakeFrame(0, shape=(2, 3)))
 
     def test_cache_contract_requires_exact_video_and_unique_frames(self):
         with tempfile.TemporaryDirectory() as root:
@@ -67,21 +80,21 @@ class BallHoldoutTests(unittest.TestCase):
                 load_cache_contract(cache, video)
 
     def test_extracts_only_requested_frames_and_releases_video(self):
-        frames = [np.full((2, 2, 3), value, dtype=np.uint8) for value in range(3)]
+        frames = [FakeFrame(value) for value in range(3)]
         fake = FakeCV2(frames)
         rows = extract_pixel_hashes("unused.mp4", [0, 2], cv2_module=fake)
         self.assertEqual([row["frame_index"] for row in rows], [0, 2])
         self.assertTrue(fake.capture.released)
 
     def test_fails_when_video_ends_before_contract(self):
-        fake = FakeCV2([np.zeros((2, 2, 3), dtype=np.uint8)])
+        fake = FakeCV2([FakeFrame()])
         with self.assertRaisesRegex(RuntimeError, "video ended"):
             extract_pixel_hashes("unused.mp4", [0, 2], cv2_module=fake)
 
     def test_builds_deterministic_non_accuracy_manifest(self):
         with tempfile.TemporaryDirectory() as root:
             video, cache = self.files(root)
-            frames = [np.full((2, 2, 3), value, dtype=np.uint8) for value in range(3)]
+            frames = [FakeFrame(value) for value in range(3)]
             result = build_holdout_manifest(video, cache, cv2_module=FakeCV2(frames))
             self.assertEqual(result["frame_count"], 2)
             self.assertEqual(result["status"], "HELDOUT_PIXEL_FINGERPRINTS_NOT_MODEL_ACCURACY")
