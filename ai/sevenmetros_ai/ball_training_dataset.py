@@ -20,12 +20,17 @@ from .ball_holdout import (
 
 
 SCHEMA = "sevenmetros.ball-training-dataset-validation/v1"
+REJECTION_SCHEMA = "sevenmetros.ball-training-dataset-rejection/v1"
+REJECTED_STATUS = "REJECTED_BALL_TRAINING_DATASET"
 STATUS = "STRUCTURALLY_VALID_AND_HOLDOUT_EXCLUDED_NOT_MODEL_ACCURACY"
 PERCEPTUAL_STATUS = "STRUCTURALLY_VALID_AND_HOLDOUT_EXCLUDED_EXACT_AND_PERCEPTUAL_NOT_MODEL_ACCURACY"
 IMAGE_SUFFIXES = {".bmp", ".jpeg", ".jpg", ".png", ".webp"}
 BALL_NAMES = {"ball", "ballon", "balon", "pelota", "handball"}
 HEX_SHA256 = re.compile(r"^[0-9a-f]{64}$")
 HEX64 = re.compile(r"^[0-9a-f]{16}$")
+# Roboflow exports can place an edge a few millionths beyond 1.0 after decimal
+# serialization. This is far below one pixel at normal video resolutions.
+YOLO_BOUNDARY_EPSILON = 1e-5
 
 
 def _canonical_ball_name(value):
@@ -111,7 +116,12 @@ def _parse_label(path):
             raise ValueError(f"{path}:{line_number}: center must be normalized")
         if not (0.0 < width <= 1.0 and 0.0 < height <= 1.0):
             raise ValueError(f"{path}:{line_number}: size must be normalized and positive")
-        if x - width / 2 < 0 or x + width / 2 > 1 or y - height / 2 < 0 or y + height / 2 > 1:
+        if (
+            x - width / 2 < -YOLO_BOUNDARY_EPSILON
+            or x + width / 2 > 1 + YOLO_BOUNDARY_EPSILON
+            or y - height / 2 < -YOLO_BOUNDARY_EPSILON
+            or y + height / 2 > 1 + YOLO_BOUNDARY_EPSILON
+        ):
             raise ValueError(f"{path}:{line_number}: box extends outside the image")
         boxes.append(values)
     return boxes
@@ -219,6 +229,33 @@ def load_dataset_yaml(path):
     if not isinstance(payload, dict):
         raise ValueError("dataset YAML must contain a mapping")
     return payload
+
+
+def dataset_rejection_report(yaml_path, holdout_manifest_path, error):
+    """Build portable evidence for a fail-closed dataset rejection."""
+    yaml_path = Path(yaml_path)
+    holdout_manifest_path = Path(holdout_manifest_path)
+    message = str(error)
+    try:
+        root = str(yaml_path.resolve().parent)
+    except OSError:
+        root = str(yaml_path.parent)
+    if root:
+        message = message.replace(root, "<dataset_root>")
+    report = {
+        "schema_version": REJECTION_SCHEMA,
+        "status": REJECTED_STATUS,
+        "accuracy_status": "NOT_EVALUATED",
+        "error_type": type(error).__name__,
+        "error": message,
+        "data_yaml_name": yaml_path.name,
+        "holdout_manifest_name": holdout_manifest_path.name,
+    }
+    if yaml_path.is_file():
+        report["data_yaml_sha256"] = sha256_file(yaml_path)
+    if holdout_manifest_path.is_file():
+        report["holdout_manifest_sha256"] = sha256_file(holdout_manifest_path)
+    return report
 
 
 def validate_yolo_dataset(
@@ -345,7 +382,7 @@ def validate_yolo_dataset(
         "status": PERCEPTUAL_STATUS if use_perceptual else STATUS,
         "accuracy_status": "NOT_EVALUATED",
         "dataset": {
-            "root": str(dataset_root),
+            "root": "<dataset_root>",
             "class_count": 1,
             "class_id": 0,
             "class_name": class_name,

@@ -5,7 +5,11 @@ import json
 import sys
 from pathlib import Path
 
-from sevenmetros_ai.ball_training_dataset import load_dataset_yaml, validate_yolo_dataset
+from sevenmetros_ai.ball_training_dataset import (
+    dataset_rejection_report,
+    load_dataset_yaml,
+    validate_yolo_dataset,
+)
 
 
 def main():
@@ -22,7 +26,18 @@ def main():
             load_dataset_yaml(args.data_yaml), args.data_yaml, holdout,
         )
     except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
-        print(f"REJECTED: {exc}", file=sys.stderr)
+        report = dataset_rejection_report(
+            args.data_yaml, args.holdout_manifest, exc,
+        )
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(
+            json.dumps(report, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        print(json.dumps({
+            "status": report["status"],
+            "error": report["error"],
+        }, sort_keys=True), file=sys.stderr)
         return 2
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

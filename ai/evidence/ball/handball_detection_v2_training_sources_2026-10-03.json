@@ -1,0 +1,33 @@
+{
+  "dataset_title": "handball-detection v2 (2025-01-06)",
+  "domain": "team_handball",
+  "schema": "sevenmetros.ball-training-sources/v1",
+  "sources": [
+    {
+      "attribution": "Penalty Detection / Roboflow user; Git snapshot by Jacob Attard",
+      "license": {
+        "id": "CC-BY-4.0",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "obligations": [
+        "attribution"
+      ],
+      "role": "original_media",
+      "terms_accessed_on": "2026-10-03",
+      "url": "https://github.com/jacobattard/Thesis/blob/ebd05c73e8bffa3a537aed13ecb8174c4de4eeeb/training/handball-detection-2/README.dataset.txt"
+    },
+    {
+      "attribution": "Penalty Detection / Roboflow user; Git snapshot by Jacob Attard",
+      "license": {
+        "id": "CC-BY-4.0",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "obligations": [
+        "attribution"
+      ],
+      "role": "annotations",
+      "terms_accessed_on": "2026-10-03",
+      "url": "https://github.com/jacobattard/Thesis/blob/ebd05c73e8bffa3a537aed13ecb8174c4de4eeeb/training/handball-detection-2/README.dataset.txt"
+    }
+  ]
+}

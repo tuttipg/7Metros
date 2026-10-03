@@ -7,7 +7,9 @@ from pathlib import Path
 from sevenmetros_ai.ball_holdout import PERCEPTUAL_SCHEMA, SCHEMA as HOLDOUT_SCHEMA
 from sevenmetros_ai.ball_training_dataset import (
     PERCEPTUAL_STATUS,
+    REJECTED_STATUS,
     STATUS,
+    dataset_rejection_report,
     validate_yolo_dataset,
 )
 
@@ -112,6 +114,24 @@ class BallTrainingDatasetTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "outside the image"):
                 validate_yolo_dataset(config, yaml_path, holdout, image_pixel_hasher=fake_pixel_hash)
 
+    def test_accepts_serialization_roundoff_but_rejects_real_overflow(self):
+        with tempfile.TemporaryDirectory() as root:
+            config, yaml_path, holdout = self.dataset(root)
+            label = Path(root) / "labels/train/sample-1.txt"
+            label.write_text(
+                "0 0.9887161458333333 0.5 0.022570312500000002 0.2\n",
+                encoding="utf-8",
+            )
+            report = validate_yolo_dataset(
+                config, yaml_path, holdout, image_pixel_hasher=fake_pixel_hash,
+            )
+            self.assertEqual(report["dataset"]["root"], "<dataset_root>")
+            label.write_text("0 0.99 0.5 0.03 0.2\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "outside the image"):
+                validate_yolo_dataset(
+                    config, yaml_path, holdout, image_pixel_hasher=fake_pixel_hash,
+                )
+
     def test_rejects_exact_heldout_pixel_collision(self):
         with tempfile.TemporaryDirectory() as root:
             config, yaml_path, holdout = self.dataset(root)
@@ -173,6 +193,30 @@ class BallTrainingDatasetTests(unittest.TestCase):
             holdout["frame_count"] = 2
             with self.assertRaisesRegex(ValueError, "frame_count"):
                 validate_yolo_dataset(config, yaml_path, holdout, image_pixel_hasher=fake_pixel_hash)
+
+    def test_rejection_report_is_hashed_portable_and_not_accuracy(self):
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            yaml_path = root / "data.yaml"
+            holdout_path = root / "holdout.json"
+            yaml_path.write_text("names: [handball]\n", encoding="utf-8")
+            holdout_path.write_text('{"frame_count": 113}\n', encoding="utf-8")
+            error = ValueError(
+                f"{root}/train/labels/bad.txt:3: box extends outside the image"
+            )
+            report = dataset_rejection_report(yaml_path, holdout_path, error)
+            self.assertEqual(report["status"], REJECTED_STATUS)
+            self.assertEqual(report["accuracy_status"], "NOT_EVALUATED")
+            self.assertNotIn(str(root), report["error"])
+            self.assertIn("<dataset_root>/train/labels/bad.txt:3", report["error"])
+            self.assertEqual(
+                report["data_yaml_sha256"],
+                hashlib.sha256(yaml_path.read_bytes()).hexdigest(),
+            )
+            self.assertEqual(
+                report["holdout_manifest_sha256"],
+                hashlib.sha256(holdout_path.read_bytes()).hexdigest(),
+            )
 
 
 if __name__ == "__main__":
