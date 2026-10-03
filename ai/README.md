@@ -246,6 +246,22 @@ El estado `STRUCTURALLY_VALID_AND_HOLDOUT_EXCLUDED_NOT_MODEL_ACCURACY` sólo
 habilita el próximo paso del pipeline. No valida la calidad de las anotaciones,
 la licencia del dataset ni el rendimiento de un modelo entrenado.
 
+La licencia se controla por separado antes de descargar o entrenar. El manifest
+de fuentes debe cubrir tanto el medio original como las anotaciones, registrar
+atribución, URL de licencia y obligaciones. El modo `product` rechaza licencias
+`NC`; una licencia desconocida también falla cerrada:
+
+```bash
+python screen_ball_training_sources.py \
+  --manifest training-sources.json \
+  --intended-use product \
+  --output source-rights-screen.json
+```
+
+`SOURCE_RIGHTS_SCREEN_PASSED_NOT_DATASET_ADMISSION` sólo aprueba la
+compatibilidad documental de esas fuentes. Todavía exige descargar, hashear y
+validar el dataset; tampoco afirma calidad de labels ni precisión del modelo.
+
 ## Ground truth humano
 
 `prepare_mot_annotation.py` convierte un intervalo y un JSONL de tracker en una tarea MOTChallenge revisable. El seed automático nunca se considera ground truth.
