@@ -9,19 +9,22 @@ jobs:
   fetch-model:
     runs-on: ubuntu-latest
     steps:
-      - name: Download ONNX model
+      - name: Download football-ball YOLO11n model and runtime wheel
         run: |
           set -euxo pipefail
           curl -L --fail --retry 3 \
-            'https://huggingface.co/acatorcini/yolov9-soccer-ball/resolve/main/v9b_best.onnx?download=true' \
-            -o v9b_best.onnx
-          sha256sum v9b_best.onnx | tee sha256.txt
-          test "$(cut -d' ' -f1 sha256.txt)" = "9fd2031e5bced9dff47a48bae8c6809dd56493124ef8924ae28a3ce26a17a441"
+            'https://huggingface.co/martinjolif/yolo-football-ball-detection/resolve/main/yolo-football-ball-detection.pt?download=true' \
+            -o yolo-football-ball-detection.pt
+          echo 'fb37942448e7de08745e8aab148d0794f680a738ddd55e5f17abe9ab2d6313fb  yolo-football-ball-detection.pt' > expected.sha256
+          sha256sum -c expected.sha256
+          python -m pip download --no-deps 'ultralytics==8.4.163' -d wheelhouse
+          sha256sum yolo-football-ball-detection.pt wheelhouse/* > sha256.txt
       - name: Upload model artifact
         uses: actions/upload-artifact@v4
         with:
-          name: soccer-ball-onnx
+          name: football-ball-yolo11n
           path: |
-            v9b_best.onnx
+            yolo-football-ball-detection.pt
+            wheelhouse/
             sha256.txt
           retention-days: 1
