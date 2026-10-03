@@ -183,6 +183,25 @@ Un candidato sólo pasa el guardrail si **en cada secuencia**:
 
 Una mejora grande en un GT no puede ocultar una regresión en el otro.
 
+## Admisión de modelos especializados de pelota
+
+Antes de ejecutar un checkpoint externo, `admit_ball_model.py` exige un manifest
+de procedencia v1, verifica el SHA-256 antes de deserializar, licencia y fuentes
+de entrenamiento, exclusión explícita del video held-out y que el checkpoint sea
+`detect` de una sola clase con el ID/nombre declarados:
+
+```bash
+python admit_ball_model.py \
+  --model handball.pt \
+  --provenance handball.provenance.json \
+  --evaluation-video-sha256 SHA256_DEL_VIDEO \
+  --output admission.json
+```
+
+El estado `ADMITTED_FOR_HELDOUT_EVALUATION_NOT_ACCURACY` habilita únicamente el
+benchmark; no afirma precisión. Un `.pt` de PyTorch debe provenir además de una
+fuente confiable, porque cargar checkpoints no confiables puede ejecutar código.
+
 ## Ground truth humano
 
 `prepare_mot_annotation.py` convierte un intervalo y un JSONL de tracker en una tarea MOTChallenge revisable. El seed automático nunca se considera ground truth.
