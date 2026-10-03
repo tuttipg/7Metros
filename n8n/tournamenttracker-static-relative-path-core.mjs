@@ -24,6 +24,7 @@ function classifyRelativePath(raw) {
   if (!raw || raw.length > MAX_PATH_LENGTH) return { accepted: false, reason: 'invalid_length' };
   if (!raw.startsWith('/') || raw.startsWith('//')) return { accepted: false, reason: 'root_relative_path_required' };
   if (AMBIGUOUS_RAW_CHARS.test(raw)) return { accepted: false, reason: 'ambiguous_raw_characters' };
+  if (raw.slice(1).includes('//')) return { accepted: false, reason: 'ambiguous_repeated_separator' };
   if (raw.includes('${') || raw.includes('?') || raw.includes('#') || /%[0-9a-f]{2}/i.test(raw)) {
     return { accepted: false, reason: 'dynamic_or_ambiguous_path' };
   }
@@ -90,6 +91,7 @@ export function extractTournamentTrackerStaticRelativePaths({ body, assetClassif
       queryAllowed: false,
       fragmentAllowed: false,
       percentEncodingAllowed: false,
+      repeatedSeparatorsAllowed: false,
       writesAllowed: false,
       authAllowed: false,
     },
