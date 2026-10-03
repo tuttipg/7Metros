@@ -19,6 +19,17 @@ def ball(x, confidence):
     return Detection(x, 10, x + 10, 20, confidence=confidence, label="ball")
 
 
+RUNTIME = {
+    "python_version": "3.12.0",
+    "opencv_version": "4.11.0",
+    "ultralytics_version": "8.4.163",
+    "torch_version": "2.14.0+cpu",
+    "device": "cpu",
+    "machine": "x86_64",
+    "torch_num_threads": 4,
+}
+
+
 class TemporalBallGroundTruthBenchmarkTests(unittest.TestCase):
     def test_bridge_selects_returning_true_box_without_interpolation(self):
         rows = {
@@ -104,7 +115,12 @@ class TemporalBallGroundTruthBenchmarkTests(unittest.TestCase):
                 {5: .6, 6: .7},
                 low_threshold=.02,
                 imgsz=960,
+                inference_runtime=RUNTIME,
             )
+            self.assertEqual(
+                payload["schema_version"], "sevenmetros.ball-detection-cache/v2",
+            )
+            self.assertEqual(payload["inference_runtime"], RUNTIME)
             cache.write_text(json.dumps(payload), encoding="utf-8")
             rows, fractions = load_ball_detection_cache(
                 cache,
@@ -121,6 +137,53 @@ class TemporalBallGroundTruthBenchmarkTests(unittest.TestCase):
             self.assertEqual(rows[6], [])
             self.assertEqual(fractions, {5: .6, 6: .7})
 
+    def test_legacy_v1_cache_remains_replayable_without_runtime_imports(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            video, model, cache = root / "clip.mp4", root / "model.pt", root / "cache.json"
+            video.write_bytes(b"video")
+            model.write_bytes(b"model")
+            documents = [{
+                "sequence": {"name": "flight", "start_frame": 5, "end_frame_exclusive": 6},
+            }]
+            payload = build_ball_detection_cache(
+                video, model, documents, {5: [ball(10, .2)]}, {5: .6},
+                low_threshold=.02, imgsz=960, inference_runtime=RUNTIME,
+            )
+            payload["schema_version"] = "sevenmetros.ball-detection-cache/v1"
+            payload.pop("inference_runtime")
+            cache.write_text(json.dumps(payload), encoding="utf-8")
+            rows, fractions = load_ball_detection_cache(
+                cache, video=video, model=model, documents=documents,
+                low_threshold=.02, imgsz=960,
+            )
+            self.assertEqual(rows[5][0].confidence, .2)
+            self.assertEqual(fractions[5], .6)
+
+    def test_v2_cache_rejects_missing_or_invalid_runtime_provenance(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            video, model, cache = root / "clip.mp4", root / "model.pt", root / "cache.json"
+            video.write_bytes(b"video")
+            model.write_bytes(b"model")
+            documents = [{
+                "sequence": {"name": "flight", "start_frame": 5, "end_frame_exclusive": 6},
+            }]
+            payload = build_ball_detection_cache(
+                video, model, documents, {5: []}, {5: .6},
+                low_threshold=.02, imgsz=960, inference_runtime=RUNTIME,
+            )
+            for provenance in (None, {**RUNTIME, "torch_num_threads": 0}):
+                payload["inference_runtime"] = provenance
+                cache.write_text(json.dumps(payload), encoding="utf-8")
+                with self.subTest(provenance=provenance), self.assertRaisesRegex(
+                    ValueError, "runtime",
+                ):
+                    load_ball_detection_cache(
+                        cache, video=video, model=model, documents=documents,
+                        low_threshold=.02, imgsz=960,
+                    )
+
     def test_strict_cache_rejects_configuration_or_frame_mismatch(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -133,6 +196,7 @@ class TemporalBallGroundTruthBenchmarkTests(unittest.TestCase):
             payload = build_ball_detection_cache(
                 video, model, documents, {5: [], 6: []}, {5: .6, 6: .7},
                 low_threshold=.02, imgsz=960,
+                inference_runtime=RUNTIME,
             )
             cache.write_text(json.dumps(payload), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "configuration mismatch"):
@@ -167,6 +231,7 @@ class TemporalBallGroundTruthBenchmarkTests(unittest.TestCase):
                     build_ball_detection_cache(
                         video, model, documents, {5: []}, {5: .6},
                         low_threshold=.10, imgsz=640, class_id=class_id,
+                        inference_runtime=RUNTIME,
                     )
 
     def test_benchmark_replays_cache_without_neural_inference(self):
@@ -201,6 +266,7 @@ class TemporalBallGroundTruthBenchmarkTests(unittest.TestCase):
                 {0: .6, 1: .6},
                 low_threshold=.02,
                 imgsz=960,
+                inference_runtime=RUNTIME,
             )), encoding="utf-8")
             result = benchmark(
                 video, model, [ground_truth], cache_input=cache,
@@ -208,6 +274,13 @@ class TemporalBallGroundTruthBenchmarkTests(unittest.TestCase):
             self.assertEqual(
                 result["processing"]["detector"],
                 "STRICT_DETECTION_CACHE_REPLAY_NO_NEURAL_INFERENCE",
+            )
+            self.assertEqual(
+                result["inputs"]["detection_cache"]["schema_version"],
+                "sevenmetros.ball-detection-cache/v2",
+            )
+            self.assertEqual(
+                result["inputs"]["detection_cache"]["inference_runtime"], RUNTIME,
             )
             self.assertEqual(result["blue_court_plus_temporal"]["matched"], 1)
             self.assertEqual(result["settings"]["ball_class_id"], 32)
@@ -224,6 +297,7 @@ class TemporalBallGroundTruthBenchmarkTests(unittest.TestCase):
             payload = build_ball_detection_cache(
                 video, model, documents, {5: [ball(10, .2)]}, {5: .6},
                 low_threshold=.10, imgsz=640, class_id=0,
+                inference_runtime=RUNTIME,
             )
             cache.write_text(json.dumps(payload), encoding="utf-8")
             rows, _ = load_ball_detection_cache(

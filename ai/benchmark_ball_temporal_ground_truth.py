@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import platform
 from pathlib import Path
 
 from sevenmetros_ai.ball import (
@@ -26,7 +27,18 @@ from sevenmetros_ai.fixture_filter import blue_court_fraction
 from sevenmetros_ai.tracking import Detection
 
 
-BALL_CACHE_SCHEMA = "sevenmetros.ball-detection-cache/v1"
+BALL_CACHE_SCHEMA_V1 = "sevenmetros.ball-detection-cache/v1"
+BALL_CACHE_SCHEMA = "sevenmetros.ball-detection-cache/v2"
+BALL_CACHE_SCHEMAS = {BALL_CACHE_SCHEMA_V1, BALL_CACHE_SCHEMA}
+RUNTIME_PROVENANCE_KEYS = {
+    "python_version",
+    "opencv_version",
+    "ultralytics_version",
+    "torch_version",
+    "device",
+    "machine",
+    "torch_num_threads",
+}
 
 
 def _serialized(detection):
@@ -63,6 +75,46 @@ def _expected_sequence_frames(documents):
     return frames
 
 
+def _validate_runtime_provenance(provenance):
+    if not isinstance(provenance, dict) or set(provenance) != RUNTIME_PROVENANCE_KEYS:
+        raise ValueError("inference runtime provenance fields mismatch")
+    text_fields = RUNTIME_PROVENANCE_KEYS - {"torch_num_threads"}
+    if any(not isinstance(provenance[key], str) or not provenance[key] for key in text_fields):
+        raise ValueError("inference runtime provenance text fields must be non-empty")
+    threads = provenance["torch_num_threads"]
+    if isinstance(threads, bool) or not isinstance(threads, int) or threads <= 0:
+        raise ValueError("inference runtime torch_num_threads must be a positive integer")
+    return dict(provenance)
+
+
+def _vision_runtime_provenance(detector):
+    """Capture the runtime that generated boxes; replay does not import it."""
+    import cv2
+    import torch
+    import ultralytics
+
+    predictor = getattr(detector.model, "predictor", None)
+    device = getattr(predictor, "device", None)
+    if device is None:
+        raise RuntimeError("Could not determine inference device after prediction")
+    return _validate_runtime_provenance({
+        "python_version": platform.python_version(),
+        "opencv_version": str(cv2.__version__),
+        "ultralytics_version": str(ultralytics.__version__),
+        "torch_version": str(torch.__version__),
+        "device": str(device),
+        "machine": platform.machine() or "unknown",
+        "torch_num_threads": torch.get_num_threads(),
+    })
+
+
+def _cache_metadata(payload):
+    return {
+        "schema_version": payload["schema_version"],
+        "inference_runtime": payload.get("inference_runtime"),
+    }
+
+
 def _deserialize_detection(payload, frame_index):
     if not isinstance(payload, dict):
         raise ValueError(f"cache frame {frame_index}: detection must be an object")
@@ -91,9 +143,11 @@ def build_ball_detection_cache(
     *,
     low_threshold,
     imgsz,
+    inference_runtime,
     class_id=COCO_SPORTS_BALL_CLASS_ID,
 ):
     class_id = normalize_ball_class_id(class_id)
+    inference_runtime = _validate_runtime_provenance(inference_runtime)
     expected_frames = _expected_sequence_frames(documents)
     if sorted(rows) != sorted(expected_frames):
         raise ValueError("inference rows do not exactly cover the GT sequence frames")
@@ -112,6 +166,7 @@ def build_ball_detection_cache(
             "low_threshold": float(low_threshold),
             "imgsz": int(imgsz),
         },
+        "inference_runtime": inference_runtime,
         "sequences": _sequence_specs(documents),
         "frames": [
             {
@@ -136,8 +191,13 @@ def load_ball_detection_cache(
 ):
     class_id = normalize_ball_class_id(class_id)
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
-    if payload.get("schema_version") != BALL_CACHE_SCHEMA:
-        raise ValueError(f"cache schema must be {BALL_CACHE_SCHEMA}")
+    schema = payload.get("schema_version")
+    if schema not in BALL_CACHE_SCHEMAS:
+        raise ValueError(f"cache schema must be one of {sorted(BALL_CACHE_SCHEMAS)}")
+    if schema == BALL_CACHE_SCHEMA:
+        _validate_runtime_provenance(payload.get("inference_runtime"))
+    elif "inference_runtime" in payload:
+        raise ValueError("legacy cache must not contain v2 runtime provenance")
     expected_source = {
         "video_sha256": sha256_file(video),
         "model_sha256": sha256_file(model),
@@ -299,6 +359,7 @@ def benchmark(
     _expected_sequence_frames(documents)
 
     inference_rows, court_fractions = {}, {}
+    cache_metadata = None
     if cache_input is not None:
         inference_rows, court_fractions = load_ball_detection_cache(
             cache_input,
@@ -308,6 +369,9 @@ def benchmark(
             low_threshold=low_threshold,
             imgsz=imgsz,
             class_id=ball_class_id,
+        )
+        cache_metadata = _cache_metadata(
+            json.loads(Path(cache_input).read_text(encoding="utf-8")),
         )
     else:
         try:
@@ -344,8 +408,10 @@ def benchmark(
                 court_fractions,
                 low_threshold=low_threshold,
                 imgsz=imgsz,
+                inference_runtime=_vision_runtime_provenance(detector),
                 class_id=ball_class_id,
             )
+            cache_metadata = _cache_metadata(cache_document)
             cache_output.parent.mkdir(parents=True, exist_ok=True)
             with cache_output.open("x", encoding="utf-8") as stream:
                 stream.write(json.dumps(cache_document, indent=2) + "\n")
@@ -452,11 +518,13 @@ def benchmark(
                 {
                     "mode": "replay",
                     "sha256": sha256_file(cache_input),
+                    **cache_metadata,
                 }
                 if cache_input is not None else
                 ({
                     "mode": "generated",
                     "sha256": sha256_file(cache_output),
+                    **cache_metadata,
                 } if cache_output is not None else None)
             ),
         },
