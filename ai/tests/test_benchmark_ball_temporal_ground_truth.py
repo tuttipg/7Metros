@@ -140,6 +140,11 @@ class TemporalBallGroundTruthBenchmarkTests(unittest.TestCase):
                     cache, video=video, model=model, documents=documents,
                     low_threshold=.03, imgsz=960,
                 )
+            with self.assertRaisesRegex(ValueError, "configuration mismatch"):
+                load_ball_detection_cache(
+                    cache, video=video, model=model, documents=documents,
+                    low_threshold=.02, imgsz=960, class_id=0,
+                )
             payload["frames"].pop()
             cache.write_text(json.dumps(payload), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "incomplete, duplicated, or out of order"):
@@ -147,6 +152,22 @@ class TemporalBallGroundTruthBenchmarkTests(unittest.TestCase):
                     cache, video=video, model=model, documents=documents,
                     low_threshold=.02, imgsz=960,
                 )
+
+    def test_cache_rejects_lossy_or_negative_class_ids(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            video, model = root / "clip.mp4", root / "model.pt"
+            video.write_bytes(b"video")
+            model.write_bytes(b"model")
+            documents = [{
+                "sequence": {"name": "flight", "start_frame": 5, "end_frame_exclusive": 6},
+            }]
+            for class_id in (-1, 1.5, True, "0"):
+                with self.subTest(class_id=class_id), self.assertRaises(ValueError):
+                    build_ball_detection_cache(
+                        video, model, documents, {5: []}, {5: .6},
+                        low_threshold=.10, imgsz=640, class_id=class_id,
+                    )
 
     def test_benchmark_replays_cache_without_neural_inference(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -189,6 +210,28 @@ class TemporalBallGroundTruthBenchmarkTests(unittest.TestCase):
                 "STRICT_DETECTION_CACHE_REPLAY_NO_NEURAL_INFERENCE",
             )
             self.assertEqual(result["blue_court_plus_temporal"]["matched"], 1)
+            self.assertEqual(result["settings"]["ball_class_id"], 32)
+
+    def test_cache_round_trip_supports_specialized_single_class_model(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            video, model, cache = root / "clip.mp4", root / "model.pt", root / "cache.json"
+            video.write_bytes(b"video")
+            model.write_bytes(b"specialized-model")
+            documents = [{
+                "sequence": {"name": "flight", "start_frame": 5, "end_frame_exclusive": 6},
+            }]
+            payload = build_ball_detection_cache(
+                video, model, documents, {5: [ball(10, .2)]}, {5: .6},
+                low_threshold=.10, imgsz=640, class_id=0,
+            )
+            cache.write_text(json.dumps(payload), encoding="utf-8")
+            rows, _ = load_ball_detection_cache(
+                cache, video=video, model=model, documents=documents,
+                low_threshold=.10, imgsz=640, class_id=0,
+            )
+            self.assertEqual(payload["detector"]["class_id"], 0)
+            self.assertEqual(rows[5][0].label, "ball")
 
     def test_cache_output_collision_fails_before_inference(self):
         with tempfile.TemporaryDirectory() as directory:

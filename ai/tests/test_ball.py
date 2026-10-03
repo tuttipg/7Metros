@@ -42,11 +42,21 @@ class BallDetectorTests(unittest.TestCase):
         detector = YoloSportsBallDetector(yolo_model=FakeModel([]))
         self.assertEqual(detector.detect(object()), [])
 
+    def test_custom_single_class_model_uses_configured_class_zero(self):
+        model = FakeModel([])
+        detector = YoloSportsBallDetector(class_id=0, yolo_model=model)
+        detector.detect(object())
+        self.assertEqual(detector.class_id, 0)
+        self.assertEqual(model.calls[0]['classes'], [0])
+
     def test_validates_configuration(self):
         with self.assertRaises(ValueError):
             YoloSportsBallDetector(confidence=0, yolo_model=FakeModel([]))
         with self.assertRaises(ValueError):
             YoloSportsBallDetector(imgsz=0, yolo_model=FakeModel([]))
+        for class_id in (-1, 1.5, True, "0"):
+            with self.subTest(class_id=class_id), self.assertRaises(ValueError):
+                YoloSportsBallDetector(class_id=class_id, yolo_model=FakeModel([]))
 
 
 if __name__ == '__main__':

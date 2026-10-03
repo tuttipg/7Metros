@@ -11,7 +11,11 @@ import argparse
 import json
 from pathlib import Path
 
-from sevenmetros_ai.ball import COCO_SPORTS_BALL_CLASS_ID, YoloSportsBallDetector
+from sevenmetros_ai.ball import (
+    COCO_SPORTS_BALL_CLASS_ID,
+    YoloSportsBallDetector,
+    normalize_ball_class_id,
+)
 from sevenmetros_ai.ball_ground_truth import (
     evaluate_ball_ground_truth,
     sha256_file,
@@ -87,7 +91,9 @@ def build_ball_detection_cache(
     *,
     low_threshold,
     imgsz,
+    class_id=COCO_SPORTS_BALL_CLASS_ID,
 ):
+    class_id = normalize_ball_class_id(class_id)
     expected_frames = _expected_sequence_frames(documents)
     if sorted(rows) != sorted(expected_frames):
         raise ValueError("inference rows do not exactly cover the GT sequence frames")
@@ -102,7 +108,7 @@ def build_ball_detection_cache(
         },
         "detector": {
             "type": "YoloSportsBallDetector",
-            "class_id": COCO_SPORTS_BALL_CLASS_ID,
+            "class_id": class_id,
             "low_threshold": float(low_threshold),
             "imgsz": int(imgsz),
         },
@@ -126,7 +132,9 @@ def load_ball_detection_cache(
     documents,
     low_threshold,
     imgsz,
+    class_id=COCO_SPORTS_BALL_CLASS_ID,
 ):
+    class_id = normalize_ball_class_id(class_id)
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if payload.get("schema_version") != BALL_CACHE_SCHEMA:
         raise ValueError(f"cache schema must be {BALL_CACHE_SCHEMA}")
@@ -139,7 +147,7 @@ def load_ball_detection_cache(
         raise ValueError("cache source video/model mismatch")
     expected_detector = {
         "type": "YoloSportsBallDetector",
-        "class_id": COCO_SPORTS_BALL_CLASS_ID,
+        "class_id": class_id,
         "low_threshold": float(low_threshold),
         "imgsz": int(imgsz),
     }
@@ -264,7 +272,9 @@ def benchmark(
     min_court_fraction=.15,
     cache_input=None,
     cache_output=None,
+    ball_class_id=COCO_SPORTS_BALL_CLASS_ID,
 ):
+    ball_class_id = normalize_ball_class_id(ball_class_id)
     if not 0 < float(low_threshold) <= float(high_threshold) <= 1:
         raise ValueError("require 0 < low_threshold <= high_threshold <= 1")
     if cache_input is not None and cache_output is not None:
@@ -297,6 +307,7 @@ def benchmark(
             documents=documents,
             low_threshold=low_threshold,
             imgsz=imgsz,
+            class_id=ball_class_id,
         )
     else:
         try:
@@ -305,6 +316,7 @@ def benchmark(
             raise RuntimeError("OpenCV is required for new inference") from exc
         detector = YoloSportsBallDetector(
             model, confidence=low_threshold, imgsz=imgsz,
+            class_id=ball_class_id,
         )
         cap = cv2.VideoCapture(str(video))
         if not cap.isOpened():
@@ -332,6 +344,7 @@ def benchmark(
                 court_fractions,
                 low_threshold=low_threshold,
                 imgsz=imgsz,
+                class_id=ball_class_id,
             )
             cache_output.parent.mkdir(parents=True, exist_ok=True)
             with cache_output.open("x", encoding="utf-8") as stream:
@@ -451,6 +464,7 @@ def benchmark(
             "low_threshold": float(low_threshold),
             "high_threshold": float(high_threshold),
             "imgsz": int(imgsz),
+            "ball_class_id": int(ball_class_id),
             "max_missed": int(max_missed),
             "min_largest_blue_court_fraction": float(min_court_fraction),
         },
@@ -490,6 +504,10 @@ def main():
     parser.add_argument("--low-threshold", type=float, default=.02)
     parser.add_argument("--high-threshold", type=float, default=.05)
     parser.add_argument("--imgsz", type=int, default=960)
+    parser.add_argument(
+        "--ball-class-id", type=int, default=COCO_SPORTS_BALL_CLASS_ID,
+        help="Detector class containing the ball (COCO sports ball is 32; single-class models commonly use 0)",
+    )
     parser.add_argument("--max-missed", type=int, default=4)
     parser.add_argument("--min-court-fraction", type=float, default=.15)
     cache_group = parser.add_mutually_exclusive_group()
@@ -507,6 +525,7 @@ def main():
         low_threshold=args.low_threshold,
         high_threshold=args.high_threshold,
         imgsz=args.imgsz,
+        ball_class_id=args.ball_class_id,
         max_missed=args.max_missed,
         min_court_fraction=args.min_court_fraction,
         cache_input=args.cache_input,
