@@ -1,0 +1,44 @@
+{
+  "status": "EXTERNAL_SOCCER_BALL_DETECTORS_REJECTED",
+  "evaluation_scope": "10 human-visible positive handball frames; content-aligned original MP4",
+  "source_video_sha256": "84a94f6e5526d94afc67dc8ee99cc9b390265482d6f0250f2d8a12080e437ed2",
+  "gt_source_fixture_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+  "gt_fixture_frames": [108,109,110,111,112,156,157,158,159,160],
+  "iou_threshold": 0.5,
+  "models": {
+    "stock_yolo11n_coco": {
+      "sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+      "runtime": "ultralytics 8.4.163",
+      "imgsz": 960,
+      "screening_conf": 0.001,
+      "matches_iou_0_5": 9,
+      "top_candidate_matches": 9,
+      "mean_best_iou": 0.7123287327013221,
+      "decision": "CONTROL_KEEP"
+    },
+    "acatorcini_yolov9_soccer_ball_onnx": {
+      "sha256": "9fd2031e5bced9dff47a48bae8c6809dd56493124ef8924ae28a3ce26a17a441",
+      "runtime": "opencv-dnn",
+      "preprocess": "documented direct resize RGB 1280x1280, normalize 0-1",
+      "matches_iou_0_5": 0,
+      "top_candidate_matches": 0,
+      "mean_best_iou": 0.44695211795935474,
+      "goal_window_max_confidence_326_340": 0.002388,
+      "decision": "REJECT_DOMAIN_MISMATCH"
+    },
+    "martinjolif_yolo11n_football_ball": {
+      "sha256": "fb37942448e7de08745e8aab148d0794f680a738ddd55e5f17abe9ab2d6313fb",
+      "runtime": "ultralytics 8.4.163",
+      "imgsz": 960,
+      "screening_conf": 0.001,
+      "matches_iou_0_5": 0,
+      "top_candidate_matches": 0,
+      "frames_without_any_detection": 8,
+      "frames_with_off_ball_detection": 2,
+      "decision": "REJECT_DOMAIN_MISMATCH"
+    }
+  },
+  "weights_added_to_pipeline": false,
+  "defaults_changed": false,
+  "next_step": "handball-specific open-data fine-tuning; keep 7Metros visible GT evaluation-only for first run"
+}

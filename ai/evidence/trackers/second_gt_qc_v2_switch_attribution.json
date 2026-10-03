@@ -1,0 +1,30 @@
+{
+  "status": "QC_V2_BASELINE_IDSW_ATTRIBUTION",
+  "sequence": "ferro_lujan_hard_reentry",
+  "scope": {
+    "frames": 90,
+    "gt_qc_v2_sha256": "d6c39e1d9e75b77b63315b98ab8db68bb278c6c765bc6ca802d19d185984a082",
+    "tracker": "baseline_high_only with uniform role output filter",
+    "matching": "CLEAR-style continuity-preferred assignment at IoU >= 0.5"
+  },
+  "total_id_switches": 5,
+  "events": [
+    {"task_frame": 25, "gt_id": 217, "tracker_id_before": 222, "tracker_id_after": 217, "matched_iou": 0.550336, "frames_since_previous_match": 1, "missing_match_frames_before": 0, "detector_iou_ge_0_25": 0.550334, "detector_confidence": 0.597482},
+    {"task_frame": 47, "gt_id": 217, "tracker_id_before": 217, "tracker_id_after": 222, "matched_iou": 0.872032, "frames_since_previous_match": 3, "missing_match_frames_before": 2, "detector_iou_ge_0_25": 0.872032, "detector_confidence": 0.455952},
+    {"task_frame": 59, "gt_id": 217, "tracker_id_before": 222, "tracker_id_after": 225, "matched_iou": 0.556634, "frames_since_previous_match": 12, "missing_match_frames_before": 11, "detector_iou_ge_0_25": 0.556635, "detector_confidence": 0.255492},
+    {"task_frame": 65, "gt_id": 222, "tracker_id_before": 217, "tracker_id_after": 225, "matched_iou": 0.565059, "frames_since_previous_match": 1, "missing_match_frames_before": 0, "detector_iou_ge_0_25": 0.769128, "detector_confidence": 0.388485},
+    {"task_frame": 68, "gt_id": 222, "tracker_id_before": 225, "tracker_id_after": 226, "matched_iou": 0.535749, "frames_since_previous_match": 1, "missing_match_frames_before": 0, "detector_iou_ge_0_25": 0.787194, "detector_confidence": 0.264181}
+  ],
+  "interpretation": [
+    "the four switches previously induced by the task-frame-3 human annotation error are gone after QC-v2",
+    "all five remaining switches affect only GT identities 217 or 222 in the dense contact cluster",
+    "two switch events occur after observation gaps (2 and 11 frames), so extending track memory alone does not provide enough evidence to select the correct identity on reentry",
+    "the detector has an IoU>=0.5 box at every switch frame, so these five events are not explained by complete detector absence at the switch frame itself",
+    "task-frame-59 uses a detection barely above the high threshold (confidence 0.255492), making confidence/localization instability relevant even before considering appearance ReID"
+  ],
+  "limits": [
+    "this is diagnostic attribution of one baseline tracker and does not replace official TrackEval",
+    "the exact two_stage and ByteTrack QC-v2 outputs remain unavailable, so their corrected switch locations cannot yet be compared",
+    "tracker IDs are arbitrary and only continuity changes matter"
+  ]
+}

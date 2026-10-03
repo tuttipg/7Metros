@@ -1,0 +1,73 @@
+{
+  "scope": "cache replay with identical source boxes and fixture filter; no neural inference",
+  "accuracy_status": "not_evaluated_no_complete_ground_truth",
+  "frames": 3600,
+  "fps": 30.0,
+  "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+  "model": "yolo11n.pt",
+  "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+  "detector_confidence": 0.1,
+  "detection_cache_sha256": "b825b6a8bf1312b1a43d636ae2c50be197bdd49a72ae321889d40e0cd1d57403",
+  "raw_detections": 53786,
+  "filtered_detections": 40242,
+  "trackers": {
+    "baseline_high_only": {
+      "track_observations": 34925,
+      "weak_track_observations": 0,
+      "unique_tracks": 273,
+      "continuous_runs": 1081,
+      "mean_continuous_run_frames": 32.308,
+      "median_continuous_run_frames": 4.0,
+      "single_frame_tracks": 29,
+      "new_track_rate_per_100_frames": 7.583
+    },
+    "two_stage": {
+      "track_observations": 36733,
+      "weak_track_observations": 1808,
+      "unique_tracks": 279,
+      "continuous_runs": 634,
+      "mean_continuous_run_frames": 57.938,
+      "median_continuous_run_frames": 10.5,
+      "single_frame_tracks": 18,
+      "new_track_rate_per_100_frames": 7.75
+    },
+    "bytetrack_standard": {
+      "track_observations": 34751,
+      "weak_track_observations": 1152,
+      "unique_tracks": 322,
+      "continuous_runs": 594,
+      "mean_continuous_run_frames": 58.503,
+      "median_continuous_run_frames": 14.0,
+      "single_frame_tracks": 23,
+      "new_track_rate_per_100_frames": 8.944,
+      "implementation": {
+        "package": "ultralytics",
+        "version": "8.4.163",
+        "track_high_thresh": 0.25,
+        "track_low_thresh": 0.1,
+        "new_track_thresh": 0.25,
+        "track_buffer": 30,
+        "match_thresh": 0.8,
+        "fuse_score": true
+      }
+    }
+  },
+  "sparse_audits": {
+    "attacker_defender_contact": {
+      "baseline_high_only_sampled_id_changes": 0,
+      "two_stage_sampled_id_changes": 0,
+      "bytetrack_standard_sampled_id_changes": 2,
+      "matched_points": 9,
+      "ambiguous_points": 1,
+      "shared_box_points": 2
+    },
+    "two_teammates_crossing": {
+      "baseline_high_only_sampled_id_changes": 0,
+      "two_stage_sampled_id_changes": 0,
+      "bytetrack_standard_sampled_id_changes": 0,
+      "matched_points": 16,
+      "ambiguous_points": 0,
+      "shared_box_points": 2
+    }
+  }
+}

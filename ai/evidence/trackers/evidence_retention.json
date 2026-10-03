@@ -1,0 +1,27 @@
+{
+  "status": "IMPLEMENTED_REPRODUCIBILITY_GUARDRAIL",
+  "schema": "7metros-ai.evidence-slices.v1",
+  "range_semantics": "start_inclusive_end_exclusive",
+  "tests_added": 6,
+  "default_pipeline_changed": false,
+  "tracking_behavior_changed": false,
+  "real_smoke": {
+    "source": "historical memory30 baseline JSONL",
+    "source_frames": 3600,
+    "ranges": {
+      "105:210": {
+        "frames": 105,
+        "observations": 1267,
+        "track_ids": 16,
+        "sha256": "a3f9b784ce2a6d2f6d04ba9a4885f013dbd2f649aa3ef63070652ab211ba03ba"
+      },
+      "2915:3005": {
+        "frames": 90,
+        "observations": 1088,
+        "track_ids": 18,
+        "sha256": "eb499fe3420a3257c199b0e6bd2ca2f8c860e9a78e3fa2c6726163bc87e20bdf"
+      }
+    }
+  },
+  "purpose": "retain compact frame-level tracker evidence needed to rerun MOT evaluation after large local JSONLs are gone"
+}
