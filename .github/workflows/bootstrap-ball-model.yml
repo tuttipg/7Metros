@@ -6,34 +6,47 @@ on:
       - tmp/ball-model-bootstrap-20261002
 
 jobs:
-  fetch-handball-data:
+  inspect-public-handball-data:
     runs-on: ubuntu-latest
     steps:
-      - name: Install public-dataset client
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install 'roboflow==1.1.48'
-      - name: Download public handball dataset without private credentials
+      - name: Fetch public Universe pages
         run: |
           set -euxo pipefail
+          curl -L --fail --retry 3 \
+            'https://universe.roboflow.com/ahmeds-workspace-fbvwb/handball-ball-player-detection/dataset/2' \
+            -o dataset.html
+          curl -L --fail --retry 3 \
+            'https://universe.roboflow.com/ahmeds-workspace-fbvwb/handball-ball-player-detection/browse' \
+            -o browse.html
           python - <<'PY'
-          import roboflow
-          ds = roboflow.download_dataset(
-              dataset_url='https://universe.roboflow.com/ahmeds-workspace-fbvwb/handball-ball-player-detection/dataset/2',
-              model_format='yolov8',
-              location='handball_dataset',
-          )
-          print(ds.location)
+          from pathlib import Path
+          import re, json
+          for name in ['dataset.html','browse.html']:
+              text=Path(name).read_text(errors='replace')
+              print(name, 'bytes', len(text))
+              patterns=[
+                  r'https?://[^"\'<> ]+',
+                  r'[^"\']*(?:download|export|annotation|source\.roboflow|api\.roboflow)[^"\']*',
+              ]
+              hits=[]
+              for p in patterns:
+                  hits += re.findall(p,text,re.I)
+              clean=[]
+              for h in hits:
+                  if any(k in h.lower() for k in ('roboflow','download','export','annotation')):
+                      if h not in clean: clean.append(h)
+              Path(name+'.hits.txt').write_text('\n'.join(clean[:1000]))
+              print('hits',len(clean))
           PY
-          find handball_dataset -maxdepth 3 -type f | sort | head -100
-          find handball_dataset -type f | wc -l | tee file_count.txt
-          sha256sum handball_dataset/data.yaml > dataset_yaml.sha256
-      - name: Upload dataset artifact
+          grep -Eio 'https?://[^" ]+' dataset.html | grep -Ei 'roboflow|download|export' | head -100 || true
+          grep -Eio 'https?://[^" ]+' browse.html | grep -Ei 'source\.roboflow|roboflow|download|export' | head -100 || true
+      - name: Upload public metadata snapshot
         uses: actions/upload-artifact@v4
         with:
-          name: public-handball-dataset-v2
+          name: roboflow-public-metadata
           path: |
-            handball_dataset/
-            file_count.txt
-            dataset_yaml.sha256
+            dataset.html
+            browse.html
+            dataset.html.hits.txt
+            browse.html.hits.txt
           retention-days: 1
