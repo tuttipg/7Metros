@@ -74,6 +74,40 @@ def replay_sequence(
     return control, guarded, temporal, decisions
 
 
+def evaluate_visible_sequences(documents, prediction_variants):
+    """Score every positive sequence independently.
+
+    Negative-only control sequences remain covered by the aggregate evaluator;
+    they cannot be passed to ``evaluate_ball_ground_truth`` on their own because
+    that deliberately requires at least one human-visible ball box.
+    """
+    results = {}
+    for document in documents:
+        annotations = document["annotations"]
+        if not any(row["state"] == "visible" for row in annotations):
+            continue
+        name = document["sequence"]["name"]
+        if name in results:
+            raise ValueError(f"duplicate visible sequence name: {name}")
+        results[name] = {
+            variant: evaluate_ball_ground_truth(annotations, predictions)
+            for variant, predictions in prediction_variants.items()
+        }
+    return results
+
+
+def is_non_regressive(candidate, control):
+    return (
+        candidate["matched"] >= control["matched"]
+        and candidate["false_negatives_on_visible_frames"]
+        <= control["false_negatives_on_visible_frames"]
+        and candidate["false_positive_candidates_on_evaluable_frames"]
+        <= control["false_positive_candidates_on_evaluable_frames"]
+        and candidate["longest_consecutive_visible_miss_run"]
+        <= control["longest_consecutive_visible_miss_run"]
+    )
+
+
 def benchmark(
     video,
     model,
@@ -177,15 +211,23 @@ def benchmark(
         str(value): evaluate_ball_ground_truth(annotations, predictions)
         for value, predictions in sensitivity_predictions.items()
     }
-    verified = (
-        temporal_metrics["matched"] >= guarded_metrics["matched"]
-        and temporal_metrics["false_negatives_on_visible_frames"]
-        <= guarded_metrics["false_negatives_on_visible_frames"]
-        and temporal_metrics["false_positive_candidates_on_evaluable_frames"]
-        <= guarded_metrics["false_positive_candidates_on_evaluable_frames"]
-        and temporal_metrics["longest_consecutive_visible_miss_run"]
-        <= guarded_metrics["longest_consecutive_visible_miss_run"]
+    per_visible_sequence = evaluate_visible_sequences(documents, {
+        "raw_strong_control": control_predictions,
+        "blue_court_guard": guarded_predictions,
+        "blue_court_plus_temporal": temporal_predictions,
+        **{
+            f"max_missed_{value}": predictions
+            for value, predictions in sensitivity_predictions.items()
+        },
+    })
+    aggregate_non_regression = is_non_regressive(temporal_metrics, guarded_metrics)
+    per_sequence_non_regression = all(
+        is_non_regressive(
+            metrics["blue_court_plus_temporal"], metrics["blue_court_guard"],
+        )
+        for metrics in per_visible_sequence.values()
     )
+    verified = aggregate_non_regression and per_sequence_non_regression
     return {
         "status": (
             "TEMPORAL_SELECTION_VERIFIED_ON_REVIEWED_SAMPLE_NOT_MATCH_ACCURACY"
@@ -214,11 +256,17 @@ def benchmark(
             "visible_false_negative_delta_vs_guard_max": 0,
             "false_positive_delta_vs_guard_max": 0,
             "longest_visible_miss_run_delta_vs_guard_max": 0,
+            "same_non_regression_required_for_each_visible_sequence": True,
+        },
+        "verification": {
+            "aggregate_non_regression": aggregate_non_regression,
+            "per_visible_sequence_non_regression": per_sequence_non_regression,
         },
         "raw_strong_control": control_metrics,
         "blue_court_guard": guarded_metrics,
         "blue_court_plus_temporal": temporal_metrics,
         "max_missed_sensitivity": sensitivity_metrics,
+        "per_visible_sequence": per_visible_sequence,
         "predictions": {
             "raw_low_threshold": {
                 str(k): v for k, v in raw_low_predictions.items()
