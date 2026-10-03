@@ -124,16 +124,18 @@ def bbox_iou(first, second):
     return intersection / union if union > 0 else 0.0
 
 
-def evaluate_visible_ball_frames(annotations, predictions_by_frame, *, iou_threshold=.5):
-    """Score detections only where a human supplied a visible ball box.
+def evaluate_ball_ground_truth(annotations, predictions_by_frame, *, iou_threshold=.5):
+    """Score visible positives and human-confirmed out-of-frame negatives.
 
-    Ambiguous, occluded and out-of-frame rows are ignored rather than treated as
-    detector negatives.  The result is sequence-local agreement, not a claim of
-    whole-match detector accuracy.
+    Ambiguous and occluded rows are ignored rather than treated as detector
+    negatives.  ``out_of_frame`` is evaluable because the broadcast image cannot
+    contain a true ball box.  The result remains sequence-local agreement, not a
+    claim of whole-match detector accuracy.
     """
     if not 0 < float(iou_threshold) <= 1:
         raise ValueError("iou_threshold must be in (0,1]")
     visible = [row for row in annotations if row.get("state") == "visible"]
+    negatives = [row for row in annotations if row.get("state") == "out_of_frame"]
     if not visible:
         raise ValueError("no visible human ball boxes are available for evaluation")
     matched = false_negatives = false_positives = 0
@@ -162,24 +164,59 @@ def evaluate_visible_ball_frames(annotations, predictions_by_frame, *, iou_thres
         best_ious.append(best_iou)
         frames.append({
             "frame_index": frame,
+            "gt_state": "visible",
             "candidates": len(candidates),
             "best_iou": best_iou,
             "matched_iou_threshold": is_match,
         })
-    precision = matched / (matched + false_positives) if matched + false_positives else 0.0
+    positive_false_positives = false_positives
+    negative_frames_with_candidates = 0
+    for row in negatives:
+        frame = int(row["frame_index"])
+        candidates = list(predictions_by_frame.get(frame, []))
+        negative_frames_with_candidates += int(bool(candidates))
+        false_positives += len(candidates)
+        frames.append({
+            "frame_index": frame,
+            "gt_state": "out_of_frame",
+            "candidates": len(candidates),
+            "best_iou": None,
+            "matched_iou_threshold": False,
+        })
+    positive_precision = (
+        matched / (matched + positive_false_positives)
+        if matched + positive_false_positives else 0.0
+    )
+    evaluable_precision = (
+        matched / (matched + false_positives) if matched + false_positives else 0.0
+    )
     recall = matched / (matched + false_negatives)
     return {
-        "status": "VISIBLE_POSITIVE_FRAMES_ONLY_NOT_MATCH_ACCURACY",
+        "status": (
+            "REVIEWED_VISIBLE_AND_OUT_OF_FRAME_SAMPLE_NOT_MATCH_ACCURACY"
+            if negatives else "VISIBLE_POSITIVE_FRAMES_ONLY_NOT_MATCH_ACCURACY"
+        ),
         "iou_threshold": float(iou_threshold),
         "visible_gt_frames": len(visible),
+        "out_of_frame_negative_frames": len(negatives),
+        "negative_frames_with_candidates": negative_frames_with_candidates,
         "matched": matched,
         "false_negatives_on_visible_frames": false_negatives,
-        "false_positives_on_visible_frames": false_positives,
-        "precision_on_reviewed_positive_frames": precision,
+        "false_positives_on_visible_frames": positive_false_positives,
+        "false_positive_candidates_on_evaluable_frames": false_positives,
+        "precision_on_reviewed_positive_frames": positive_precision,
+        "precision_on_reviewed_evaluable_frames": evaluable_precision,
         "recall_on_reviewed_positive_frames": recall,
         "mean_best_iou": sum(best_ious) / len(best_ious),
         "mean_center_error_px": (
             sum(center_errors) / len(center_errors) if center_errors else None
         ),
-        "frames": frames,
+        "frames": sorted(frames, key=lambda item: item["frame_index"]),
     }
+
+
+def evaluate_visible_ball_frames(annotations, predictions_by_frame, *, iou_threshold=.5):
+    """Backward-compatible alias for the ball-GT evaluator."""
+    return evaluate_ball_ground_truth(
+        annotations, predictions_by_frame, iou_threshold=iou_threshold,
+    )

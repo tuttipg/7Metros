@@ -1,4 +1,4 @@
-"""Run fresh sports-ball inference against visible human-reviewed frames only."""
+"""Run fresh sports-ball inference against evaluable human-reviewed frames."""
 from __future__ import annotations
 
 import argparse
@@ -7,7 +7,7 @@ from pathlib import Path
 
 from sevenmetros_ai.ball import YoloSportsBallDetector
 from sevenmetros_ai.ball_ground_truth import (
-    evaluate_visible_ball_frames,
+    evaluate_ball_ground_truth,
     sha256_file,
     validate_ball_ground_truth,
 )
@@ -26,11 +26,12 @@ def benchmark(video, model, ground_truth_paths, *, confidence=.05, imgsz=960):
         validate_ball_ground_truth(document, source_video=video)
         documents.append(document)
         annotations.extend(document["annotations"])
-    visible_frames = sorted(
-        row["frame_index"] for row in annotations if row["state"] == "visible"
+    evaluable_frames = sorted(
+        row["frame_index"] for row in annotations
+        if row["state"] in {"visible", "out_of_frame"}
     )
-    if len(visible_frames) != len(set(visible_frames)):
-        raise ValueError("ground-truth documents contain duplicate visible frames")
+    if len(evaluable_frames) != len(set(evaluable_frames)):
+        raise ValueError("ground-truth documents contain duplicate evaluable frames")
 
     detector = YoloSportsBallDetector(model, confidence=confidence, imgsz=imgsz)
     cap = cv2.VideoCapture(str(video))
@@ -38,7 +39,7 @@ def benchmark(video, model, ground_truth_paths, *, confidence=.05, imgsz=960):
         raise RuntimeError(f"Could not open video: {video}")
     predictions = {}
     try:
-        for frame_index in visible_frames:
+        for frame_index in evaluable_frames:
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
             ok, frame = cap.read()
             if not ok:
@@ -50,9 +51,9 @@ def benchmark(video, model, ground_truth_paths, *, confidence=.05, imgsz=960):
     finally:
         cap.release()
 
-    result = evaluate_visible_ball_frames(annotations, predictions)
+    result = evaluate_ball_ground_truth(annotations, predictions)
     result.update({
-        "inference": "NEW_NEURAL_INFERENCE_ON_LISTED_VISIBLE_FRAMES",
+        "inference": "NEW_NEURAL_INFERENCE_ON_LISTED_EVALUABLE_FRAMES",
         "inputs": {
             "video_sha256": sha256_file(video),
             "model_sha256": sha256_file(model),

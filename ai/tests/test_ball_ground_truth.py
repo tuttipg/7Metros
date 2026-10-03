@@ -2,6 +2,7 @@ import copy
 import unittest
 
 from sevenmetros_ai.ball_ground_truth import (
+    evaluate_ball_ground_truth,
     evaluate_visible_ball_frames,
     validate_ball_ground_truth,
 )
@@ -93,10 +94,29 @@ class BallGroundTruthTests(unittest.TestCase):
         self.assertEqual(result["matched"], 1)
         self.assertEqual(result["false_negatives_on_visible_frames"], 1)
         self.assertEqual(result["false_positives_on_visible_frames"], 1)
+        self.assertEqual(result["false_positive_candidates_on_evaluable_frames"], 1)
 
     def test_evaluation_requires_visible_ground_truth(self):
         with self.assertRaisesRegex(ValueError, "no visible"):
             evaluate_visible_ball_frames(sample_document()["annotations"], {})
+
+    def test_out_of_frame_candidates_are_false_positives(self):
+        rows = [
+            {"frame_index": 1, "state": "visible", "bbox_xyxy": [10, 10, 20, 20]},
+            {"frame_index": 2, "state": "out_of_frame", "bbox_xyxy": None},
+            {"frame_index": 3, "state": "occluded", "bbox_xyxy": None},
+        ]
+        predictions = {
+            1: [{"bbox_xyxy": [10, 10, 20, 20]}],
+            2: [{"bbox_xyxy": [100, 100, 120, 120]}],
+            3: [{"bbox_xyxy": [100, 100, 120, 120]}],
+        }
+        result = evaluate_ball_ground_truth(rows, predictions)
+        self.assertEqual(result["out_of_frame_negative_frames"], 1)
+        self.assertEqual(result["negative_frames_with_candidates"], 1)
+        self.assertEqual(result["false_positives_on_visible_frames"], 0)
+        self.assertAlmostEqual(result["precision_on_reviewed_positive_frames"], 1.0)
+        self.assertAlmostEqual(result["precision_on_reviewed_evaluable_frames"], .5)
 
 
 if __name__ == "__main__":

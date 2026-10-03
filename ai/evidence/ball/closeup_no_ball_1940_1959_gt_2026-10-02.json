@@ -1,0 +1,43 @@
+{
+  "schema_version": "sevenmetros.ball-gt/v1",
+  "source": {
+    "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+    "width": 936,
+    "height": 524,
+    "fps": 30.0,
+    "encoding_note": "Local x264 fixture copy; not the canonical FFV1 tracking fixture."
+  },
+  "sequence": {
+    "name": "closeup_no_ball_1940_1959",
+    "start_frame": 1940,
+    "end_frame_exclusive": 1960
+  },
+  "review": {
+    "method": "Frame-by-frame native-resolution review of an uninterrupted broadcast close-up.",
+    "policy": "out_of_frame is used only because the crop excludes both the ball and active playing area.",
+    "result": "TWENTY_CONFIRMED_OUT_OF_FRAME_NEGATIVES"
+  },
+  "annotations": [
+    {"frame_index": 1940, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1941, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1942, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1943, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1944, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1945, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1946, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1947, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1948, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1949, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1950, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1951, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1952, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1953, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1954, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1955, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1956, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1957, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1958, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."},
+    {"frame_index": 1959, "state": "out_of_frame", "bbox_xyxy": null, "note": "Broadcast close-up excludes the ball and playing area."}
+  ]
+}
+
