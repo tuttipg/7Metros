@@ -22,6 +22,9 @@ const body = [
   'const f=`/torneos/${id}`;',
   `const g='//external.example/path';`,
   `const h='/torneos/775?token=nope';`,
+  `const i='/api//matches';`,
+  `const j='/api/deleteMatch';`,
+  `const k='/api/updateScore';`,
 ].join('\n');
 
 const result = extractTournamentTrackerStaticRelativePaths({ body, assetClassification: classification(body) });
@@ -32,10 +35,12 @@ assert.equal(result.probeAllowed, false);
 assert.equal(result.executionAllowed, false);
 assert.equal(result.constraints.hostResolutionAllowed, false);
 assert.equal(result.constraints.automaticProbingAllowed, false);
+assert.equal(result.constraints.repeatedSeparatorsAllowed, false);
 assert.equal(result.constraints.writesAllowed, false);
 assert.equal(result.constraints.authAllowed, false);
 assert.deepEqual(result.candidates.map((item) => item.path), ['/get-context', '/torneos/775']);
 assert.ok(result.candidates.every((item) => item.hostResolved === false && item.probeAllowed === false));
+assert.ok(result.rejectedCount >= 4);
 
 const forged = classification(body);
 forged.bodySha256 = '0'.repeat(64);
