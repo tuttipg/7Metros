@@ -1,0 +1,37 @@
+{
+  "schema_version": "sevenmetros.ball-gt/v1",
+  "source": {
+    "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+    "width": 936,
+    "height": 524,
+    "fps": 30.0,
+    "encoding_note": "Local x264 fixture copy; not the canonical FFV1 tracking fixture."
+  },
+  "sequence": {
+    "name": "visible_low_pass_1405_1419",
+    "start_frame": 1405,
+    "end_frame_exclusive": 1420
+  },
+  "review": {
+    "method": "Frame-by-frame native-resolution review plus unboxed 8x nearest-neighbour crops.",
+    "policy": "Integer bbox follows the visually separable dark ball boundary, including visible motion blur; screening selected the action but did not define boxes.",
+    "result": "FIFTEEN_VISIBLE_LOCALISABLE_FRAMES"
+  },
+  "annotations": [
+    {"frame_index": 1405, "state": "visible", "bbox_xyxy": [423, 171, 436, 182], "note": "Visible low pass before crossing the dashed court line."},
+    {"frame_index": 1406, "state": "visible", "bbox_xyxy": [411, 172, 422, 182], "note": "Visible low pass before crossing the dashed court line."},
+    {"frame_index": 1407, "state": "visible", "bbox_xyxy": [404, 172, 416, 182], "note": "Visible low pass before crossing the dashed court line."},
+    {"frame_index": 1408, "state": "visible", "bbox_xyxy": [381, 173, 395, 184], "note": "Ball remains visually separable while approaching the dashed court line."},
+    {"frame_index": 1409, "state": "visible", "bbox_xyxy": [366, 175, 384, 184], "note": "Motion-blurred ball remains localisable between player legs and court line."},
+    {"frame_index": 1410, "state": "visible", "bbox_xyxy": [362, 177, 374, 186], "note": "Ball remains localisable against the dashed court line."},
+    {"frame_index": 1411, "state": "visible", "bbox_xyxy": [341, 180, 352, 190], "note": "Ball remains localisable against nearby player and line pixels."},
+    {"frame_index": 1412, "state": "visible", "bbox_xyxy": [327, 182, 338, 192], "note": "Ball is visually separated again after crossing the line."},
+    {"frame_index": 1413, "state": "visible", "bbox_xyxy": [319, 183, 331, 193], "note": "Visible low pass after the court-line crossing."},
+    {"frame_index": 1414, "state": "visible", "bbox_xyxy": [297, 189, 309, 200], "note": "Visible low pass after the court-line crossing."},
+    {"frame_index": 1415, "state": "visible", "bbox_xyxy": [283, 193, 295, 204], "note": "Visible low pass after the court-line crossing."},
+    {"frame_index": 1416, "state": "visible", "bbox_xyxy": [276, 196, 288, 206], "note": "Visible low pass after the court-line crossing."},
+    {"frame_index": 1417, "state": "visible", "bbox_xyxy": [255, 204, 268, 215], "note": "Visible low pass after the court-line crossing."},
+    {"frame_index": 1418, "state": "visible", "bbox_xyxy": [242, 209, 254, 221], "note": "Visible low pass after the court-line crossing."},
+    {"frame_index": 1419, "state": "visible", "bbox_xyxy": [235, 212, 248, 224], "note": "Visible low pass approaching the receiving player."}
+  ]
+}

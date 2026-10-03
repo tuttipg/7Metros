@@ -170,6 +170,21 @@ def evaluate_ball_ground_truth(annotations, predictions_by_frame, *, iou_thresho
             "matched_iou_threshold": is_match,
         })
     positive_false_positives = false_positives
+    missed_visible_frames = sorted(
+        row["frame_index"] for row in frames
+        if row["gt_state"] == "visible" and not row["matched_iou_threshold"]
+    )
+    visible_miss_runs = []
+    for frame in missed_visible_frames:
+        if not visible_miss_runs or frame != visible_miss_runs[-1]["end_frame"] + 1:
+            visible_miss_runs.append({
+                "start_frame": frame,
+                "end_frame": frame,
+                "length": 1,
+            })
+        else:
+            visible_miss_runs[-1]["end_frame"] = frame
+            visible_miss_runs[-1]["length"] += 1
     negative_frames_with_candidates = 0
     for row in negatives:
         frame = int(row["frame_index"])
@@ -202,6 +217,10 @@ def evaluate_ball_ground_truth(annotations, predictions_by_frame, *, iou_thresho
         "negative_frames_with_candidates": negative_frames_with_candidates,
         "matched": matched,
         "false_negatives_on_visible_frames": false_negatives,
+        "visible_miss_runs": visible_miss_runs,
+        "longest_consecutive_visible_miss_run": max(
+            (run["length"] for run in visible_miss_runs), default=0,
+        ),
         "false_positives_on_visible_frames": positive_false_positives,
         "false_positive_candidates_on_evaluable_frames": false_positives,
         "precision_on_reviewed_positive_frames": positive_precision,

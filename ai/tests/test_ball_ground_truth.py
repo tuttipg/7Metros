@@ -95,6 +95,23 @@ class BallGroundTruthTests(unittest.TestCase):
         self.assertEqual(result["false_negatives_on_visible_frames"], 1)
         self.assertEqual(result["false_positives_on_visible_frames"], 1)
         self.assertEqual(result["false_positive_candidates_on_evaluable_frames"], 1)
+        self.assertEqual(result["visible_miss_runs"], [
+            {"start_frame": 2, "end_frame": 2, "length": 1},
+        ])
+        self.assertEqual(result["longest_consecutive_visible_miss_run"], 1)
+
+    def test_visible_miss_runs_split_on_matches_and_frame_gaps(self):
+        rows = [
+            {"frame_index": frame, "state": "visible", "bbox_xyxy": [10, 10, 20, 20]}
+            for frame in (10, 11, 12, 20, 21)
+        ]
+        predictions = {12: [{"bbox_xyxy": [10, 10, 20, 20]}]}
+        result = evaluate_ball_ground_truth(rows, predictions)
+        self.assertEqual(result["visible_miss_runs"], [
+            {"start_frame": 10, "end_frame": 11, "length": 2},
+            {"start_frame": 20, "end_frame": 21, "length": 2},
+        ])
+        self.assertEqual(result["longest_consecutive_visible_miss_run"], 2)
 
     def test_evaluation_requires_visible_ground_truth(self):
         with self.assertRaisesRegex(ValueError, "no visible"):
