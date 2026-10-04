@@ -68,6 +68,28 @@ A `Planilla` includes at least:
 
 The UI enables **Ver planilla** only when at least one `planilla.pdf` is present. With exactly one PDF it opens that `pdf` value directly; with multiple planillas it presents a selector. The selector renders `planilla.local.goles - planilla.visitante.goles` and opens `planilla.pdf`. Transmission links are handled separately through `url_transmision`.
 
+## Current-build static drift check
+
+A second static-only extraction was performed against the currently active public build selected by `asset-manifest.json`:
+
+- bundle: `static/js/main.2eefd057.js`
+- source map blob SHA: `13d60111b2ca47b9831e70f9fd06a631fc7127ce`
+
+The large source map was not treated as empty when the ordinary file reader returned an empty/truncated body. Instead, the immutable Git blob was inspected selectively without executing JavaScript or calling any discovered application endpoint.
+
+For the fields and behavior relevant to the SAFE planilla path, **no contract drift was found** between the fixture-era snapshot and the current build:
+
+- `getContextMenu()` still GETs `/get-context`, decrypts and parses the response.
+- `getTorneosXDivision(...)` still GETs `/torneos-x-division/{federacionId}/{temporadaId}/{rama}/{categoriaId}`.
+- `getTorneo(torneoId)` still GETs `/torneos/{torneoId}`, decrypts and parses it as `Torneo`.
+- `Partido` still contains `numeroFecha` and `planillas: Planilla[]`.
+- `Planilla` still contains `resultado_directo`, `pdf`, `url_transmision`, `local` and `visitante`.
+- the current UI still counts non-empty `planilla.pdf` values; with exactly one it opens that explicit value with `window.open`, otherwise it opens the planilla selector.
+
+Classification: **statically confirmed in both fixture-era and current public client builds; runtime/public accessibility remains unverified**.
+
+This is evidence of client-contract continuity, not proof that the backend route is anonymous, that tournament `775` exists at runtime, or that the control fixture/PDF can currently be fetched.
+
 ## Consequence for 7Metros
 
 This establishes a static fixture-era chain:
@@ -79,7 +101,7 @@ This establishes a static fixture-era chain:
 → per-planilla local/visitor score
 → `Planilla.pdf`
 
-Therefore, if a future separately-approved anonymous/public GET of tournament `775` is ever performed, the safe validator should not guess a PDF URL. It should require the returned tournament structure to identify the control match by date/teams, verify its 20–27 score, then obtain the PDF only from the explicit `planillas[].pdf` field and run the existing official-PDF allowlist/bounded-streaming/provenance gates.
+The current-build comparison shows that this same client contract remains present in the active public bundle. Therefore, if a future separately-approved anonymous/public GET of tournament `775` is ever performed, the safe validator should not guess a PDF URL. It should require the returned tournament structure to identify the control match by date/teams, verify its 20–27 score, then obtain the PDF only from the explicit `planillas[].pdf` field and run the existing official-PDF allowlist/bounded-streaming/provenance gates.
 
 ## Negative/unknown findings
 
@@ -92,4 +114,4 @@ Therefore, if a future separately-approved anonymous/public GET of tournament `7
 
 ## Next safe task
 
-Compare this restored fixture-era `SystemClient`/models with the currently active TournamentTracker build. Record contract drift (route names, fields, planilla behavior) statically before considering any runtime validation. Runtime candidates remain fail-closed and manual-review-only.
+The fixture-era/current-build drift check is now complete for the planilla path. The next safe task is to turn the confirmed stable contract into a deterministic, offline validator for a captured/decrypted `Torneo` fixture: identify a match by date and normalized team identity, require the expected score, require an explicit `planillas[].pdf`, and fail closed on ambiguity. Tests should use synthetic fixtures plus the already-known control expectations and must not perform network access. Runtime candidates remain fail-closed and manual-review-only.
