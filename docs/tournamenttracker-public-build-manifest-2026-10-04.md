@@ -43,6 +43,17 @@ The same public tree at the fixture-era commit retains multiple older main bundl
 
 `787.6621794f.chunk.js` and its source map are also present, but are not a `main.*` generation and must not be treated as a historical main build.
 
+## Source-map extraction status
+
+A direct UTF-8 file read of the fixture-era artifacts through the connected GitHub contents interface returns the correct immutable blob identities but an empty `content` field for both oversized files:
+
+- `main.69ca49ae.js` -> `429a457cd089db2d417cecd78477ef12f704d546`
+- `main.69ca49ae.js.map` -> `93c5abf7923d9bdb731d277c597757b8199c946c`
+
+This is treated as a **reader/transport limitation**, not as evidence that either repository file is empty. Their non-zero sizes are independently recorded in the repository tree above. GitHub indexed code search also does not expose useful `matchSheet`/planilla source excerpts from this compiled snapshot.
+
+Consequently, no route, model, score, match-sheet ID, or PDF identity may be claimed from a partial/empty read. Future extraction should use a bounded/raw artifact path that can verify the expected blob identity/size first, then parse the source-map JSON locally without executing JavaScript. If that path is unavailable, continue with other public/static evidence instead of weakening the SAFE gate.
+
 ## Rules for differential analysis
 
 1. Determine the active build from `asset-manifest.json`, never from directory ordering or filename sorting.
@@ -54,6 +65,7 @@ The same public tree at the fixture-era commit retains multiple older main bundl
 7. Do not execute source maps or JavaScript bundles.
 8. Any future comparison of `Torneo`, `Partido`, `Planilla`, `/get-context`, `/torneos/...`, or related structures must record which exact build(s) contain the evidence.
 9. A repository snapshot is not runtime proof; backend responses, score, PDF identity, and deployment state require separate evidence.
+10. Empty/truncated connector reads of oversized blobs are transport limitations and must never be interpreted as empty source artifacts or negative endpoint evidence.
 
 ## Control fixture
 
@@ -63,4 +75,4 @@ The eventual functional validation target remains the known control fixture:
 - 2026-03-21
 - Apertura 2026 (`tournamentId=775` is existing project evidence)
 
-The fixture-era snapshot now gives us a reproducible static artifact to inspect next: `main.69ca49ae.js.map` at blob `93c5abf7923d9bdb731d277c597757b8199c946c`. This manifest does **not** claim that TournamentTracker was executed or that it independently confirms the score/PDF.
+The fixture-era snapshot gives us a reproducible static artifact for future bounded extraction: `main.69ca49ae.js.map` at blob `93c5abf7923d9bdb731d277c597757b8199c946c`. This manifest does **not** claim that TournamentTracker was executed or that it independently confirms the score/PDF.
