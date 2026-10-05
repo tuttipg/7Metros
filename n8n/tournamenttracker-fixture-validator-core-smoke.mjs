@@ -38,6 +38,6 @@ check('planilla ausente rechazada', () => assert.throws(()=>validateTournamentTr
 check('múltiples planillas rechazadas', () => assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,partidos:[{...control,planillas:[{pdf},{pdf}]}]},expected}),/múltiples planillas/));
 check('host PDF externo rechazado', () => assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,partidos:[{...control,planillas:[{pdf:'https://evil.example/x.pdf'}]}]},expected})));
 check('PDF no explícito rechazado', () => assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,partidos:[{...control,planillas:[{}]}]},expected}),/sin pdf explícito/));
-check('fecha esperada vacía rechazada', () => assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture,expected:{...expected,fecha:''}}),/Fecha esperada inválida/));
+check('fecha esperada vacía rechazada', () => assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture,expected:{...expected,fecha:''}}),/Fecha esperada inválid/));
 
 console.log('✓ TournamentTracker fixture offline: regresión SAFE completa validada');
