@@ -16,102 +16,64 @@ This snapshot is temporal static evidence. It does not prove which bytes a brows
 
 ## Confirmed client routes
 
-The source map restores the application-level `SystemClient` implementation and confirms these GET calls:
-
-```ts
-async getContextMenu() {
-  const context = await this.requestHandler.get<string>(`/get-context`);
-  const decryptedData = decrypt(context);
-  return JSON.parse(decryptedData) as ContextMenu[];
-}
-
-async getTorneosXDivision(federacionId: string, temporadaId: string, rama: string, categoriaId: string) {
-  const torneosXDivision = await this.requestHandler.get<string>(
-    `/torneos-x-division/${federacionId}/${temporadaId}/${rama}/${categoriaId}`
-  );
-  // response is decrypted and parsed by the client
-}
-
-async getTorneo(torneoId: string) {
-  const torneo = await this.requestHandler.get<string>(`/torneos/${torneoId}`);
-  const decryptedData = decrypt(torneo);
-  return JSON.parse(decryptedData) as Torneo;
-}
-```
+The source map restores the application-level `SystemClient` implementation and confirms GET calls for `/get-context`, `/torneos-x-division/{federacionId}/{temporadaId}/{rama}/{categoriaId}` and `/torneos/{torneoId}`. `getTorneo()` decrypts the response and parses it as `Torneo`.
 
 Classification: **confirmed in fixture-era client code, not runtime-probed**. These routes remain `probeAllowed=false` in 7Metros.
 
+## Confirmed Torneo → Partido nesting
+
+A deeper static extraction of the same immutable source map confirms the exact container chain rather than inferring it from UI behavior:
+
+- `Torneo.fases: Fase[]`
+- `Fase.zonas: Zona[]`
+- `Zona.partidos: Partido[]`
+
+The fixture UI independently traverses `torneo.fases`, then each phase's `zonas`, and reads each zone's `partidos`. Therefore the offline adapter may deterministically flatten:
+
+`Torneo.fases[] → Fase.zonas[] → Zona.partidos[]`
+
+while retaining `fase.id` and `zona.id` as provenance. No alternate top-level `partidos` field is assumed.
+
 ## Confirmed fixture/planilla data contract
 
-The restored TypeScript model shows that a `Partido` includes at least:
+The restored TypeScript model shows that a `Partido` includes at least `id`, `idClubLocal`, `idClubVisitante`, `golesLocal`, `golesVisitante`, `nombreLocal`, `nombreVisitante`, `horario`, playing/played/pending-confirmation flags, `numeroFecha` and `planillas: Planilla[]`, plus referees and venue metadata. The UI derives a fixture date from `new Date(partido.horario)`.
 
-- `id`
-- `idClubLocal`
-- `idClubVisitante`
-- `golesLocal`
-- `golesVisitante`
-- `nombreLocal`
-- `nombreVisitante`
-- local/visitor crest paths
-- playing/played/pending-confirmation flags
-- `numeroFecha`
-- `planillas: Planilla[]`
-- referees and venue metadata
+A `Planilla` includes at least `resultado_directo`, `pdf`, `url_transmision`, `local: Equipo` and `visitante: Equipo`.
 
-A `Planilla` includes at least:
-
-- `resultado_directo`
-- `pdf`
-- `url_transmision`
-- `local: Equipo`
-- `visitante: Equipo`
-
-The UI enables **Ver planilla** only when at least one `planilla.pdf` is present. With exactly one PDF it opens that `pdf` value directly; with multiple planillas it presents a selector. The selector renders `planilla.local.goles - planilla.visitante.goles` and opens `planilla.pdf`. Transmission links are handled separately through `url_transmision`.
+The UI enables **Ver planilla** only when at least one `planilla.pdf` is present. With exactly one PDF it opens that `pdf` value directly; with multiple planillas it presents a selector. Transmission links are handled separately through `url_transmision`.
 
 ## Current-build static drift check
 
-A second static-only extraction was performed against the currently active public build selected by `asset-manifest.json`:
-
-- bundle: `static/js/main.2eefd057.js`
-- source map blob SHA: `13d60111b2ca47b9831e70f9fd06a631fc7127ce`
-
-The large source map was not treated as empty when the ordinary file reader returned an empty/truncated body. Instead, the immutable Git blob was inspected selectively without executing JavaScript or calling any discovered application endpoint.
-
-For the fields and behavior relevant to the SAFE planilla path, **no contract drift was found** between the fixture-era snapshot and the current build:
-
-- `getContextMenu()` still GETs `/get-context`, decrypts and parses the response.
-- `getTorneosXDivision(...)` still GETs `/torneos-x-division/{federacionId}/{temporadaId}/{rama}/{categoriaId}`.
-- `getTorneo(torneoId)` still GETs `/torneos/{torneoId}`, decrypts and parses it as `Torneo`.
-- `Partido` still contains `numeroFecha` and `planillas: Planilla[]`.
-- `Planilla` still contains `resultado_directo`, `pdf`, `url_transmision`, `local` and `visitante`.
-- the current UI still counts non-empty `planilla.pdf` values; with exactly one it opens that explicit value with `window.open`, otherwise it opens the planilla selector.
+A second static-only extraction was performed against the currently active public build selected by `asset-manifest.json` (`static/js/main.2eefd057.js`; source map blob SHA `13d60111b2ca47b9831e70f9fd06a631fc7127ce`). For the fields and behavior relevant to the SAFE planilla path, no contract drift was found: the routes, `Partido.planillas`, `Planilla.pdf` and explicit PDF-opening behavior remain present.
 
 Classification: **statically confirmed in both fixture-era and current public client builds; runtime/public accessibility remains unverified**.
 
-This is evidence of client-contract continuity, not proof that the backend route is anonymous, that tournament `775` exists at runtime, or that the control fixture/PDF can currently be fetched.
-
 ## Consequence for 7Metros
 
-This establishes a static fixture-era chain:
+The static chain is now explicit:
 
 `/torneos/{torneoId}`
 → decrypted `Torneo`
-→ fixture `Partido`
-→ `Partido.planillas[]`
-→ per-planilla local/visitor score
+→ `fases[]`
+→ `zonas[]`
+→ `partidos[]`
+→ exact `Partido`
+→ `planillas[]`
 → `Planilla.pdf`
 
-The current-build comparison shows that this same client contract remains present in the active public bundle. Therefore, if a future separately-approved anonymous/public GET of tournament `775` is ever performed, the safe validator should not guess a PDF URL. It should require the returned tournament structure to identify the control match by date/teams, verify its 20–27 score, then obtain the PDF only from the explicit `planillas[].pdf` field and run the existing official-PDF allowlist/bounded-streaming/provenance gates.
+`n8n/tournamenttracker-torneo-adapter-core.mjs` implements only the offline structural transformation. It requires an explicitly offline/decrypted evidence envelope with `network_used=false`, `auth_used=false` and `write_enabled=false`; converts TournamentTracker score strings to non-negative integers; derives `YYYY-MM-DD` only from an explicit ISO-like `horario`; preserves tournament/phase/zone/match identifiers; and hands the normalized fixture to the existing fail-closed validator. It performs no network access.
+
+The smoke regression uses the already-known control expectations (Argentinos Juniors 20–27 Ferro, 2026-03-21 and the previously known planilla filename) as synthetic input; it is a regression fixture, not new runtime evidence.
 
 ## Negative/unknown findings
 
-- This static analysis does **not** independently confirm tournament `775`.
-- It does **not** independently confirm the control score 20–27.
-- It does **not** identify the control match's `Partido.id`.
-- It does **not** identify the control PDF URL.
+- This static analysis does **not** independently confirm tournament `775` at runtime.
+- It does **not** independently confirm the control score 20–27 from TournamentTracker runtime.
+- It does **not** identify the control match's real `Partido.id`.
+- It does **not** discover the control PDF URL from a live endpoint.
 - It does **not** prove that `/torneos/775` is currently anonymous/public.
-- No endpoint was called as part of this analysis.
+- No TournamentTracker/FEMEBAL application endpoint was called as part of this analysis.
 
 ## Next safe task
 
-The fixture-era/current-build drift check is now complete for the planilla path. The next safe task is to turn the confirmed stable contract into a deterministic, offline validator for a captured/decrypted `Torneo` fixture: identify a match by date and normalized team identity, require the expected score, require an explicit `planillas[].pdf`, and fail closed on ambiguity. Tests should use synthetic fixtures plus the already-known control expectations and must not perform network access. Runtime candidates remain fail-closed and manual-review-only.
+With the nesting and offline adapter now explicit, the next safe task is to strengthen provenance for captured/decrypted `Torneo` fixtures (source artifact hash, capture classification and immutable evidence metadata) before any future separately-approved anonymous/public GET is considered. Runtime candidates remain fail-closed and manual-review-only.
