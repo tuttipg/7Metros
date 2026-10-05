@@ -27,6 +27,13 @@ const validated = validateTournamentTrackerFixtureOffline({ fixture, expected: {
   fecha: '2026-03-21', local: 'Argentinos Juniors', visitante: 'Ferro Carril Oeste', goles_local: 20, goles_visitante: 27,
 } });
 assert.match(validated.pdf_url, /5ce377051ea0acb1\.pdf$/);
+assert.equal(validated.provenance.verified_exact_body, true);
+assert.equal(validated.provenance.artifact_sha256, sha256);
+assert.equal(validated.provenance.artifact_bytes, Buffer.byteLength(rawArtifact, 'utf8'));
+assert.equal(validated.provenance.source, 'tournamenttracker_decrypted_torneo_offline');
+assert.equal(validated.provenance.network_used, false);
+assert.equal(validated.provenance.auth_used, false);
+assert.equal(validated.provenance.write_enabled, false);
 
 assert.throws(() => verifyAndAdaptTournamentTrackerTorneoArtifactOffline({ rawArtifact: `${rawArtifact} `, evidence }), /artifact_bytes no coincide/);
 assert.throws(() => verifyAndAdaptTournamentTrackerTorneoArtifactOffline({ rawArtifact, evidence: { ...evidence, artifact_sha256: '0'.repeat(64) } }), /artifact_sha256 no coincide/);
