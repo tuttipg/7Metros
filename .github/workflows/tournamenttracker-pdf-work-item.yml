@@ -1,0 +1,25 @@
+name: TournamentTracker PDF work-item SAFE regression
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  tournamenttracker-pdf-work-item:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check TournamentTracker PDF work-item syntax
+        run: |
+          node --check n8n/tournamenttracker-pdf-work-item-core.mjs
+          node --check n8n/tournamenttracker-pdf-work-item-core-smoke.mjs
+          node --check n8n/tournamenttracker-pdf-fetch-bridge-smoke.mjs
+      - name: TournamentTracker verified Torneo to official PDF work-item regression
+        run: node n8n/tournamenttracker-pdf-work-item-core-smoke.mjs
+      - name: TournamentTracker verified Torneo to SAFE PDF fetch regression
+        run: node n8n/tournamenttracker-pdf-fetch-bridge-smoke.mjs

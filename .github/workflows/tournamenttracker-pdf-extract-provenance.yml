@@ -1,0 +1,23 @@
+name: TournamentTracker PDF extraction provenance SAFE regression
+
+on:
+  pull_request:
+    paths:
+      - 'n8n/pdf-extract-contract.mjs'
+      - 'n8n/tournamenttracker-pdf-extract-provenance-smoke.mjs'
+      - '.github/workflows/tournamenttracker-pdf-extract-provenance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node n8n/tournamenttracker-pdf-extract-provenance-smoke.mjs

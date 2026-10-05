@@ -1,0 +1,44 @@
+name: FEMEBAL SAFE smoke isolation
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: ${{ matrix.test }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - n8n/importer-core-smoke.mjs
+          - n8n/discovery-manifest-bridge-smoke.mjs
+          - n8n/planilla-core-smoke.mjs
+          - n8n/planilla-dry-run-core-smoke.mjs
+          - n8n/official-pdf-fetch-core-smoke.mjs
+          - n8n/pdf-extract-contract-smoke.mjs
+          - n8n/pdf-extraction-wiring-smoke.mjs
+          - n8n/femebal-safe-workflow-smoke.mjs
+          - n8n/community-api-core-smoke.mjs
+          - n8n/programming-candidate-core-smoke.mjs
+          - n8n/programming-candidate-empty-regression-smoke.mjs
+          - n8n/tournamenttracker-public-core-smoke.mjs
+          - n8n/tournamenttracker-static-endpoint-core-smoke.mjs
+          - n8n/tournamenttracker-static-relative-path-core-smoke.mjs
+          - n8n/tournamenttracker-query-policy-smoke.mjs
+          - n8n/tournamenttracker-indexed-route-core-smoke.mjs
+          - n8n/tournamenttracker-evidence-manifest-smoke.mjs
+          - n8n/player-scope-core-smoke.mjs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run isolated smoke
+        run: node "${{ matrix.test }}"
