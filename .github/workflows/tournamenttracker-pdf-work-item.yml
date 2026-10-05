@@ -18,5 +18,8 @@ jobs:
         run: |
           node --check n8n/tournamenttracker-pdf-work-item-core.mjs
           node --check n8n/tournamenttracker-pdf-work-item-core-smoke.mjs
+          node --check n8n/tournamenttracker-pdf-fetch-bridge-smoke.mjs
       - name: TournamentTracker verified Torneo to official PDF work-item regression
         run: node n8n/tournamenttracker-pdf-work-item-core-smoke.mjs
+      - name: TournamentTracker verified Torneo to SAFE PDF fetch regression
+        run: node n8n/tournamenttracker-pdf-fetch-bridge-smoke.mjs
