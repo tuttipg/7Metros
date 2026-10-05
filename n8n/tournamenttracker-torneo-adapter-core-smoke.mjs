@@ -23,7 +23,7 @@ const control = {
         nombreVisitante: 'Ferro Carril Oeste',
         golesLocal: '20',
         golesVisitante: '27',
-        planillas: [{ pdf: 'https://fm-handball.s3.sa-east-1.amazonaws.com/pdf_planillas/5ce377051ea0acb1.pdf' }],
+        planillas: [{ pdf: 'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf' }],
       }],
     }],
   }],
