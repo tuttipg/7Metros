@@ -25,7 +25,7 @@ assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture,expected:{...
 assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,partidos:[control,control]},expected}),/ambigua/);
 assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,partidos:[{...control,planillas:[]}]},expected}),/no tiene planilla/);
 assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,partidos:[{...control,planillas:[{pdf},{pdf}]}]},expected}),/múltiples planillas/);
-assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,partidos:[{...control,planillas:[{pdf:'https://evil.example/x.pdf'}]}]},expected));
+assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,partidos:[{...control,planillas:[{pdf:'https://evil.example/x.pdf'}]}]},expected}));
 assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,partidos:[{...control,planillas:[{}]}]},expected}),/sin pdf explícito/);
 assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture,expected:{...expected,fecha:''}}),/Fecha esperada inválida/);
 console.log('✓ TournamentTracker fixture offline: control 20–27, ambigüedad, PDF explícito y SAFE fail-closed validados');
