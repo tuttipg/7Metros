@@ -39,5 +39,9 @@ check('múltiples planillas rechazadas', () => assert.throws(()=>validateTournam
 check('host PDF externo rechazado', () => assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,partidos:[{...control,planillas:[{pdf:'https://evil.example/x.pdf'}]}]},expected})));
 check('PDF no explícito rechazado', () => assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,partidos:[{...control,planillas:[{}]}]},expected}),/sin pdf explícito/));
 check('fecha esperada vacía rechazada', () => assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture,expected:{...expected,fecha:''}}),/Fecha esperada inválid/));
+check('fecha esperada exige ISO YYYY-MM-DD', () => assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture,expected:{...expected,fecha:'21/03/2026'}}),/YYYY-MM-DD/));
+check('fecha esperada calendario imposible rechazada', () => assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture,expected:{...expected,fecha:'2026-02-30'}}),/calendario válida/));
+check('fecha de partido exige ISO YYYY-MM-DD', () => assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,partidos:[{...control,fecha:'21/03/2026'}]},expected}),/YYYY-MM-DD/));
+check('fecha de partido calendario imposible rechazada', () => assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,partidos:[{...control,fecha:'2026-02-30'}]},expected}),/calendario válida/));
 
 console.log('✓ TournamentTracker fixture offline: regresión SAFE completa validada');
