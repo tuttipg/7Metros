@@ -70,8 +70,8 @@ assert.throws(()=>parsePlanillaDryRun({workItem,extractedText,expected:true}),/I
 assert.throws(()=>parsePlanillaDryRun({workItem,extractedText,expected:{local:true}}),/Equipo local esperado inválido/);
 
 assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,method:'POST'},extractedText}),/GET/);
-assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,source:{...workItem.source,provenance:undefined}},extractedText}),/provenance/);
-assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,source:{...workItem.source,provenance:'public_index'}},extractedText}),/provenance/);
+assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,source:{...workItem.source,provenance:undefined}},extractedText}),/provenance/i);
+assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,source:{...workItem.source,provenance:'public_index'}},extractedText}),/provenance/i);
 assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,source:{...workItem.source,document_type:'programacion_pdf'}},extractedText}),/document_type/);
 assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,source:{...workItem.source,page_url:'https://evil.example/source'}},extractedText}));
 assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,source:{...workItem.source,source_type:'unknown'}},extractedText}),/source_type/);
