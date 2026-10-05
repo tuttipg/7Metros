@@ -1,9 +1,31 @@
 import { parseOfficialFemebalSheet } from './planilla-core.mjs';
 import { canonicalizeOfficialFemebalUrl } from './official-url-policy.mjs';
 
+const SHA256_RE = /^[a-f0-9]{64}$/;
+
+function validatePublicExplicitSource(source, sourceUrl) {
+  const sourcePdfUrl = canonicalizeOfficialFemebalUrl(source.pdf_url, { pdf: true });
+  if (sourcePdfUrl !== sourceUrl) throw new Error('La fuente del work item no coincide con su URL');
+  if (source.document_type !== 'planilla_partido_pdf') throw new Error('La fuente debe ser document_type=planilla_partido_pdf');
+  canonicalizeOfficialFemebalUrl(source.page_url);
+  if (!['fecha_normal', 'reprogramacion'].includes(source.source_type)) throw new Error('source_type de la planilla inválido');
+}
+
+function validateTournamentTrackerSource(item, source, sourceUrl) {
+  const sourcePdfUrl = canonicalizeOfficialFemebalUrl(source.pdf_url, { pdf: true });
+  if (sourcePdfUrl !== sourceUrl) throw new Error('La fuente TournamentTracker no coincide con su URL');
+  if (item.kind !== 'tournamenttracker_selected_official_pdf') throw new Error('kind incompatible con provenance TournamentTracker');
+  if (item.dry_run !== true) throw new Error('TournamentTracker PDF requiere dry_run=true');
+  if (source.torneo_verified_exact_body !== true) throw new Error('TournamentTracker requiere torneo_verified_exact_body=true');
+  if (typeof source.torneo_artifact_sha256 !== 'string' || !SHA256_RE.test(source.torneo_artifact_sha256)) throw new Error('torneo_artifact_sha256 inválido');
+  if (!Number.isSafeInteger(source.torneo_artifact_bytes) || source.torneo_artifact_bytes < 1) throw new Error('torneo_artifact_bytes inválido');
+  if (source.network_used !== false || source.auth_used !== false || source.write_enabled !== false) throw new Error('Fuente TournamentTracker fuera de frontera SAFE');
+  if (!item.expected_match || typeof item.expected_match !== 'object' || Array.isArray(item.expected_match)) throw new Error('TournamentTracker requiere expected_match');
+}
+
 export function validatePdfWorkItem(item) {
   if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('Work item PDF inválido');
-  if (item.kind !== 'femebal_official_pdf') throw new Error('kind de work item inválido');
+  if (!['femebal_official_pdf', 'tournamenttracker_selected_official_pdf'].includes(item.kind)) throw new Error('kind de work item inválido');
   if (item.method !== 'GET') throw new Error('El work item debe usar GET');
   if (item.allow_redirects !== false) throw new Error('Los redirects deben estar deshabilitados');
   if (item.auth_used !== false) throw new Error('El work item no puede usar autenticación');
@@ -11,12 +33,9 @@ export function validatePdfWorkItem(item) {
 
   const sourceUrl = canonicalizeOfficialFemebalUrl(item.url, { pdf: true });
   if (!item.source || typeof item.source !== 'object' || Array.isArray(item.source)) throw new Error('Fuente del work item inválida');
-  const sourcePdfUrl = canonicalizeOfficialFemebalUrl(item.source.pdf_url, { pdf: true });
-  if (sourcePdfUrl !== sourceUrl) throw new Error('La fuente del work item no coincide con su URL');
-  if (item.source.provenance !== 'public_explicit_link') throw new Error('La planilla requiere provenance=public_explicit_link');
-  if (item.source.document_type !== 'planilla_partido_pdf') throw new Error('La fuente debe ser document_type=planilla_partido_pdf');
-  canonicalizeOfficialFemebalUrl(item.source.page_url);
-  if (!['fecha_normal', 'reprogramacion'].includes(item.source.source_type)) throw new Error('source_type de la planilla inválido');
+  if (item.source.provenance === 'public_explicit_link') validatePublicExplicitSource(item.source, sourceUrl);
+  else if (item.source.provenance === 'tournamenttracker_verified_torneo_selection') validateTournamentTrackerSource(item, item.source, sourceUrl);
+  else throw new Error('Provenance de planilla no permitida');
   return sourceUrl;
 }
 
