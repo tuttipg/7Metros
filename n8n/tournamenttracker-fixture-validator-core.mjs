@@ -9,6 +9,20 @@ function requireNonEmptyString(value, label) {
   return value.trim();
 }
 
+function requireIsoDate(value, label) {
+  const date = requireNonEmptyString(value, label);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) throw new Error(`${label} debe usar YYYY-MM-DD`);
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) {
+    throw new Error(`${label} no es una fecha calendario válida`);
+  }
+  return date;
+}
+
 function requireScore(value, label) {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${label} inválido`);
   return value;
@@ -17,7 +31,7 @@ function requireScore(value, label) {
 function validateExpected(expected) {
   if (!expected || typeof expected !== 'object' || Array.isArray(expected)) throw new Error('Partido esperado inválido');
   return {
-    fecha: requireNonEmptyString(expected.fecha, 'Fecha esperada'),
+    fecha: requireIsoDate(expected.fecha, 'Fecha esperada'),
     local: requireNonEmptyString(expected.local, 'Equipo local esperado'),
     visitante: requireNonEmptyString(expected.visitante, 'Equipo visitante esperado'),
     goles_local: requireScore(expected.goles_local, 'Marcador local esperado'),
@@ -37,7 +51,7 @@ function validateMatch(match, index) {
   if (!Array.isArray(planillas)) throw new Error(`planillas debe ser array en partido ${index}`);
   return {
     ...match,
-    fecha: requireNonEmptyString(match.fecha, `Fecha de partido ${index}`),
+    fecha: requireIsoDate(match.fecha, `Fecha de partido ${index}`),
     local: requireNonEmptyString(match.local, `Local de partido ${index}`),
     visitante: requireNonEmptyString(match.visitante, `Visitante de partido ${index}`),
     goles_local: requireScore(match.goles_local, `Marcador local de partido ${index}`),
