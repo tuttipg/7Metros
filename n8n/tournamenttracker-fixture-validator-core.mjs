@@ -92,5 +92,6 @@ export function validateTournamentTrackerFixtureOffline({ fixture, expected }) {
     expected_match: wanted,
     match,
     pdf_url: match.planillas[0].pdf,
+    ...(fixture.provenance === undefined ? {} : { provenance: fixture.provenance }),
   };
 }
