@@ -131,6 +131,9 @@ export function prepareDataset(dataset) {
   const clubById = new Map(state.clubs.map(row => [row.id, row]));
 
   state.matches = (dataset.partidos || []).map(row => {
+    const matchId = Number(row.id);
+    if (!Number.isFinite(matchId)) return null;
+
     const homeTeamId = Number(field(row, ['local_equipo_id', 'local_id'], NaN));
     const awayTeamId = Number(field(row, ['visitante_equipo_id', 'visitante_id'], NaN));
     const homeTeam = teamById.get(homeTeamId) || null;
@@ -144,7 +147,7 @@ export function prepareDataset(dataset) {
     const finished = statusRaw === 'finalizado' || statusRaw === 'final' || (hasScores && statusRaw !== 'programado');
 
     return {
-      id: Number(row.id),
+      id: matchId,
       date: field(row, ['fecha'], ''),
       time: String(field(row, ['hora'], '') || '').slice(0, 5),
       round: field(row, ['jornada', 'fecha_torneo'], null),
