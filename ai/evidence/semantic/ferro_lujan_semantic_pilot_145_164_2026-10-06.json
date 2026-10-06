@@ -1,6 +1,6 @@
 {
   "schema_version": "sevenmetros.semantic-gt/v1",
-  "status": "HUMAN_REVIEW_PENDING",
+  "status": "ASSISTED_VISUAL_REVIEW_PENDING_HUMAN_CONFIRMATION",
   "source": {
     "video_sha256": "84a94f6e5526d94afc67dc8ee99cc9b390265482d6f0250f2d8a12080e437ed2",
     "video_name": "20260926-1444-24.0816290.mp4",
@@ -13,7 +13,7 @@
     "name": "ferro_lujan_semantic_pilot_145_164",
     "start_frame": 145,
     "end_frame_exclusive": 165,
-    "purpose": "Small semantic validation around the existing CONTROL CHANGE? candidate at frame 151 and the visually observed same-team pass completing around frame 164."
+    "purpose": "Small semantic validation around the existing control-change candidate and the same-team pass completing at frame 164."
   },
   "existing_ground_truth": {
     "player_gt": {
@@ -40,14 +40,14 @@
     "controlled_owner_rule": "controlled requires a visually clear ball in the player's hands/body-control zone; free means the ball is visible but not controlled by a player; unknown is used when visibility or control cannot be established.",
     "event_rule": "A control-change event is placed on the first frame where control by the new player is visually established after the flight/transition. Same-team and opponent changes are separate kinds.",
     "event_tolerance_for_scoring": 2,
-    "note": "The proposal below is not official GT until a human reviewer confirms or edits it."
+    "note": "Assistant visual review corrected the initial proposal. These labels are not official human GT until a human reviewer confirms or edits them."
   },
   "proposed_labels_for_human_confirmation": {
     "frames": [
       {"frame_index": 145, "ball_state": "visible", "possession_state": "controlled", "possessor_ref": "player_gt_1"},
       {"frame_index": 146, "ball_state": "visible", "possession_state": "controlled", "possessor_ref": "player_gt_1"},
       {"frame_index": 147, "ball_state": "visible", "possession_state": "controlled", "possessor_ref": "player_gt_1"},
-      {"frame_index": 148, "ball_state": "visible", "possession_state": "controlled", "possessor_ref": "player_gt_1"},
+      {"frame_index": 148, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
       {"frame_index": 149, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
       {"frame_index": 150, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
       {"frame_index": 151, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
