@@ -1,6 +1,6 @@
 {
   "schema_version": "sevenmetros.semantic-gt/v1",
-  "status": "ASSISTED_VISUAL_REVIEW_PENDING_HUMAN_CONFIRMATION",
+  "status": "HUMAN_REVIEW_COMPLETE",
   "source": {
     "video_sha256": "84a94f6e5526d94afc67dc8ee99cc9b390265482d6f0250f2d8a12080e437ed2",
     "video_name": "20260926-1444-24.0816290.mp4",
@@ -40,33 +40,144 @@
     "controlled_owner_rule": "controlled requires a visually clear ball in the player's hands/body-control zone; free means the ball is visible but not controlled by a player; unknown is used when visibility or control cannot be established.",
     "event_rule": "A control-change event is placed on the first frame where control by the new player is visually established after the flight/transition. Same-team and opponent changes are separate kinds.",
     "event_tolerance_for_scoring": 2,
-    "note": "Assistant visual review corrected the initial proposal. These labels are not official human GT until a human reviewer confirms or edits them."
+    "note": "Human reviewer confirmed the 20-frame semantic labels and event placement in this sequence. The labels below are official human GT for this pilot."
   },
   "proposed_labels_for_human_confirmation": {
     "frames": [
-      {"frame_index": 145, "ball_state": "visible", "possession_state": "controlled", "possessor_ref": "player_gt_1"},
-      {"frame_index": 146, "ball_state": "visible", "possession_state": "controlled", "possessor_ref": "player_gt_1"},
-      {"frame_index": 147, "ball_state": "visible", "possession_state": "controlled", "possessor_ref": "player_gt_1"},
-      {"frame_index": 148, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 149, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 150, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 151, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 152, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 153, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 154, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 155, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 156, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 157, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 158, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 159, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 160, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 161, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 162, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 163, "ball_state": "visible", "possession_state": "free", "possessor_ref": null},
-      {"frame_index": 164, "ball_state": "visible", "possession_state": "controlled", "possessor_ref": "player_gt_8"}
+      {
+        "frame_index": 145,
+        "ball_state": "visible",
+        "possession_state": "controlled",
+        "possessor_ref": "player_gt_1"
+      },
+      {
+        "frame_index": 146,
+        "ball_state": "visible",
+        "possession_state": "controlled",
+        "possessor_ref": "player_gt_1"
+      },
+      {
+        "frame_index": 147,
+        "ball_state": "visible",
+        "possession_state": "controlled",
+        "possessor_ref": "player_gt_1"
+      },
+      {
+        "frame_index": 148,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 149,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 150,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 151,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 152,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 153,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 154,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 155,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 156,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 157,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 158,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 159,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 160,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 161,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 162,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 163,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 164,
+        "ball_state": "visible",
+        "possession_state": "controlled",
+        "possessor_ref": "player_gt_8"
+      }
     ],
     "events": [
-      {"frame_index": 164, "kind": "same_team_control_change", "source_possessor_ref": "player_gt_1", "target_possessor_ref": "player_gt_8"}
+      {
+        "frame_index": 164,
+        "kind": "same_team_control_change",
+        "source_possessor_ref": "player_gt_1",
+        "target_possessor_ref": "player_gt_8"
+      }
     ]
+  },
+  "human_review": {
+    "status": "CONFIRMED",
+    "confirmed_by": "human_reviewer",
+    "confirmed_date": "2026-10-06",
+    "confirmed_scope": "frames 145-164 inclusive"
   }
 }
