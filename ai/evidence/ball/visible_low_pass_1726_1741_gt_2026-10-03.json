@@ -1,0 +1,38 @@
+{
+  "schema_version": "sevenmetros.ball-gt/v1",
+  "source": {
+    "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+    "width": 936,
+    "height": 524,
+    "fps": 30.0,
+    "encoding_note": "Local x264 fixture copy; not the canonical FFV1 tracking fixture."
+  },
+  "sequence": {
+    "name": "visible_low_pass_1726_1741",
+    "start_frame": 1726,
+    "end_frame_exclusive": 1742
+  },
+  "review": {
+    "method": "Frame-by-frame native-resolution review plus unboxed 4x nearest-neighbour crops.",
+    "policy": "Integer bbox follows the visually separable dark ball boundary, including visible motion blur; detector screening selected the action but did not define boxes.",
+    "result": "SIXTEEN_VISIBLE_LOCALISABLE_FRAMES_NO_TRUE_OCCLUSION"
+  },
+  "annotations": [
+    {"frame_index": 1726, "state": "visible", "bbox_xyxy": [519, 294, 532, 317], "note": "Motion-blurred ball is visually separable before the low pass accelerates."},
+    {"frame_index": 1727, "state": "visible", "bbox_xyxy": [496, 301, 507, 312], "note": "Visible ball travelling left across open court."},
+    {"frame_index": 1728, "state": "visible", "bbox_xyxy": [482, 294, 497, 308], "note": "Visible ball travelling left across open court."},
+    {"frame_index": 1729, "state": "visible", "bbox_xyxy": [449, 286, 464, 300], "note": "Visible ball travelling left across open court."},
+    {"frame_index": 1730, "state": "visible", "bbox_xyxy": [429, 281, 443, 295], "note": "Visible ball travelling left across open court."},
+    {"frame_index": 1731, "state": "visible", "bbox_xyxy": [418, 279, 432, 293], "note": "Visible ball approaching the defender's legs."},
+    {"frame_index": 1732, "state": "visible", "bbox_xyxy": [368, 278, 380, 293], "note": "Ball remains visually separable immediately left of the defender's legs."},
+    {"frame_index": 1733, "state": "visible", "bbox_xyxy": [368, 282, 378, 296], "note": "Ball remains visually separable between nearby shoe pixels."},
+    {"frame_index": 1734, "state": "visible", "bbox_xyxy": [337, 276, 350, 287], "note": "Ball remains visually separable immediately left of the dark shoe."},
+    {"frame_index": 1735, "state": "visible", "bbox_xyxy": [313, 263, 329, 278], "note": "Visible ball after passing the defender's legs."},
+    {"frame_index": 1736, "state": "visible", "bbox_xyxy": [305, 263, 320, 277], "note": "Visible ball after passing the defender's legs."},
+    {"frame_index": 1737, "state": "visible", "bbox_xyxy": [280, 262, 294, 276], "note": "Visible ball travelling left across open court."},
+    {"frame_index": 1738, "state": "visible", "bbox_xyxy": [263, 262, 278, 276], "note": "Visible ball travelling left across open court."},
+    {"frame_index": 1739, "state": "visible", "bbox_xyxy": [263, 262, 278, 276], "note": "Duplicated source frame; the ball remains visible and localisable."},
+    {"frame_index": 1740, "state": "visible", "bbox_xyxy": [225, 263, 239, 278], "note": "Visible ball approaching the receiving player."},
+    {"frame_index": 1741, "state": "visible", "bbox_xyxy": [216, 266, 231, 280], "note": "Ball remains localisable beside the receiver's raised hands."}
+  ]
+}

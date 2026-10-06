@@ -1,0 +1,58 @@
+{
+  "scope": "fresh_640_all_frames_plus_fresh_1280_on_track_contact_frames",
+  "full_artifact_sha256": "60b68b7f2f855fb5b1d8540e0b40ad37e3cc86c743a17f7b9b85b72d824c47d7",
+  "repeat_artifact_sha256": "c32e1f02e9e234f1c3cbb2d07da25dd85e9284b5a37c3dd1a4ed4e4012331cd0",
+  "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+  "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+  "confidence": 0.1,
+  "frames": 195,
+  "ranges_end_exclusive": [[105, 210], [1065, 1155]],
+  "trigger": {
+    "selected_frames": 53,
+    "selected_fraction": 0.2717948717948718,
+    "criterion": "two predicted track centers inside one 640 box, separation >= 20% diagonal, missed <= 6"
+  },
+  "runtime_measured_excluding_model_load_and_warmup": {
+    "runs": [
+      {
+        "total_seconds": 12.246411193998938,
+        "effective_fps": 15.923032218251425,
+        "baseline_pass_seconds": 6.7172638560005,
+        "contact_trigger_replay_seconds": 0.8703522270006943,
+        "candidate_selected_pass_seconds": 4.64675897699999
+      },
+      {
+        "total_seconds": 13.231721076997928,
+        "effective_fps": 14.73731186330618,
+        "baseline_pass_seconds": 7.553173854001216,
+        "contact_trigger_replay_seconds": 0.9170433889994456,
+        "candidate_selected_pass_seconds": 4.7471772530007
+      }
+    ],
+    "prior_full_1280_seconds": 17.447490434999054,
+    "cache_outputs_identical_between_runs": true
+  },
+  "deduplicated": {
+    "baseline_640": {
+      "detections": 2911,
+      "sparse_points": {"unique_box": 25, "shared_box": 4, "ambiguous": 1, "missing": 0},
+      "range_unique_tracks": [16, 16],
+      "range_mean_continuous_run_frames": [54.833, 47.952]
+    },
+    "selective_local": {
+      "detections": 2930,
+      "sparse_points": {"unique_box": 28, "shared_box": 0, "ambiguous": 2, "missing": 0},
+      "range_unique_tracks": [17, 16],
+      "range_mean_continuous_run_frames": [50.846, 46.045]
+    },
+    "rejected_full_frame_substitution": {
+      "artifact_sha256": "e2692b43115a1f8c01533a90aa1005d13f12ce4df68435267bc47fc5062332bf",
+      "range_unique_tracks": [21, 18],
+      "range_mean_continuous_run_frames": [26.245, 34.533]
+    }
+  },
+  "standard_detection_metrics": null,
+  "standard_tracking_metrics": null,
+  "decision": "experimental_only_do_not_change_default",
+  "limitation": "Sparse assistant-selected points, thresholds explored on these ranges, and tracker health without independently reviewed ground truth."
+}

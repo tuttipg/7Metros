@@ -1,0 +1,30 @@
+{
+  "status": "UNVERIFIED_CONTROL_CHANGE_CANDIDATES_NO_EVENT_GT",
+  "decision": "KEEP_AS_EXPERIMENTAL_EVENT_CANDIDATE_LAYER",
+  "fixture": "Ferro - N. S. de Lujan",
+  "sequence": "ferro_lujan_contact",
+  "fixture_frames": [105, 210],
+  "frame_count": 105,
+  "settings": {"min_run_frames": 2, "max_transition_gap_frames": 4},
+  "stable_runs": 4,
+  "events": [
+    {
+      "kind": "opponent_control_change_candidate",
+      "frame_index": 151,
+      "source_track_id": 1,
+      "source_team": "Ferro",
+      "target_track_id": 5,
+      "target_team": "Lujan",
+      "gap_frames": 1,
+      "source_run_frames": 2,
+      "target_run_frames": 5
+    }
+  ],
+  "confirmed_events": 0,
+  "artifacts": {
+    "demo_video_sha256": "bc61b7cd998fc7a2c9a9c6094511b0073266ba141fba87adef694fb9085415cd",
+    "json_sha256": "7b2da8c264063acd50d9580046b300ee8c0da04f884ea8d9659ecd6e8454219a"
+  },
+  "accuracy_metrics": null,
+  "reason_accuracy_unavailable": "No human event ground truth exists; CONTROL CHANGE? is a conservative candidate only."
+}

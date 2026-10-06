@@ -1,0 +1,35 @@
+{
+  "scope": "replay_of_existing_640_and_1280_neural_inference_caches",
+  "full_replay_artifact_sha256": "1df6ec7295c67faaa820d94994354c320bdc37835f25b7ead31191f71985d9a4",
+  "inputs": {
+    "baseline_cache_sha256": "baada623955ce660277806dd0affa8e534e2198e1d0d0a8ceb7739063b773b27",
+    "candidate_cache_sha256": "80c99cef32e80fdee626a83190363eda36bca2b2261884f4e0310e1b3dc159d3",
+    "comparison_sha256": "89c60527eb4d895c199073ad9ffde9dc3c49549c955bc027213e809e160846dd",
+    "frames": 195
+  },
+  "trigger": {
+    "coverage": 0.5,
+    "maximum_neighbor_pair_iou": 0.2,
+    "minimum_current_box_aspect": 0.35,
+    "uses_adjacent_frames": true,
+    "selected_count": 40,
+    "selected_fraction": 0.20512820512820512,
+    "threshold_selection": "exploratory_on_same_ranges_not_held_out"
+  },
+  "deduplicated_sparse_point_status": {
+    "baseline_640": {"unique_box": 25, "shared_box": 4, "ambiguous": 1, "missing": 0},
+    "candidate_1280": {"unique_box": 28, "shared_box": 0, "ambiguous": 2, "missing": 0},
+    "selective_640_1280": {"unique_box": 28, "shared_box": 0, "ambiguous": 2, "missing": 0}
+  },
+  "runtime_estimate": {
+    "not_measured_end_to_end": true,
+    "baseline_640_seconds_measured": 7.074493411999356,
+    "candidate_1280_seconds_measured": 17.447490434999054,
+    "selective_seconds_estimated": 10.653465808922238,
+    "selective_fps_estimated": 18.30390255128882,
+    "estimated_time_reduction_vs_full_1280": 0.3893983866268951
+  },
+  "standard_detection_metrics": null,
+  "standard_tracking_metrics": null,
+  "limitation": "Replay, sparse assistant-selected points, thresholds explored on the same ranges, and estimated rather than end-to-end measured selective runtime."
+}

@@ -1,0 +1,34 @@
+{
+  "status": "DIAGNOSTIC_EXACT_BASELINE_BEFORE_ROLE_FILTER",
+  "sequence": "ferro_lujan_hard_reentry",
+  "source_fixture_frames": [2915, 3004],
+  "matching_iou_threshold": 0.5,
+  "totals": {"TP": 917, "FN": 208, "FP": 171},
+  "fn_concentration": {
+    "top_four_gt_ids": {"ids": [215, 205, 222, 217], "fn": 171, "fraction": 0.822115},
+    "upper_boundary_gt_ids": {"ids": [215, 205], "fn": 112, "fraction": 0.538462}
+  },
+  "per_gt": {
+    "215": {"visible": 90, "TP": 16, "FN": 74, "recall": 0.177778, "tracker_ids": {"215": 16}},
+    "205": {"visible": 89, "TP": 51, "FN": 38, "recall": 0.573034, "tracker_ids": {"205": 51}},
+    "222": {"visible": 90, "TP": 59, "FN": 31, "recall": 0.655556, "tracker_ids": {"217": 38, "226": 17, "222": 2, "225": 2}},
+    "217": {"visible": 89, "TP": 61, "FN": 28, "recall": 0.685393, "tracker_ids": {"222": 24, "225": 24, "217": 11, "226": 2}},
+    "212": {"visible": 48, "TP": 36, "FN": 12, "recall": 0.75},
+    "211": {"visible": 89, "TP": 76, "FN": 13, "recall": 0.853933},
+    "162": {"visible": 90, "TP": 78, "FN": 12, "recall": 0.866667},
+    "208": {"visible": 90, "TP": 90, "FN": 0, "recall": 1.0},
+    "213": {"visible": 90, "TP": 90, "FN": 0, "recall": 1.0},
+    "216": {"visible": 90, "TP": 90, "FN": 0, "recall": 1.0},
+    "218": {"visible": 90, "TP": 90, "FN": 0, "recall": 1.0},
+    "219": {"visible": 90, "TP": 90, "FN": 0, "recall": 1.0},
+    "221": {"visible": 90, "TP": 90, "FN": 0, "recall": 1.0}
+  },
+  "false_positive_track_ids": {"202": 90, "224": 61, "217": 9, "223": 6, "225": 3, "215": 1, "222": 1},
+  "role_candidate_fp_fraction": {"track_ids": [202, 224], "fp": 151, "fraction": 0.883041},
+  "hardest_frames_fn": {"2959": 5, "2953": 4, "2954": 4, "2955": 4, "2956": 4, "2960": 4},
+  "interpretation_limits": [
+    "diagnostic matching is not a replacement for official TrackEval metrics",
+    "without the exact low-confidence cache, upper-boundary misses cannot yet be separated into detector-confidence versus fixture-filter losses",
+    "short-gap interpolation does not solve identity swaps between GT 217 and 222"
+  ]
+}

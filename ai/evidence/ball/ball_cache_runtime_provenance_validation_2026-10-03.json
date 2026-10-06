@@ -1,0 +1,51 @@
+{
+  "schema_version": "sevenmetros.ball-cache-runtime-validation/v1",
+  "status": "VERIFIED_REAL_INFERENCE_AND_STRICT_REPLAY_NOT_GENERAL_ACCURACY",
+  "source": {
+    "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+    "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+    "class_id": 32,
+    "low_threshold": 0.02,
+    "high_threshold": 0.05,
+    "imgsz": 960
+  },
+  "cache_v2": {
+    "path": "ai/evidence/ball/yolo11n_ball_gt_cache_v2_runtime_002_960_2026-10-03.json",
+    "sha256": "fc0494dcae2e6355920b4cef1b96c735fd1f62e78412b104cbd8445b5e23f8d5",
+    "bytes": 45391,
+    "frames": 113,
+    "detections": 132,
+    "inference_runtime": {
+      "python_version": "3.12.14",
+      "opencv_version": "4.11.0",
+      "ultralytics_version": "8.4.163",
+      "torch_version": "2.14.0+cpu",
+      "device": "cpu",
+      "machine": "x86_64",
+      "torch_num_threads": 8
+    }
+  },
+  "verification": {
+    "fresh_inference_seconds_local_observation": 9.436,
+    "minimal_runtime_replay_seconds_local_observation": 0.327,
+    "replay_imported_opencv_or_ultralytics": false,
+    "normalized_inference_and_replay_outputs_exact": true,
+    "historical_v1_cache_still_replays": true,
+    "historical_v1_runtime_provenance": null,
+    "aggregate_non_regression": true,
+    "per_visible_sequence_non_regression": true
+  },
+  "reviewed_sample_metrics": {
+    "visible_ground_truth_frames": 53,
+    "out_of_frame_negative_frames": 60,
+    "matched": 44,
+    "false_positive_candidates_on_evaluable_frames": 2,
+    "precision_on_reviewed_evaluable_frames": 0.9565217391304348,
+    "recall_on_reviewed_positive_frames": 0.8301886792452831
+  },
+  "limitations": [
+    "Metrics cover selected reviewed frames from one match, not the complete match or general accuracy.",
+    "Runtime provenance explains future cache differences but does not make floating-point inference deterministic across hardware.",
+    "The historical v1 cache remains valid but cannot retroactively identify the runtime that generated it."
+  ]
+}

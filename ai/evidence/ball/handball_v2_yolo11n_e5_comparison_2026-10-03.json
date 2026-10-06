@@ -1,0 +1,70 @@
+{
+  "schema": "sevenmetros.ball-model-heldout-comparison/v1",
+  "status": "SPECIALIZED_MODEL_REJECTED_ON_REVIEWED_HELDOUT_SAMPLE_NOT_MATCH_ACCURACY",
+  "evaluation_scope": {
+    "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+    "visible_gt_frames": 53,
+    "out_of_frame_negative_frames": 60,
+    "iou_threshold": 0.5,
+    "low_threshold": 0.1,
+    "high_threshold": 0.25,
+    "imgsz": 960
+  },
+  "generic_yolo11n_coco_sports_ball": {
+    "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+    "cache_sha256": "f172c80fa9e7ac41531a19aaeb0cb712004ab854c773ef06bcc0be212fa4c36b",
+    "cache_detections": 53,
+    "strong_control": {
+      "matched": 24,
+      "false_positive_candidates": 3,
+      "reviewed_evaluable_precision": 0.8888888888888888,
+      "reviewed_positive_recall": 0.4528301886792453,
+      "longest_visible_miss_run": 9
+    },
+    "court_guard_plus_two_stage_association": {
+      "matched": 33,
+      "false_positive_candidates": 1,
+      "reviewed_evaluable_precision": 0.9705882352941176,
+      "reviewed_positive_recall": 0.6226415094339622,
+      "longest_visible_miss_run": 9
+    },
+    "aggregate_non_regression": true,
+    "per_visible_sequence_non_regression": false
+  },
+  "specialized_handball_yolo11n_e5": {
+    "model_sha256": "0bf57b3a22505be98767b473f0c22cf16fc05534ce1d794a0c85474e181eb9b5",
+    "cache_sha256": "665c5f4eab8888b9f380a6e988bae1a7289dc36ec3348e6ca5499efe34f1bc8c",
+    "cache_detections": 256,
+    "strong_control": {
+      "matched": 15,
+      "false_positive_candidates": 76,
+      "reviewed_evaluable_precision": 0.16483516483516483,
+      "reviewed_positive_recall": 0.2830188679245283,
+      "longest_visible_miss_run": 15
+    },
+    "court_guard_plus_two_stage_association": {
+      "matched": 16,
+      "false_positive_candidates": 29,
+      "reviewed_evaluable_precision": 0.35555555555555557,
+      "reviewed_positive_recall": 0.3018867924528302,
+      "longest_visible_miss_run": 16
+    },
+    "aggregate_non_regression": false,
+    "per_visible_sequence_non_regression": false
+  },
+  "replay_verification": {
+    "generic_matches_fresh_inference_after_execution_metadata_removed": true,
+    "specialized_matches_fresh_inference_after_execution_metadata_removed": true
+  },
+  "decision": {
+    "production_default_changed": false,
+    "specialized_checkpoint_admitted_for_production": false,
+    "generic_two_stage_association_admitted_for_production": false,
+    "reason": "Both variants fail per-visible-sequence non-regression; the specialized model also regresses aggregate held-out metrics."
+  },
+  "limitations": [
+    "Metrics cover selected reviewed sequences from one match, not full-match or general accuracy.",
+    "External-dataset validation metrics are not match metrics.",
+    "Replay verifies deterministic consumption of persisted detections; it is not neural inference."
+  ]
+}

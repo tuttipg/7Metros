@@ -1,0 +1,65 @@
+{
+  "schema_version": "sevenmetros.ball-cache-validation/v1",
+  "status": "STRICT_CACHE_REPLAY_EXACT_MATCH",
+  "cache": {
+    "path": "ai/evidence/ball/yolo11n_ball_gt_cache_002_960_2026-10-03.json",
+    "schema_version": "sevenmetros.ball-detection-cache/v1",
+    "sha256": "6ccaa11216e81287ee6812783b9a23bfc89f3205d016c9e82b145aaf9ca251d0",
+    "bytes": 45150,
+    "frames": 113,
+    "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+    "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+    "class_id": 32,
+    "low_threshold": 0.02,
+    "imgsz": 960
+  },
+  "runs": {
+    "fresh": {
+      "processing": "NEW_NEURAL_INFERENCE_ON_EVERY_FRAME_OF_LISTED_GT_SEQUENCES",
+      "observed_wall_seconds": 11.634630259
+    },
+    "replay": {
+      "processing": "STRICT_DETECTION_CACHE_REPLAY_NO_NEURAL_INFERENCE",
+      "observed_wall_seconds": 0.351274307
+    },
+    "timing_note": "One local CPU observation per mode; useful as reproducibility evidence, not a general performance benchmark."
+  },
+  "comparison": {
+    "normalization": "Removed only processing.detector and inputs.detection_cache, which intentionally identify execution mode.",
+    "all_remaining_output_fields_equal": true,
+    "synthetic_ball_positions": 0,
+    "aggregate_non_regression": true,
+    "per_visible_sequence_non_regression": true
+  },
+  "metrics_identical_in_fresh_and_replay": {
+    "raw_strong_control": {
+      "matched": 43,
+      "visible_gt_frames": 53,
+      "false_positive_candidates_on_evaluable_frames": 32,
+      "precision_on_reviewed_evaluable_frames": 0.5733333333333334,
+      "recall_on_reviewed_positive_frames": 0.8113207547169812,
+      "longest_consecutive_visible_miss_run": 4
+    },
+    "blue_court_guard": {
+      "matched": 43,
+      "visible_gt_frames": 53,
+      "false_positive_candidates_on_evaluable_frames": 12,
+      "precision_on_reviewed_evaluable_frames": 0.7818181818181819,
+      "recall_on_reviewed_positive_frames": 0.8113207547169812,
+      "longest_consecutive_visible_miss_run": 4
+    },
+    "blue_court_plus_temporal": {
+      "matched": 44,
+      "visible_gt_frames": 53,
+      "false_positive_candidates_on_evaluable_frames": 2,
+      "precision_on_reviewed_evaluable_frames": 0.9565217391304348,
+      "recall_on_reviewed_positive_frames": 0.8301886792452831,
+      "longest_consecutive_visible_miss_run": 4
+    }
+  },
+  "limits": [
+    "The fresh run is new neural inference; the second run is cache replay.",
+    "The cache covers selected GT sequences from one match, not the complete match.",
+    "Metrics describe the reviewed 53-positive/60-negative sample, not general accuracy."
+  ]
+}

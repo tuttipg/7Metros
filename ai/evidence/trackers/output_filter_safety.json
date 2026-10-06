@@ -1,0 +1,66 @@
+{
+  "status": "OUTPUT_FILTER_VERIFIED_ON_REVIEWED_GT",
+  "scope": "persisted_tracker_replay_against_human_reviewed_gt",
+  "accuracy_scope": "this reviewed interval only; not general precision",
+  "frames": 105,
+  "iou_threshold": 0.5,
+  "matching": "maximum-cardinality Hungarian; IoU tie-break",
+  "gt_sha256": "6cbee6046118d3f25cc3ae028b1aaa24b75e42859f0bc2541eaab9cfdcd1b615",
+  "before_sha256": {
+    "baseline_high_only": "fe303f9265ed7ebf0c2e303c7ce8722fd34f6c1c011c90ceefaa7b5b66033a1e",
+    "two_stage": "f545b112eada58a1af20007434c5dae224426f8631245c1253f28232971514fd",
+    "bytetrack_standard": "e5967d295bb9aadb59d492d5c92b440c05940e57c082d2a2f6b678faacc4e4fc"
+  },
+  "after_sha256": {
+    "baseline_high_only": "8c1322c08e8c8efed09b172ff0a8d7aea006c8cc05a85992708f65b2812e51d9",
+    "two_stage": "96c3b19827f7b385b10d5e64b90d4d92742ea241db3863ffe26f23796fdf7f7b",
+    "bytetrack_standard": "dd69c609eef955be4f359d6132eed7205d1f26cd67f8710eb2fddb3f4823630c"
+  },
+  "trackers": {
+    "baseline_high_only": {
+      "status": "REMOVED_ONLY_FALSE_POSITIVES_ON_REVIEWED_GT",
+      "before_observations": 1267,
+      "after_observations": 1189,
+      "removed_observations": 78,
+      "before": {"TP": 1154, "FN": 205, "FP": 113},
+      "after": {"TP": 1154, "FN": 205, "FP": 35},
+      "removed_matched_before": 0,
+      "removed_with_any_gt_overlap": 0,
+      "removed_track_ids": {"2": 78},
+      "removed_gt_ids": {},
+      "risky_overlap_gt_ids": {},
+      "affected_frame_count": 78,
+      "affected_frame_ranges": [[28, 105]]
+    },
+    "two_stage": {
+      "status": "REMOVED_ONLY_FALSE_POSITIVES_ON_REVIEWED_GT",
+      "before_observations": 1344,
+      "after_observations": 1266,
+      "removed_observations": 78,
+      "before": {"TP": 1224, "FN": 135, "FP": 120},
+      "after": {"TP": 1224, "FN": 135, "FP": 42},
+      "removed_matched_before": 0,
+      "removed_with_any_gt_overlap": 0,
+      "removed_track_ids": {"2": 78},
+      "removed_gt_ids": {},
+      "risky_overlap_gt_ids": {},
+      "affected_frame_count": 78,
+      "affected_frame_ranges": [[28, 105]]
+    },
+    "bytetrack_standard": {
+      "status": "REMOVED_ONLY_FALSE_POSITIVES_ON_REVIEWED_GT",
+      "before_observations": 1316,
+      "after_observations": 1211,
+      "removed_observations": 105,
+      "before": {"TP": 1206, "FN": 153, "FP": 110},
+      "after": {"TP": 1206, "FN": 153, "FP": 5},
+      "removed_matched_before": 0,
+      "removed_with_any_gt_overlap": 0,
+      "removed_track_ids": {"2": 105},
+      "removed_gt_ids": {},
+      "risky_overlap_gt_ids": {},
+      "affected_frame_count": 105,
+      "affected_frame_ranges": [[1, 105]]
+    }
+  }
+}

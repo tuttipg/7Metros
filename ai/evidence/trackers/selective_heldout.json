@@ -1,0 +1,56 @@
+{
+  "scope": "fresh_inference_on_preselected_heldout_wide_shot_then_two_stage_tracker_replay",
+  "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+  "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+  "confidence": 0.1,
+  "range_end_exclusive": [2100, 2400],
+  "frames": 300,
+  "reference_points": null,
+  "fresh_inference": {
+    "triggered_1280_frames": 103,
+    "triggered_fraction": 0.3433333333333333,
+    "runtime_seconds_excluding_model_load_and_warmup": 20.509700956001325,
+    "effective_fps": 14.627224484822012,
+    "baseline_cache_sha256": "0c707fb6441c31928205fc5b17f1037c4a21bd97e71e118f8ce5f2807c3e3eb8",
+    "candidate_selected_cache_sha256": "9c9e97b9ff027bc1055eec49de554db2bd32081ed195843fdc0fa88d0ea335c0",
+    "selective_cache_sha256": "6ce856811bc33fc13de556c7021db87ef8a17e0b5d7aad13d5e30f18bd79366b"
+  },
+  "tracking_health": {
+    "baseline_640": {
+      "unique_tracks": 29,
+      "mean_continuous_run_frames": 57.397,
+      "track_observations": 3329,
+      "reappearances_same_id": 29,
+      "weak_track_observations": 121
+    },
+    "selective_non_spawnable": {
+      "unique_tracks": 29,
+      "mean_continuous_run_frames": 52.312,
+      "track_observations": 3348,
+      "reappearances_same_id": 35,
+      "weak_track_observations": 113
+    }
+  },
+  "exact_observation_birth_audit": {
+    "baseline_births_after_range_start": {
+      "count": 18,
+      "also_born": 16,
+      "absorbed_by_existing_candidate_track": 2,
+      "observation_replaced_or_missing": 0
+    },
+    "selective_births_after_range_start": {
+      "count": 18,
+      "also_born": 16,
+      "absorbed_by_existing_baseline_track": 2,
+      "observation_replaced_or_missing": 0
+    },
+    "full_audit_sha256": "2f21ddcb29a0c5bfe03d171cf68144323448466617e0e69f844f1b95dcb6c6f3"
+  },
+  "tests": {
+    "passed": 102,
+    "skipped_optional_dependencies": 8
+  },
+  "decision": "do_not_promote_selective_policy_on_tracker_health_result",
+  "accuracy_status": "not_evaluated_no_independently_reviewed_ground_truth",
+  "limitation": "The birth audit only classifies exact shared serialized observations; it cannot establish correct identities or detection accuracy."
+}

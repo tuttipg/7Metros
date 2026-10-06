@@ -1,0 +1,77 @@
+test_nonfinite_reference_rejected_before_loading_model (test_cli.CliTests.test_nonfinite_reference_rejected_before_loading_model) ... ok
+test_summary_cannot_overwrite_input (test_cli.CliTests.test_summary_cannot_overwrite_input) ... ok
+test_summary_saves_hash_config_and_team_references (test_cli.CliTests.test_summary_saves_hash_config_and_team_references) ... ok
+test_duplicate_and_out_of_order_rejected (test_continuity.ContinuityTests.test_duplicate_and_out_of_order_rejected) ... ok
+test_empty_metrics (test_continuity.ContinuityTests.test_empty_metrics) ... ok
+test_end_of_video_absence_is_not_reappearance (test_continuity.ContinuityTests.test_end_of_video_absence_is_not_reappearance) ... ok
+test_gap_does_not_count_as_continuous_tracking (test_continuity.ContinuityTests.test_gap_does_not_count_as_continuous_tracking) ... ok
+test_blue_floor_rejects_outside_person (test_fixture_filter.FilterTests.test_blue_floor_rejects_outside_person) ... skipped 'optional vision dependencies not installed'
+test_distinct_people_and_roles_survive (test_fixture_filter.FilterTests.test_distinct_people_and_roles_survive) ... ok
+test_duplicate_keeps_high_confidence (test_fixture_filter.FilterTests.test_duplicate_keeps_high_confidence) ... ok
+test_no_blue_floor_does_not_claim_players (test_fixture_filter.FilterTests.test_no_blue_floor_does_not_claim_players) ... skipped 'optional vision dependencies not installed'
+test_forbidden_label_cannot_be_assigned (test_global_assignment.GlobalAssignmentTests.test_forbidden_label_cannot_be_assigned) ... ok
+test_invalid_method_rejected (test_global_assignment.GlobalAssignmentTests.test_invalid_method_rejected) ... ok
+test_joint_assignment_avoids_greedy_dead_end (test_global_assignment.GlobalAssignmentTests.test_joint_assignment_avoids_greedy_dead_end) ... ok
+test_unmatched_rows_and_empty_frames (test_global_assignment.GlobalAssignmentTests.test_unmatched_rows_and_empty_frames) ... ok
+test_empty_summary_is_zeroed (test_metrics.TrackingMetricsTests.test_empty_summary_is_zeroed) ... ok
+test_metrics_capture_track_lifetime_and_churn (test_metrics.TrackingMetricsTests.test_metrics_capture_track_lifetime_and_churn) ... ok
+test_invalid_limit_is_rejected (test_pipeline.PipelineTests.test_invalid_limit_is_rejected) ... ok
+test_path_collision_is_rejected_before_opening_video (test_pipeline.PipelineTests.test_path_collision_is_rejected_before_opening_video) ... ok
+test_pipeline_emits_jsonl_and_annotated_video_frames (test_pipeline.PipelineTests.test_pipeline_emits_jsonl_and_annotated_video_frames) ... ok
+test_merged_box_is_not_two_matches (test_point_audit.PointAuditTests.test_merged_box_is_not_two_matches) ... ok
+test_missing_reference_frame_fails (test_point_audit.PointAuditTests.test_missing_reference_frame_fails) ... ok
+test_two_boxes_are_ambiguous_not_correct (test_point_audit.PointAuditTests.test_two_boxes_are_ambiguous_not_correct) ... ok
+test_consistent_new_color_corrects (test_recovered_tracking.RecoveredTests.test_consistent_new_color_corrects) ... ok
+test_extended_memory_recovers_after_twenty_missing_frames (test_recovered_tracking.RecoveredTests.test_extended_memory_recovers_after_twenty_missing_frames) ... ok
+test_extended_memory_still_expires (test_recovered_tracking.RecoveredTests.test_extended_memory_still_expires) ... ok
+test_history_cleaned (test_recovered_tracking.RecoveredTests.test_history_cleaned) ... ok
+test_initial_motion_not_damped (test_recovered_tracking.RecoveredTests.test_initial_motion_not_damped) ... ok
+test_kits (test_recovered_tracking.RecoveredTests.test_kits) ... ok
+test_label_gate_preserved (test_recovered_tracking.RecoveredTests.test_label_gate_preserved) ... ok
+test_one_wrong_color_does_not_fragment (test_recovered_tracking.RecoveredTests.test_one_wrong_color_does_not_fragment) ... ok
+test_role_stays_candidate (test_recovered_tracking.RecoveredTests.test_role_stays_candidate) ... ok
+test_smoothing_survives_jitter_then_gap (test_recovered_tracking.RecoveredTests.test_smoothing_survives_jitter_then_gap) ... ok
+test_temporal_requires_three (test_recovered_tracking.RecoveredTests.test_temporal_requires_three) ... ok
+test_unknown_expires (test_recovered_tracking.RecoveredTests.test_unknown_expires) ... ok
+test_velocity_alpha_validation (test_recovered_tracking.RecoveredTests.test_velocity_alpha_validation) ... ok
+test_known_roles_remain_separate (test_regressions.RegressionTests.test_known_roles_remain_separate) ... ok
+test_unknown_color_does_not_erase_team_gate (test_regressions.RegressionTests.test_unknown_color_does_not_erase_team_gate) ... ok
+test_velocity_is_per_frame_after_occlusion (test_regressions.RegressionTests.test_velocity_is_per_frame_after_occlusion) ... ok
+test_duplicate_and_court_counts_are_separate (test_stage_diagnostics.StageDiagnosticsTests.test_duplicate_and_court_counts_are_separate) ... ok
+test_merged_box_is_visible_at_detector_stage (test_stage_diagnostics.StageDiagnosticsTests.test_merged_box_is_visible_at_detector_stage) ... ok
+test_schema_rounding_does_not_falsely_reject_output (test_stage_diagnostics.StageDiagnosticsTests.test_schema_rounding_does_not_falsely_reject_output) ... ok
+test_unknown_output_box_fails (test_stage_diagnostics.StageDiagnosticsTests.test_unknown_output_box_fails) ... ok
+test_ambiguous_sample_stays_unknown (test_teams.TeamColorTests.test_ambiguous_sample_stays_unknown) ... ok
+test_auto_calibration_finds_two_color_families_despite_brightness_changes (test_teams.TeamColorTests.test_auto_calibration_finds_two_color_families_despite_brightness_changes) ... ok
+test_auto_calibration_is_reproducible_when_input_order_changes (test_teams.TeamColorTests.test_auto_calibration_is_reproducible_when_input_order_changes) ... ok
+test_auto_calibration_rejects_single_color_family (test_teams.TeamColorTests.test_auto_calibration_rejects_single_color_family) ... ok
+test_brightness_changes_preserve_color_identity (test_teams.TeamColorTests.test_brightness_changes_preserve_color_identity) ... ok
+test_classifies_clear_home_and_away_colors (test_teams.TeamColorTests.test_classifies_clear_home_and_away_colors) ... ok
+test_distant_sample_stays_unknown (test_teams.TeamColorTests.test_distant_sample_stays_unknown) ... ok
+test_invalid_thresholds_are_rejected (test_teams.TeamColorTests.test_invalid_thresholds_are_rejected) ... ok
+test_bbox_iou (test_tracking.TrackingTests.test_bbox_iou) ... ok
+test_far_detection_gets_new_id (test_tracking.TrackingTests.test_far_detection_gets_new_id) ... ok
+test_frame_payload_contract (test_tracking.TrackingTests.test_frame_payload_contract) ... ok
+test_id_persists_for_small_motion (test_tracking.TrackingTests.test_id_persists_for_small_motion) ... ok
+test_label_gating_prevents_ball_from_stealing_player_track (test_tracking.TrackingTests.test_label_gating_prevents_ball_from_stealing_player_track) ... ok
+test_team_gating_prevents_id_swap_at_crossing (test_tracking.TrackingTests.test_team_gating_prevents_id_swap_at_crossing) ... ok
+test_track_survives_one_missing_frame (test_tracking.TrackingTests.test_track_survives_one_missing_frame) ... ok
+test_velocity_prediction_handles_fast_motion (test_tracking.TrackingTests.test_velocity_prediction_handles_fast_motion) ... ok
+test_detector_rejects_invalid_confidence_before_import (test_two_stage.ConfidenceConfigTests.test_detector_rejects_invalid_confidence_before_import) ... ok
+test_existing_high_confidence_cache_rejected_for_low_threshold (test_two_stage.ConfidenceConfigTests.test_existing_high_confidence_cache_rejected_for_low_threshold) ... ok
+test_high_only_equivalent_with_both_assignment_modes (test_two_stage.TwoStageTests.test_high_only_equivalent_with_both_assignment_modes) ... ok
+test_high_stage_has_priority (test_two_stage.TwoStageTests.test_high_stage_has_priority) ... ok
+test_invalid_thresholds (test_two_stage.TwoStageTests.test_invalid_thresholds) ... ok
+test_no_duplicate_weak_assignment (test_two_stage.TwoStageTests.test_no_duplicate_weak_assignment) ... ok
+test_weak_bridge_preserves_identity_vs_high_only (test_two_stage.TwoStageTests.test_weak_bridge_preserves_identity_vs_high_only) ... ok
+test_weak_does_not_change_team_votes (test_two_stage.TwoStageTests.test_weak_does_not_change_team_votes) ... ok
+test_weak_does_not_resurrect_lost_track (test_two_stage.TwoStageTests.test_weak_does_not_resurrect_lost_track) ... ok
+test_weak_never_spawns_and_below_low_is_ignored (test_two_stage.TwoStageTests.test_weak_never_spawns_and_below_low_is_ignored) ... ok
+test_weak_requires_overlap_and_semantic_agreement (test_two_stage.TwoStageTests.test_weak_requires_overlap_and_semantic_agreement) ... ok
+test_track_label_contains_identity_confidence_and_team (test_visualization.VisualizationTests.test_track_label_contains_identity_confidence_and_team) ... ok
+test_track_label_omits_team_when_unknown (test_visualization.VisualizationTests.test_track_label_omits_team_when_unknown) ... ok
+
+----------------------------------------------------------------------
+Ran 72 tests in 0.370s
+
+OK (skipped=2)

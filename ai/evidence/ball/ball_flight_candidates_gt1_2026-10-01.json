@@ -1,0 +1,17 @@
+{
+  "status": "UNVERIFIED_FREE_BALL_FLIGHT_CANDIDATES_NO_BALL_GT",
+  "decision": "KEEP_AS_EXPERIMENTAL_PRE_EVENT_SIGNAL",
+  "fixture": "Ferro - N. S. de Lujan",
+  "sequence": "ferro_lujan_contact",
+  "fixture_frames": [105, 210],
+  "frame_count": 105,
+  "settings": {"min_frames": 3, "min_mean_speed_px_per_frame": 8.0, "min_linearity": 0.70, "requires_observed_unassigned_ball": true, "interpolates_missing_positions": false},
+  "flights": [
+    {"start_frame":108,"end_frame":112,"frames":5,"mean_speed_px_per_frame":30.880644,"max_speed_px_per_frame":42.827260,"net_displacement_px":122.874384,"path_length_px":123.522574,"linearity":0.994752,"segment_id":1},
+    {"start_frame":156,"end_frame":160,"frames":5,"mean_speed_px_per_frame":11.460073,"max_speed_px_per_frame":12.841087,"net_displacement_px":45.824366,"path_length_px":45.840292,"linearity":0.999653,"segment_id":3}
+  ],
+  "confirmed_shots": 0,
+  "artifacts": {"demo_video_sha256":"9750e55efedcc7dcc4bcbd8fa8a7d1469477e2b4fb41a08dc83a4a43efe86657","json_sha256":"5e1393b47d0c2b49d5e57f5a56624eadd6b9ad990a6dd1d3beb67f8a1566aa22"},
+  "accuracy_metrics": null,
+  "reason_accuracy_unavailable": "No human ball/event ground truth exists; BALL FLIGHT? is detector-backed motion evidence only."
+}
