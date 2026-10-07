@@ -1,10 +1,33 @@
 import { canonicalizeOfficialFemebalUrl } from './official-url-policy.mjs';
 
 const SHA256_RE = /^[a-f0-9]{64}$/;
+const MATCH_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function requireObject(value, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label} inválido`);
   return value;
+}
+
+function normalizeIdentity(value) {
+  return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function validateMatchIdentity(value, label) {
+  const match = requireObject(value, label);
+  if (typeof match.fecha !== 'string' || !MATCH_DATE_RE.test(match.fecha)) throw new Error(`${label}.fecha inválida`);
+  if (typeof match.local !== 'string' || !match.local.trim()) throw new Error(`${label}.local inválido`);
+  if (typeof match.visitante !== 'string' || !match.visitante.trim()) throw new Error(`${label}.visitante inválido`);
+  if (!Number.isSafeInteger(match.goles_local) || match.goles_local < 0) throw new Error(`${label}.goles_local inválido`);
+  if (!Number.isSafeInteger(match.goles_visitante) || match.goles_visitante < 0) throw new Error(`${label}.goles_visitante inválido`);
+  return match;
+}
+
+function assertSameMatch(expected, match) {
+  if (expected.fecha !== match.fecha) throw new Error('expected_match no coincide con el partido seleccionado: fecha');
+  if (normalizeIdentity(expected.local) !== normalizeIdentity(match.local)) throw new Error('expected_match no coincide con el partido seleccionado: local');
+  if (normalizeIdentity(expected.visitante) !== normalizeIdentity(match.visitante)) throw new Error('expected_match no coincide con el partido seleccionado: visitante');
+  if (expected.goles_local !== match.goles_local) throw new Error('expected_match no coincide con el partido seleccionado: goles_local');
+  if (expected.goles_visitante !== match.goles_visitante) throw new Error('expected_match no coincide con el partido seleccionado: goles_visitante');
 }
 
 export function buildTournamentTrackerPdfWorkItem(selection) {
@@ -25,8 +48,9 @@ export function buildTournamentTrackerPdfWorkItem(selection) {
   if (!Number.isSafeInteger(provenance.artifact_bytes) || provenance.artifact_bytes < 1) throw new Error('artifact_bytes inválido');
 
   const pdfUrl = canonicalizeOfficialFemebalUrl(selection.pdf_url, { pdf: true });
-  const expected = requireObject(selection.expected_match, 'Partido esperado');
-  const match = requireObject(selection.match, 'Partido seleccionado');
+  const expected = validateMatchIdentity(selection.expected_match, 'Partido esperado');
+  const match = validateMatchIdentity(selection.match, 'Partido seleccionado');
+  assertSameMatch(expected, match);
   if (!Array.isArray(match.planillas) || match.planillas.length !== 1) throw new Error('La selección debe contener exactamente una planilla');
   const matchPdf = canonicalizeOfficialFemebalUrl(match.planillas[0]?.pdf, { pdf: true });
   if (matchPdf !== pdfUrl) throw new Error('pdf_url no coincide con la planilla seleccionada');

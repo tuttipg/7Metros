@@ -22,6 +22,11 @@ for (const [patch,re] of [
   [{provenance:{...base.provenance,artifact_sha256:'bad'}},/artifact_sha256/],
   [{pdf_url:'https://another.cloudfront.net/pdf_planillas/x.pdf'},/allowlist/],
   [{match:{...base.match,planillas:[{pdf:'https://djfhz848yeeat.cloudfront.net/pdf_planillas/other.pdf'}]}},/no coincide/],
+  [{match:{...base.match,visitante:'SAG Villa Ballester'}},/expected_match no coincide.*visitante/],
+  [{match:{...base.match,goles_local:21}},/expected_match no coincide.*goles_local/],
+  [{expected_match:{...base.expected_match,fecha:'2026-03-22'}},/expected_match no coincide.*fecha/],
+  [{expected_match:{...base.expected_match,goles_visitante:-1}},/goles_visitante inválido/],
+  [{expected_match:{...base.expected_match,goles_local:20.5}},/goles_local inválido/],
 ]) await assert.rejects(async()=>buildTournamentTrackerPdfWorkItem({...base,...patch}),re);
 
-console.log('✓ TournamentTracker verified Torneo → exact control match → official PDF work-item provenance bridge SAFE/fail-closed OK');
+console.log('✓ TournamentTracker identity binding + SAFE/fail-closed regressions OK');
