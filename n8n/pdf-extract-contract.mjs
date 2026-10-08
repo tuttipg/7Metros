@@ -101,10 +101,20 @@ export function normalizePdfProvenance(pdfArtifact, workItem) {
 export function parseN8nExtractedPlanillaDryRun({ workItem, extraction, pdfArtifact, expected = null, maxTextChars } = {}) {
   const normalized = normalizeN8nPdfExtraction(extraction, { maxTextChars });
   const provenance = normalizePdfProvenance(pdfArtifact, workItem);
+  const tournamentTracker = provenance.upstream?.type === 'tournamenttracker_verified_torneo_selection';
+  if (tournamentTracker) {
+    if (expected !== null && expected !== undefined) {
+      throw new Error('TournamentTracker no admite expected externo; usar workItem.expected_match');
+    }
+    if (!workItem?.expected_match || typeof workItem.expected_match !== 'object' || Array.isArray(workItem.expected_match)) {
+      throw new Error('TournamentTracker requiere workItem.expected_match');
+    }
+  }
+  const parserExpected = tournamentTracker ? workItem.expected_match : expected;
   const result = parsePlanillaDryRun({
     workItem,
     extractedText: normalized.extracted_text,
-    expected,
+    expected: parserExpected,
   });
 
   return {
