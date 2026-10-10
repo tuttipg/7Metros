@@ -118,4 +118,24 @@ assert.throws(() => prioritizeFixtureSchedules([fixture({ rama: 'X' })]), /Rama 
 assert.throws(() => prioritizeFixtureSchedules([fixture({ local_equipo_id: 10, visitante_equipo_id: null })]), /un solo equipo_id/);
 assert.throws(() => prioritizeFixtureSchedules([fixture({ local_equipo_id: 10, visitante_equipo_id: 10 })]), /mismo equipo/);
 
-console.log('✓ importer-core: manifest gate, scopes, reprogramaciones, duplicados y fail-closed OK');
+// Regression: Number() no debe fabricar IDs desde formatos ambiguos.
+for (const malformed of [
+  '1e1', '0x10', '01', '+10', ' 10', '10 ', ' ', '10.0', '10\\n',
+  true, false, {}, [], Number.MAX_SAFE_INTEGER + 1, 1.5, 0, -10, NaN, Infinity,
+  '9007199254740992'
+]) {
+  assert.throws(
+    () => fixtureScopeKey(fixture({ local_equipo_id: malformed, visitante_equipo_id: 20 })),
+    /local_equipo_id inválido/,
+    `local ID inválido debe fallar cerrado: ${String(malformed)}`
+  );
+  assert.throws(
+    () => fixtureScopeKey(fixture({ local_equipo_id: 10, visitante_equipo_id: malformed })),
+    /visitante_equipo_id inválido/,
+    `visitante ID inválido debe fallar cerrado: ${String(malformed)}`
+  );
+}
+assert.match(fixtureScopeKey(fixture({ local_equipo_id: '10', visitante_equipo_id: '20' })), /^ids\\|10\\|20$/);
+assert.match(fixtureScopeKey(fixture({ local_equipo_id: '', visitante_equipo_id: null })), /^scope\\|/);
+
+console.log('✓ importer-core: manifest gate, strict IDs, scopes, reprogramaciones, duplicados y fail-closed OK');
