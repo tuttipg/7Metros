@@ -120,7 +120,7 @@ assert.throws(() => prioritizeFixtureSchedules([fixture({ local_equipo_id: 10, v
 
 // Regression: Number() no debe fabricar IDs desde formatos ambiguos.
 for (const malformed of [
-  '1e1', '0x10', '01', '+10', ' 10', '10 ', ' ', '10.0', '10\\n',
+  '1e1', '0x10', '01', '+10', ' 10', '10 ', ' ', '10.0', '10\n',
   true, false, {}, [], Number.MAX_SAFE_INTEGER + 1, 1.5, 0, -10, NaN, Infinity,
   '9007199254740992'
 ]) {
@@ -137,5 +137,13 @@ for (const malformed of [
 }
 assert.match(fixtureScopeKey(fixture({ local_equipo_id: '10', visitante_equipo_id: '20' })), /^ids\\|10\\|20$/);
 assert.match(fixtureScopeKey(fixture({ local_equipo_id: '', visitante_equipo_id: null })), /^scope\\|/);
+assert.equal(
+  fixtureScopeKey(fixture({ local_equipo_id: Number.MAX_SAFE_INTEGER, visitante_equipo_id: 20 })),
+  `ids|${Number.MAX_SAFE_INTEGER}|20`
+);
+assert.equal(
+  fixtureScopeKey(fixture({ local_equipo_id: String(Number.MAX_SAFE_INTEGER), visitante_equipo_id: '20' })),
+  `ids|${Number.MAX_SAFE_INTEGER}|20`
+);
 
 console.log('✓ importer-core: manifest gate, strict IDs, scopes, reprogramaciones, duplicados y fail-closed OK');
