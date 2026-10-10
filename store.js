@@ -61,6 +61,16 @@ export function teamDisplayName(team, club = null, { compact = false } = {}) {
   return compact ? `${base} ${code}` : `${base} · Equipo ${code}`;
 }
 
+// Accept only canonical, positive, safe integer IDs from the public dataset.
+function positiveSafeMatchId(value) {
+  if (typeof value === 'number') {
+    return Number.isSafeInteger(value) && value > 0 ? value : null;
+  }
+  if (typeof value !== 'string' || !/^[1-9]\\d*$/.test(value)) return null;
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
 export function prepareDataset(dataset) {
   state.globalSummary = { ...state.globalSummary, ...(dataset.globalSummary || {}) };
 
@@ -131,6 +141,9 @@ export function prepareDataset(dataset) {
   const clubById = new Map(state.clubs.map(row => [row.id, row]));
 
   state.matches = (dataset.partidos || []).map(row => {
+    const matchId = positiveSafeMatchId(row.id);
+    if (matchId === null) return null;
+
     const homeTeamId = Number(field(row, ['local_equipo_id', 'local_id'], NaN));
     const awayTeamId = Number(field(row, ['visitante_equipo_id', 'visitante_id'], NaN));
     const homeTeam = teamById.get(homeTeamId) || null;
@@ -144,7 +157,7 @@ export function prepareDataset(dataset) {
     const finished = statusRaw === 'finalizado' || statusRaw === 'final' || (hasScores && statusRaw !== 'programado');
 
     return {
-      id: Number(row.id),
+      id: matchId,
       date: field(row, ['fecha'], ''),
       time: String(field(row, ['hora'], '') || '').slice(0, 5),
       round: field(row, ['jornada', 'fecha_torneo'], null),
