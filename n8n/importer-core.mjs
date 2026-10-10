@@ -35,9 +35,22 @@ function teamCode(value) {
   return code;
 }
 
-function positiveId(value) {
-  const id = Number(value);
-  return Number.isInteger(id) && id > 0 ? id : null;
+function positiveId(value, label) {
+  // Solo null/undefined/cadena vacía significan "no resuelto".
+  // Un valor suministrado pero malformado debe fallar cerrado, no activar fallback por nombre.
+  if (value === null || value === undefined || value === '') return null;
+  let id;
+  if (typeof value === 'number') {
+    id = value;
+  } else if (typeof value === 'string' && /^[1-9][0-9]*$/.test(value)) {
+    id = Number(value);
+  } else {
+    throw new Error(`${label} inválido: se esperaba un ID entero decimal canónico`);
+  }
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    throw new Error(`${label} inválido: se esperaba un entero positivo seguro`);
+  }
+  return id;
 }
 
 export function fixtureScopeKey(fixture) {
@@ -45,8 +58,8 @@ export function fixtureScopeKey(fixture) {
   const division = requiredText(fixture, 'division');
   const rama = requiredText(fixture, 'rama').toUpperCase();
   if (!['M', 'F'].includes(rama)) throw new Error(`Rama inválida: ${rama}`);
-  const localId = positiveId(fixture?.local_equipo_id);
-  const visitanteId = positiveId(fixture?.visitante_equipo_id);
+  const localId = positiveId(fixture?.local_equipo_id, 'local_equipo_id');
+  const visitanteId = positiveId(fixture?.visitante_equipo_id, 'visitante_equipo_id');
   if (localId || visitanteId) {
     if (!localId || !visitanteId) throw new Error('Fixture con un solo equipo_id resuelto');
     if (localId === visitanteId) throw new Error('Local y visitante no pueden ser el mismo equipo');
