@@ -41,6 +41,23 @@ def validate_semantic_gt(document: dict) -> SemanticGt:
     sequence = document.get("sequence")
     frames = document.get("frames")
     events = document.get("events")
+    if frames is None and events is None:
+        reviewed = document.get("proposed_labels_for_human_confirmation")
+        human_review = document.get("human_review")
+        if (
+            document.get("status") != "HUMAN_REVIEW_COMPLETE"
+            or not isinstance(human_review, dict)
+            or human_review.get("status") != "CONFIRMED"
+        ):
+            raise ValueError(
+                "nested semantic labels require HUMAN_REVIEW_COMPLETE and human_review.status CONFIRMED"
+            )
+        if not isinstance(reviewed, dict):
+            raise ValueError("confirmed nested semantic labels are missing")
+        frames = reviewed.get("frames")
+        events = reviewed.get("events")
+    elif frames is None or events is None:
+        raise ValueError("frames and events must be supplied together")
     if not isinstance(source, dict) or not isinstance(source.get("video_sha256"), str) or len(source["video_sha256"]) != 64:
         raise ValueError("source.video_sha256 must be a SHA-256 hex string")
     start = _integer(sequence.get("start_frame"), "sequence.start_frame") if isinstance(sequence, dict) else None
