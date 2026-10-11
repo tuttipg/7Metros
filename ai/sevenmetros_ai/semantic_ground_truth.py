@@ -123,7 +123,25 @@ def load_semantic_gt(path: str | Path) -> SemanticGt:
 
 
 def score_possession(gt: SemanticGt, predictions: Iterable[dict]) -> dict:
-    pred_by_frame = {int(row["frame_index"]): row for row in predictions}
+    pred_by_frame = {}
+    for row in predictions:
+        if not isinstance(row, dict):
+            raise ValueError("each possession prediction must be an object")
+        frame = _integer(row.get("frame_index"), "prediction.frame_index")
+        if not gt.start_frame <= frame < gt.end_frame_exclusive:
+            raise ValueError("prediction frame_index must be inside GT sequence")
+        if frame in pred_by_frame:
+            raise ValueError(f"duplicate prediction frame_index: {frame}")
+        state = row.get("possession_state")
+        if state not in VALID_POSSESSION_STATES:
+            raise ValueError(f"frame {frame}: invalid predicted possession_state")
+        possessor = row.get("possessor_ref")
+        if state == "controlled":
+            if not isinstance(possessor, str) or not possessor:
+                raise ValueError(f"frame {frame}: controlled prediction requires possessor_ref")
+        elif possessor is not None:
+            raise ValueError(f"frame {frame}: non-controlled prediction cannot have possessor_ref")
+        pred_by_frame[frame] = row
     rows = []
     for frame in gt.frames:
         pred = pred_by_frame.get(frame["frame_index"], {"possession_state": "unknown", "possessor_ref": None})
@@ -151,26 +169,35 @@ def score_possession(gt: SemanticGt, predictions: Iterable[dict]) -> dict:
         "controlled_identity_accuracy": identity_correct / tp if tp else None,
     }
 
-
 def score_events(gt: SemanticGt, predicted_events: Iterable[dict], *, tolerance_frames: int = 2) -> dict:
     if isinstance(tolerance_frames, bool) or not isinstance(tolerance_frames, int) or tolerance_frames < 0:
         raise ValueError("tolerance_frames must be a non-negative integer")
-    candidates = [dict(x) for x in predicted_events]
+    candidates = []
+    for event in predicted_events:
+        if not isinstance(event, dict):
+            raise ValueError("each predicted event must be an object")
+        frame = _integer(event.get("frame_index"), "predicted event.frame_index")
+        if not gt.start_frame <= frame < gt.end_frame_exclusive:
+            raise ValueError("predicted event frame_index must be inside GT sequence")
+        kind = event.get("kind")
+        if kind not in VALID_EVENT_KINDS or kind == "none":
+            raise ValueError("predicted event must have a valid control-change kind")
+        candidates.append({**event, "frame_index": frame})
     unmatched = set(range(len(candidates)))
     matches = []
     for event in sorted(gt.events, key=lambda x: x["frame_index"]):
         eligible = [
             i for i in unmatched
             if candidates[i].get("kind") == event["kind"]
-            and abs(int(candidates[i]["frame_index"]) - event["frame_index"]) <= tolerance_frames
+            and abs(candidates[i]["frame_index"] - event["frame_index"]) <= tolerance_frames
         ]
         if not eligible:
             continue
-        i = min(eligible, key=lambda j: abs(int(candidates[j]["frame_index"]) - event["frame_index"]))
+        i = min(eligible, key=lambda j: abs(candidates[j]["frame_index"] - event["frame_index"]))
         unmatched.remove(i)
         matches.append({
             "gt_frame": event["frame_index"],
-            "pred_frame": int(candidates[i]["frame_index"]),
+            "pred_frame": candidates[i]["frame_index"],
             "kind": event["kind"],
         })
     tp = len(matches)

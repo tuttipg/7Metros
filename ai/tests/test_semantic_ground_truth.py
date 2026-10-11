@@ -64,6 +64,42 @@ class SemanticGroundTruthTests(unittest.TestCase):
         self.assertEqual(result["controlled_identity_correct"], 1)
         self.assertEqual(result["controlled_identity_accuracy"], 0.5)
 
+    def test_possession_scoring_rejects_duplicate_prediction_frames(self):
+        gt = validate_semantic_gt(document())
+        row = {"frame_index": 10, "possession_state": "controlled", "possessor_ref": "p1"}
+        with self.assertRaisesRegex(ValueError, "duplicate prediction frame_index"):
+            score_possession(gt, [row, dict(row)])
+
+    def test_possession_scoring_rejects_predictions_outside_gt_window(self):
+        gt = validate_semantic_gt(document())
+        with self.assertRaisesRegex(ValueError, "inside GT sequence"):
+            score_possession(gt, [{"frame_index": 9, "possession_state": "unknown", "possessor_ref": None}])
+
+    def test_possession_scoring_rejects_invalid_prediction_state(self):
+        gt = validate_semantic_gt(document())
+        with self.assertRaisesRegex(ValueError, "invalid predicted possession_state"):
+            score_possession(gt, [{"frame_index": 10, "possession_state": "POS?", "possessor_ref": None}])
+
+    def test_possession_scoring_rejects_boolean_frame_index(self):
+        gt = validate_semantic_gt(document())
+        with self.assertRaisesRegex(ValueError, "prediction.frame_index must be an integer"):
+            score_possession(gt, [{"frame_index": True, "possession_state": "unknown", "possessor_ref": None}])
+
+    def test_event_scoring_rejects_candidates_outside_gt_window(self):
+        gt = validate_semantic_gt(document())
+        with self.assertRaisesRegex(ValueError, "inside GT sequence"):
+            score_events(gt, [{"frame_index": 14, "kind": "same_team_control_change"}])
+
+    def test_event_scoring_rejects_invalid_kind(self):
+        gt = validate_semantic_gt(document())
+        with self.assertRaisesRegex(ValueError, "valid control-change kind"):
+            score_events(gt, [{"frame_index": 12, "kind": "none"}])
+
+    def test_event_scoring_rejects_boolean_frame_index(self):
+        gt = validate_semantic_gt(document())
+        with self.assertRaisesRegex(ValueError, "predicted event.frame_index must be an integer"):
+            score_events(gt, [{"frame_index": True, "kind": "same_team_control_change"}])
+
     def test_event_scoring_uses_fixed_tolerance(self):
         gt = validate_semantic_gt(document())
         result = score_events(
