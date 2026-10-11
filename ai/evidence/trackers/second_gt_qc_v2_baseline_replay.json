@@ -1,0 +1,53 @@
+{
+  "status": "QC_V2_BASELINE_REPRODUCED_EXACT_OUTPUT",
+  "sequence": "ferro_lujan_hard_reentry",
+  "frames": 90,
+  "ground_truth": {
+    "annotations": 1125,
+    "identities": 13,
+    "qc_v2_json_sha256": "d6c39e1d9e75b77b63315b98ab8db68bb278c6c765bc6ca802d19d185984a082",
+    "corrections": ["task frame 13: 21 -> 215", "task frame 3: reciprocal swap 217 <-> 222"]
+  },
+  "tracker": {
+    "name": "baseline_high_only",
+    "source": "exact historical memory30/baseline output with the same uniform-role-filter removals used by the current benchmark",
+    "uniform_role_filtered_observations": 962,
+    "identities": 17
+  },
+  "metrics_percent_except_counts": {
+    "HOTA": 79.884404,
+    "IDF1": 82.989938,
+    "MOTA": 77.066667,
+    "recall": 81.511111,
+    "precision": 95.322245,
+    "TP": 917,
+    "FN": 208,
+    "FP": 45,
+    "IDSW": 5,
+    "fragments": 28
+  },
+  "delta_vs_pre_qc": {
+    "HOTA": 0.058327,
+    "IDF1": 0.095832,
+    "MOTA": 0.355556,
+    "IDSW": -4,
+    "TP": 0,
+    "FN": 0,
+    "FP": 0
+  },
+  "verification": {
+    "evaluator": "local port of TrackEval HOTA/CLEAR/Identity formulas previously checked against official TrackEval 1.3.0 outputs on GT1 and pre-QC GT2 to decimal precision",
+    "pre_qc_reproduction": {
+      "HOTA": 79.826078,
+      "IDF1": 82.894106,
+      "MOTA": 76.711111,
+      "IDSW": 9
+    },
+    "pre_qc_official_values_match": true
+  },
+  "interpretation": "four baseline ID switches in the pre-QC table were induced by the isolated human identity swap at task frame 3; detection TP/FN/FP are unchanged by the identity-only correction",
+  "limits": [
+    "two_stage and bytetrack QC-v2 values remain pending because their exact second-interval JSONL/slices are not currently persisted",
+    "this reproduced baseline result should be confirmed in the next official TrackEval bundle rerun alongside all three trackers"
+  ]
+}

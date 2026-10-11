@@ -1,0 +1,39 @@
+{
+  "status": "UNVERIFIED_BALL_CONTINUITY_NO_BALL_GT",
+  "decision": "KEEP_AS_EXPERIMENTAL_DETECTOR_BACKED_CONTINUITY",
+  "fixture": "Ferro - N. S. de Lujan",
+  "sequence": "ferro_lujan_contact",
+  "source_video_sha256": "84a94f6e5526d94afc67dc8ee99cc9b390265482d6f0250f2d8a12080e437ed2",
+  "source_frames": [1005, 1110],
+  "fixture_frames": [105, 210],
+  "frame_count": 105,
+  "width": 936,
+  "height": 524,
+  "fps": 30.0,
+  "detector": {
+    "model": "yolo11n.pt",
+    "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+    "ultralytics": "8.4.163",
+    "class_id": 32,
+    "class_name": "sports ball",
+    "imgsz": 960,
+    "low_confidence": 0.02,
+    "high_confidence": 0.1
+  },
+  "association": {
+    "max_missed": 3,
+    "max_speed_px_per_frame": 70.0,
+    "max_size_ratio": 3.0,
+    "velocity_alpha": 0.4,
+    "emits_synthetic_positions": false
+  },
+  "raw": {"candidate_frames": 68, "candidates": 114},
+  "strong_only_same_inference": {"observed_frames": 24, "longest_contiguous_run": 10},
+  "temporal_selection": {"observed_frames": 38, "strong": 23, "weak": 15, "segments": 5, "longest_contiguous_run": 14},
+  "artifacts": {
+    "demo_video_sha256": "0a2431a7bb6e434ac7136807ce7d8d4b8dbfd4ae5bbcf56f82a59c4883b55724",
+    "observation_jsonl_sha256": "053933b75e878bddd73e09121cfc8c8e9f22b421a0270008c2022e1e71e62aba"
+  },
+  "accuracy_metrics": null,
+  "reason_accuracy_unavailable": "No human ball ground truth exists; continuity counts are not precision/recall."
+}

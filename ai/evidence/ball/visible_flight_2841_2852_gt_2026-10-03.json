@@ -1,0 +1,34 @@
+{
+  "schema_version": "sevenmetros.ball-gt/v1",
+  "source": {
+    "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+    "width": 936,
+    "height": 524,
+    "fps": 30.0,
+    "encoding_note": "Local x264 fixture copy; not the canonical FFV1 tracking fixture."
+  },
+  "sequence": {
+    "name": "visible_ball_flight_2841_2852",
+    "start_frame": 2841,
+    "end_frame_exclusive": 2853
+  },
+  "review": {
+    "method": "Frame-by-frame native-resolution review plus 6x nearest-neighbour crop.",
+    "policy": "Integer bbox follows the visually separable dark ball boundary, including visible motion blur.",
+    "result": "TWELVE_VISIBLE_LOCALISABLE_FRAMES"
+  },
+  "annotations": [
+    {"frame_index": 2841, "state": "visible", "bbox_xyxy": [585, 158, 596, 168], "note": "Visible dark ball in independent transition flight."},
+    {"frame_index": 2842, "state": "visible", "bbox_xyxy": [576, 155, 587, 165], "note": "Visible dark ball in independent transition flight."},
+    {"frame_index": 2843, "state": "visible", "bbox_xyxy": [566, 153, 576, 163], "note": "Visible dark ball in independent transition flight."},
+    {"frame_index": 2844, "state": "visible", "bbox_xyxy": [555, 151, 566, 161], "note": "Visible dark ball in independent transition flight."},
+    {"frame_index": 2845, "state": "visible", "bbox_xyxy": [544, 150, 556, 161], "note": "Visible dark ball in independent transition flight."},
+    {"frame_index": 2846, "state": "visible", "bbox_xyxy": [533, 150, 545, 160], "note": "Visible dark ball in independent transition flight."},
+    {"frame_index": 2847, "state": "visible", "bbox_xyxy": [523, 149, 535, 161], "note": "Visible dark ball in independent transition flight."},
+    {"frame_index": 2848, "state": "visible", "bbox_xyxy": [512, 150, 525, 162], "note": "Visible dark ball in independent transition flight."},
+    {"frame_index": 2849, "state": "visible", "bbox_xyxy": [501, 151, 514, 163], "note": "Visible dark ball in independent transition flight."},
+    {"frame_index": 2850, "state": "visible", "bbox_xyxy": [491, 153, 503, 165], "note": "Visible dark ball in independent transition flight."},
+    {"frame_index": 2851, "state": "visible", "bbox_xyxy": [481, 155, 494, 167], "note": "Visible dark ball in independent transition flight."},
+    {"frame_index": 2852, "state": "visible", "bbox_xyxy": [472, 157, 485, 170], "note": "Visible dark ball in independent transition flight."}
+  ]
+}

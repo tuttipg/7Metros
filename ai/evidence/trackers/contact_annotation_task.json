@@ -1,0 +1,18 @@
+{
+  "status": "UNVERIFIED_TRACKER_PROPOSAL_NOT_GROUND_TRUTH",
+  "source_video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+  "source_tracks_sha256": "3b937ea3d18b05d58ddddb4dd0a457b3d98cc2de1946d1cc1857cda5be0d833c",
+  "source_start_frame": 105,
+  "source_end_frame_exclusive": 210,
+  "fps": 30.0,
+  "width": 936,
+  "height": 524,
+  "task_frames": 105,
+  "proposal_boxes": 1344,
+  "proposal_track_ids": 16,
+  "seed_sha256": "8159b3bf8502a09f4cf6214a8dcc40aea3e670fa6dc188a5c02f8f1c965e8151",
+  "frames_csv_sha256": "7eba3f734a293ed427edb1e8454468c20f29ed79dc73b8e51d4fa91bb1c847d0",
+  "images_sha256": "a36c590b56650810c438d14562a9c4c1c8e8b904844f0025b140d044d7e22525",
+  "jpeg_quality": 95,
+  "metrics_allowed_before_review": false
+}

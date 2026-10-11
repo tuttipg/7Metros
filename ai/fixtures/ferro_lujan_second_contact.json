@@ -1,0 +1,26 @@
+{
+ "video_sha256":"7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+ "width":936,"height":524,
+ "method":"Assistant visual review of enlarged source crops every5frames. Torso points, no independent reviewer. Initial 1s reference confused passer with receiver and was discarded.",
+ "scope":"Two blue teammates crossing frames1080–1120; no parameter tuning on this sequence. Sparse continuity, not full-sequence MOT metrics.",
+ "points":[
+  {"frame":1080,"person":"blue_runner","xy":[130,213]},
+  {"frame":1080,"person":"blue_passer","xy":[263,207]},
+  {"frame":1085,"person":"blue_runner","xy":[150,213]},
+  {"frame":1085,"person":"blue_passer","xy":[253,199]},
+  {"frame":1090,"person":"blue_runner","xy":[167,220]},
+  {"frame":1090,"person":"blue_passer","xy":[243,197]},
+  {"frame":1095,"person":"blue_runner","xy":[190,228]},
+  {"frame":1095,"person":"blue_passer","xy":[231,203]},
+  {"frame":1100,"person":"blue_runner","xy":[198,224]},
+  {"frame":1100,"person":"blue_passer","xy":[227,196]},
+  {"frame":1105,"person":"blue_runner","xy":[215,226]},
+  {"frame":1105,"person":"blue_passer","xy":[216,189]},
+  {"frame":1110,"person":"blue_runner","xy":[241,231]},
+  {"frame":1110,"person":"blue_passer","xy":[213,183]},
+  {"frame":1115,"person":"blue_runner","xy":[271,227]},
+  {"frame":1115,"person":"blue_passer","xy":[207,180]},
+  {"frame":1120,"person":"blue_runner","xy":[296,227]},
+  {"frame":1120,"person":"blue_passer","xy":[207,180]}
+ ]
+}

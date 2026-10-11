@@ -1,0 +1,65 @@
+{
+  "status": "SHOT_GEOMETRY_READY_POSITIVE_BLOCKED_BY_BALL_DETECTOR",
+  "decision": "KEEP_DYNAMIC_GOAL_GEOMETRY_REJECT_RESOLUTION_ONLY_FIX",
+  "fixture": "Ferro - N. S. de Lujan",
+  "goal_proxy": {
+    "anchor": "visible *_GK role_candidate",
+    "horizontal_half_width_height_ratio": 0.85,
+    "top_expand_height_ratio": 0.15,
+    "bottom_expand_height_ratio": 0.15,
+    "fixed_pixel_goal_region": false
+  },
+  "shot_geometry": {
+    "requires_detector_backed_ball": true,
+    "min_observed_points": 3,
+    "max_projection_frames": 30.0,
+    "interpolates_ball_positions": false
+  },
+  "gt1": {
+    "free_ball_flights": [[108, 112], [156, 160]],
+    "shot_geometry_candidates": 0
+  },
+  "positive_context": {
+    "fixture_frames": [360, 376],
+    "note": "Corrected after frame-by-frame review; 315-339 was buildup, not the shot window.",
+    "broadcast_context": "0-0 during attack; cut to Ferro scorer celebration around frame 376",
+    "model": "yolo11n.pt",
+    "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+    "ultralytics": "8.4.163",
+    "class_id": 32,
+    "inference_confidence": 0.005,
+    "imgsz_960": {
+      "frames": 16,
+      "raw_candidates": 34,
+      "candidate_frames": 15,
+      "max_confidence": 0.10859189927577972,
+      "candidates_ge_0_10": 1,
+      "candidates_ge_0_05": 2,
+      "candidates_ge_0_02": 5,
+      "tracker_selected_observations": 1,
+      "tracker_segments_ge_3_observations": 0
+    },
+    "imgsz_1280": {
+      "frames": 16,
+      "raw_candidates": 166,
+      "candidate_frames": 16,
+      "max_confidence": 0.05288171023130417,
+      "candidates_ge_0_10": 0,
+      "candidates_ge_0_05": 2,
+      "candidates_ge_0_02": 33,
+      "tracker_selected_observations": 0,
+      "tracker_segments_ge_3_observations": 0
+    }
+  },
+  "resolution_noise_probe": {
+    "fixture_frames": [315, 340],
+    "imgsz": 1280,
+    "raw_candidates": 173,
+    "candidates_ge_0_10": 5,
+    "visual_result": "strongest candidates are dominated by dashed 6m court-line false positives",
+    "decision": "DO_NOT_PROMOTE_1280_AS_BALL_FIX"
+  },
+  "confirmed_shots": 0,
+  "accuracy_metrics": null,
+  "reason_accuracy_unavailable": "No human ball/shot ground truth exists; broadcast score/cut is sanity context, not an accuracy label."
+}

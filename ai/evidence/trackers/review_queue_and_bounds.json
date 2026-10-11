@@ -1,0 +1,55 @@
+{
+  "scope": "cache_replay_output_contract_repair_and_unverified_review_prioritization",
+  "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+  "detector_confidence": 0.1,
+  "replay_frames": 3600,
+  "output_bounds": {
+    "baseline_high_only": {
+      "clipped_boxes": 0,
+      "dropped_fully_outside_boxes": 0,
+      "invalid_serialized_boxes_after_repair": 0,
+      "jsonl_sha256": "807eced0f886dfdc16591443c7ed3d9579f1da30a7e602aabb708bab8d76b89d"
+    },
+    "two_stage": {
+      "clipped_boxes": 0,
+      "dropped_fully_outside_boxes": 0,
+      "invalid_serialized_boxes_after_repair": 0,
+      "jsonl_sha256": "3b937ea3d18b05d58ddddb4dd0a457b3d98cc2de1946d1cc1857cda5be0d833c"
+    },
+    "bytetrack_standard": {
+      "clipped_boxes": 885,
+      "dropped_fully_outside_boxes": 0,
+      "invalid_serialized_boxes_after_repair": 0,
+      "jsonl_sha256": "cb91c71b04e8caf26d80b79fcf63f610d356d4e8e779ba5e5ee2741be44ab6bf"
+    },
+    "comparison_sha256": "0b855329b53d26f15b4d61c0fd8f63405c6ec80c1c2c699688101a0987beee58",
+    "association_metrics_changed": false
+  },
+  "annotation_window": {
+    "source_range_end_exclusive": [105, 210],
+    "frames": 105,
+    "trackeval_export_rows": {
+      "baseline_high_only": 1267,
+      "two_stage": 1344,
+      "bytetrack_standard": 1316
+    }
+  },
+  "review_queue": {
+    "status": "UNVERIFIED_PRIORITY_QUEUE_NOT_GROUND_TRUTH",
+    "iou_threshold": 0.5,
+    "frames_with_nonzero_priority": 73,
+    "frames_with_zero_priority": 32,
+    "highest_priority_source_frames": [158, 159, 142, 161, 129, 143, 145, 130, 131, 132],
+    "json_sha256": "65bc43a6007cbfdefb2cc3bd725b8ac03089b4c0849b709b3d9d58b3d5623cfc",
+    "csv_sha256": "c637672bccc25c995ce2e777e57334c4323972ec0d7d2c8fb1f5c9bdf7c1d209",
+    "all_frames_still_require_human_review": true
+  },
+  "tests": {
+    "full_runtime_passed": 109,
+    "minimal_runtime_passed": 109,
+    "minimal_runtime_skipped_optional": 8
+  },
+  "standard_tracking_metrics": null,
+  "accuracy_status": "not_evaluated_no_reviewed_ground_truth",
+  "limitation": "Clipping repairs serialization geometry and the queue prioritizes disagreement; neither operation establishes correct boxes or identities."
+}

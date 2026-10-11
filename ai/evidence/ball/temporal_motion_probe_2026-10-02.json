@@ -1,0 +1,64 @@
+{
+  "status": "TEMPORAL_MOTION_DIAGNOSTIC_NOT_BALL_ACCURACY",
+  "decision": "REJECT_AS_FAST_BALL_FIX_KEEP_DIAGNOSTIC_ONLY",
+  "inputs": {
+    "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+    "tracks_sha256": "3b937ea3d18b05d58ddddb4dd0a457b3d98cc2de1946d1cc1857cda5be0d833c",
+    "reference_ball_sha256": "7b30a7c82869eb2d79246567212d84a39ed3da0e26828ab1269f0c8c1609d79d",
+    "reference_note": "Detector-backed observations are controls, not human ball ground truth."
+  },
+  "windows": {
+    "flight_a": {
+      "fixture_frames": [108, 113],
+      "motion_candidate_frames": 5,
+      "motion_candidates": 40,
+      "qualified_tracklets": 9,
+      "goal_directed_tracklets": 0,
+      "reference_points": 5,
+      "reference_points_recovered_within_5px": 5,
+      "reference_median_error_px": 0.6388882814006686
+    },
+    "flight_b": {
+      "fixture_frames": [156, 161],
+      "motion_candidate_frames": 5,
+      "motion_candidates": 20,
+      "qualified_tracklets": 3,
+      "goal_directed_tracklets": 0,
+      "reference_points": 5,
+      "reference_points_recovered_within_5px": 5,
+      "reference_median_error_px": 0.3239424816533515
+    },
+    "scoring_action": {
+      "fixture_frames": [326, 341],
+      "motion_candidate_frames": 15,
+      "motion_candidates": 116,
+      "qualified_tracklets": 24,
+      "goal_directed_tracklets": 0,
+      "reference_points": 0,
+      "reference_points_recovered_within_5px": 0,
+      "reference_median_error_px": null
+    },
+    "post_action_negative": {
+      "fixture_frames": [360, 376],
+      "motion_candidate_frames": 12,
+      "motion_candidates": 764,
+      "qualified_tracklets": 45,
+      "goal_directed_tracklets": 1,
+      "reference_points": 0,
+      "reference_points_recovered_within_5px": 0,
+      "reference_median_error_px": null
+    }
+  },
+  "settings": {
+    "difference_threshold": 22,
+    "min_area": 2,
+    "max_area": 180,
+    "max_side": 30,
+    "min_darkness": 8.0,
+    "tracklet_min_frames": 3,
+    "tracklet_min_speed": 8,
+    "tracklet_min_linearity": 0.7
+  },
+  "accuracy_metrics": null,
+  "reason_accuracy_unavailable": "No human ball ground truth exists; reference points come from detector-backed observations."
+}

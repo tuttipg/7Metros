@@ -1,0 +1,183 @@
+{
+  "schema_version": "sevenmetros.semantic-gt/v1",
+  "status": "HUMAN_REVIEW_COMPLETE",
+  "source": {
+    "video_sha256": "84a94f6e5526d94afc67dc8ee99cc9b390265482d6f0250f2d8a12080e437ed2",
+    "video_name": "20260926-1444-24.0816290.mp4",
+    "fixture_offset_frames": 900,
+    "width": 936,
+    "height": 524,
+    "fps": 30
+  },
+  "sequence": {
+    "name": "ferro_lujan_semantic_pilot_145_164",
+    "start_frame": 145,
+    "end_frame_exclusive": 165,
+    "purpose": "Small semantic validation around the existing control-change candidate and the same-team pass completing at frame 164."
+  },
+  "existing_ground_truth": {
+    "player_gt": {
+      "file": "7Metros_GT_progreso (2).json",
+      "manifest_sha256": "1e8c9135e30f7661067d0f3f62a2b6b3f8fb59ee308d97cd6e6b6c6b9c09f3e5",
+      "authority": "HUMAN_REVIEW_COMPLETE"
+    },
+    "ball_gt": {
+      "file": "ai/evidence/ball/visible_flight_156_160_gt_2026-10-02.json",
+      "coverage": "frames 156-160 only"
+    },
+    "candidate_event": {
+      "file": "ai/evidence/ball/event_candidates_gt1_2026-10-01.json",
+      "frame_index": 151,
+      "kind": "opponent_control_change_candidate",
+      "source_track_id": 1,
+      "source_team": "Ferro",
+      "target_track_id": 5,
+      "target_team": "Lujan"
+    }
+  },
+  "review_protocol": {
+    "instruction": "Review the original video frame-by-frame at native resolution. Confirm ball state and possessor only when visually verifiable. Use existing human player-GT IDs as possessor_ref values. Do not infer possession from the model candidate itself.",
+    "controlled_owner_rule": "controlled requires a visually clear ball in the player's hands/body-control zone; free means the ball is visible but not controlled by a player; unknown is used when visibility or control cannot be established.",
+    "event_rule": "A control-change event is placed on the first frame where control by the new player is visually established after the flight/transition. Same-team and opponent changes are separate kinds.",
+    "event_tolerance_for_scoring": 2,
+    "note": "Human reviewer confirmed the 20-frame semantic labels and event placement in this sequence. The labels below are official human GT for this pilot."
+  },
+  "proposed_labels_for_human_confirmation": {
+    "frames": [
+      {
+        "frame_index": 145,
+        "ball_state": "visible",
+        "possession_state": "controlled",
+        "possessor_ref": "player_gt_1"
+      },
+      {
+        "frame_index": 146,
+        "ball_state": "visible",
+        "possession_state": "controlled",
+        "possessor_ref": "player_gt_1"
+      },
+      {
+        "frame_index": 147,
+        "ball_state": "visible",
+        "possession_state": "controlled",
+        "possessor_ref": "player_gt_1"
+      },
+      {
+        "frame_index": 148,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 149,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 150,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 151,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 152,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 153,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 154,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 155,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 156,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 157,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 158,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 159,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 160,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 161,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 162,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 163,
+        "ball_state": "visible",
+        "possession_state": "free",
+        "possessor_ref": null
+      },
+      {
+        "frame_index": 164,
+        "ball_state": "visible",
+        "possession_state": "controlled",
+        "possessor_ref": "player_gt_8"
+      }
+    ],
+    "events": [
+      {
+        "frame_index": 164,
+        "kind": "same_team_control_change",
+        "source_possessor_ref": "player_gt_1",
+        "target_possessor_ref": "player_gt_8"
+      }
+    ]
+  },
+  "human_review": {
+    "status": "CONFIRMED",
+    "confirmed_by": "human_reviewer",
+    "confirmed_date": "2026-10-06",
+    "confirmed_scope": "frames 145-164 inclusive"
+  }
+}

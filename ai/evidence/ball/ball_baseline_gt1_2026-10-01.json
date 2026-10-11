@@ -1,0 +1,30 @@
+{
+  "status": "UNVERIFIED_BALL_BASELINE_NO_BALL_GT",
+  "fixture": "Ferro - N. S. de Lujan",
+  "sequence": "ferro_lujan_contact",
+  "frames": [105, 210],
+  "frame_count": 105,
+  "width": 936,
+  "height": 524,
+  "fps": 30.0,
+  "detector": {
+    "model": "yolo11n.pt",
+    "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+    "ultralytics": "8.4.163",
+    "class_id": 32,
+    "class_name": "sports ball",
+    "confidence": 0.05,
+    "imgsz": 640
+  },
+  "result": {
+    "candidate_frames": 12,
+    "candidates": 12,
+    "strongest_confidence": 0.524145,
+    "strongest_box_approx_px": [13.11, 14.08],
+    "demo_video_sha256": "d742c188cb0d7a27fc98b3df20a262e91fb4322bcb76409fa712ad86f0996518",
+    "candidate_jsonl_sha256": "c3cf062ebfdcd8c7e42a2d234a9f3037b7da6bf66338ff1023f71834362eb165"
+  },
+  "accuracy_metrics": null,
+  "reason_accuracy_unavailable": "No human ball ground truth exists yet; visual spot-check is not precision/recall.",
+  "decision": "KEEP_AS_FUNCTIONAL_VISIBLE_BASELINE_NOT_AS_POSSESSION_INPUT_YET"
+}

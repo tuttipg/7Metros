@@ -1,0 +1,27 @@
+{
+  "schema_version": "sevenmetros.ball-gt/v1",
+  "source": {
+    "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+    "width": 936,
+    "height": 524,
+    "fps": 30.0,
+    "encoding_note": "Local x264 fixture copy; not the canonical FFV1 tracking fixture."
+  },
+  "sequence": {
+    "name": "visible_ball_flight_156_160",
+    "start_frame": 156,
+    "end_frame_exclusive": 161
+  },
+  "review": {
+    "method": "Frame-by-frame native-resolution review plus 8x nearest-neighbour crop.",
+    "policy": "Integer bbox follows the visually separable dark ball boundary, including visible motion blur.",
+    "result": "FIVE_VISIBLE_LOCALISABLE_FRAMES"
+  },
+  "annotations": [
+    {"frame_index": 156, "state": "visible", "bbox_xyxy": [426, 348, 439, 360], "note": "Visible dark ball in flight."},
+    {"frame_index": 157, "state": "visible", "bbox_xyxy": [424, 358, 438, 371], "note": "Visible dark ball in flight."},
+    {"frame_index": 158, "state": "visible", "bbox_xyxy": [423, 368, 436, 381], "note": "Visible dark ball in flight."},
+    {"frame_index": 159, "state": "visible", "bbox_xyxy": [421, 380, 435, 393], "note": "Visible dark ball in flight."},
+    {"frame_index": 160, "state": "visible", "bbox_xyxy": [420, 394, 434, 406], "note": "Visible dark ball in flight."}
+  ]
+}

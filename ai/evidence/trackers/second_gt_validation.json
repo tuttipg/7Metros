@@ -1,0 +1,78 @@
+{
+  "status": "HUMAN_GT_VALIDATED_BASELINE_EVALUATED",
+  "sequence": "ferro_lujan_hard_reentry",
+  "source_fixture_frames": [2915, 3004],
+  "frames": 90,
+  "width": 936,
+  "height": 524,
+  "annotations": 1125,
+  "unique_ids": 13,
+  "duplicate_ids_within_frame": 0,
+  "invalid_boxes": 0,
+  "source_json_sha256": "52eea93bc9e0356f1e4c9d54b2e99e0f6201e7383e056015ce971a2f1eb4e8c9",
+  "validated_json_sha256": "44e75a8f873c26396b0a6237de191892a9eb52b9b83db5ddf98a7c69251f72de",
+  "gt_sha256": "9bdca94b3b48d8410260e51e433fc64c4c07848828339d4d9e5911cb0b36b090",
+  "qc_corrections": [
+    {
+      "task_frame": 13,
+      "from_id": 21,
+      "to_id": 215,
+      "previous_box_iou": 0.787303,
+      "next_box_iou": 0.551039,
+      "visual_continuity_confirmed": true
+    }
+  ],
+  "baseline_high_only_before_role_filter": {
+    "evaluation": "TrackEval-equivalent local reproduction validated exactly against the first official TrackEval result",
+    "HOTA": 75.913792,
+    "IDF1": 78.174424,
+    "MOTA": 65.511111,
+    "recall": 81.511111,
+    "precision": 84.283088,
+    "IDSW": 9,
+    "fragments": 28,
+    "TP": 917,
+    "FN": 208,
+    "FP": 171,
+    "observations": 1088,
+    "tracker_ids": 18
+  },
+  "uniform_role_filter_baseline_guardrail": {
+    "registered_removed_observations": 126,
+    "registered_removed_tracks": {"202": 90, "224": 36},
+    "track_202_max_iou_to_any_gt": 0.095074,
+    "track_224_max_iou_to_any_gt": 0.076160,
+    "removed_matches_at_iou_0_5": 0,
+    "clear_identity_after_filter": {
+      "TP": 917,
+      "FN": 208,
+      "FP": 45,
+      "IDSW": 9,
+      "MOTA": 76.711111,
+      "recall": 81.511111,
+      "precision": 95.322245,
+      "IDF1": 82.894106
+    },
+    "hota_reconstructed_approx": 79.826078,
+    "accuracy_scope": "baseline on this reviewed interval only"
+  },
+  "short_internal_gap_interpolation_experiment": {
+    "status": "EXPERIMENTAL_NOT_PROMOTED",
+    "max_missing_frames": 5,
+    "seconds_at_30fps": 0.166667,
+    "method": "linear interpolation between observations of the same track_id; no endpoint extrapolation; no new IDs",
+    "first_gt_current_baseline": {
+      "before": {"HOTA": 85.939137, "IDF1": 90.678302, "MOTA": 83.738043, "recall": 84.915379, "precision": 99.311532, "IDSW": 8, "fragments": 19},
+      "after": {"HOTA": 86.537337, "IDF1": 91.520125, "MOTA": 85.283297, "recall": 87.049301, "precision": 98.583333, "IDSW": 7, "fragments": 8}
+    },
+    "second_gt_current_baseline": {
+      "before": {"HOTA_approx": 79.826078, "IDF1": 82.894106, "MOTA": 76.711111, "recall": 81.511111, "precision": 95.322245, "IDSW": 9, "fragments": 28},
+      "after": {"HOTA_approx": 81.214384, "IDF1": 84.284378, "MOTA": 79.644444, "recall": 85.244444, "precision": 94.669299, "IDSW": 9, "fragments": 15}
+    },
+    "longer_gap_result": "discarded: larger windows increased ID switches on the hard reentry interval"
+  },
+  "missing_for_complete_second_comparison": [
+    "current two_stage JSONL for fixture frames 2915-3004",
+    "current bytetrack_standard JSONL for fixture frames 2915-3004"
+  ]
+}

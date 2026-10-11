@@ -1,0 +1,19 @@
+{
+  "synthetic": {
+    "frames": 5,
+    "ground_truth_people": 1,
+    "baseline_observations": 2,
+    "candidate_observations": 5,
+    "baseline_ids": 2,
+    "candidate_ids": 1
+  },
+  "real_accuracy": null,
+  "neural_inference_executed": false,
+  "cache_parity": {
+    "frames": 3600,
+    "observations": 40416,
+    "identical": true,
+    "sha256": "1561d9bd0e5ffaab434ce634aef0aa3af8d1eab70def2dcef693aedcae98a199",
+    "scope": "raw boxes only; no court/team classification; not accuracy"
+  }
+}

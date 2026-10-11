@@ -1,0 +1,46 @@
+{
+  "schema_version": "sevenmetros.ball-training-dataset-validator-evidence/v1",
+  "status": "VALIDATOR_VERIFIED_NO_TRAINING_OR_MODEL_ACCURACY",
+  "date": "2026-10-03",
+  "holdout_manifest": {
+    "schema_version": "sevenmetros.ball-holdout-pixels/v1",
+    "frame_count": 113,
+    "frames_fingerprint_sha256": "09d267d8594d38e40e67e4d6308fca4049d1ff3a978e1c0c76714000dd3913a0"
+  },
+  "unit_tests": {
+    "new_tests_passed": 8,
+    "minimal_suite_passed": 277,
+    "minimal_suite_skipped_optional_vision": 7,
+    "vision_runtime_suite_passed": 277,
+    "vision_runtime_suite_skipped": 0
+  },
+  "opencv_integration": {
+    "opencv_version": "4.11.0",
+    "control_image_count": 3,
+    "control_box_count": 2,
+    "control_negative_image_count": 1,
+    "accepted_status": "STRUCTURALLY_VALID_AND_HOLDOUT_EXCLUDED_NOT_MODEL_ACCURACY",
+    "exact_decoded_pixel_collision_rejected": true,
+    "real_holdout_manifest_overlap_count": 0,
+    "purpose": "STRUCTURAL_VALIDATION_ONLY_NOT_TRAINING_DATA_OR_MODEL_ACCURACY"
+  },
+  "checks": [
+    "single_ball_class",
+    "train_val_test_layout",
+    "image_label_pairing",
+    "normalized_yolo_geometry",
+    "positive_training_example",
+    "duplicate_image_bytes_and_decoded_pixels",
+    "exact_heldout_pixel_exclusion",
+    "deterministic_dataset_fingerprint"
+  ],
+  "limitations": {
+    "external_training_dataset_evaluated": false,
+    "model_trained": false,
+    "inference_executed": false,
+    "replay_executed": false,
+    "accuracy_evaluated": false,
+    "perceptual_duplicate_detection": false,
+    "local_mp4_container_readable_during_run": false
+  }
+}

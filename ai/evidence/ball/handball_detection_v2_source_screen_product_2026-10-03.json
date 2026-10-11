@@ -1,0 +1,16 @@
+{
+  "covered_roles": [
+    "annotations",
+    "original_media"
+  ],
+  "dataset_admission_status": "NOT_EVALUATED",
+  "dataset_title": "handball-detection v2 (2025-01-06)",
+  "errors": [],
+  "intended_use": "product",
+  "manifest_path": "ai/evidence/ball/handball_detection_v2_training_sources_2026-10-03.json",
+  "manifest_sha256": "a4698ec9cd659a9a9e7f5d8038a0d20e4d3149da28ffb8c3ec8395693cc415f1",
+  "model_accuracy_status": "NOT_EVALUATED",
+  "schema": "sevenmetros.ball-training-source-screen/v1",
+  "source_count": 2,
+  "status": "SOURCE_RIGHTS_SCREEN_PASSED_NOT_DATASET_ADMISSION"
+}
