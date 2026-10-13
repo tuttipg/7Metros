@@ -115,4 +115,24 @@ assert.throws(
   /requiere validación específica/,
 );
 
+assert.throws(
+  () => parseOfficialFemebalSheet(fixture.replace('2026-03-21', '2026-02-30')),
+  /Fecha de planilla inválida/,
+);
+assert.throws(
+  () => parseOfficialFemebalSheet(fixture.replace('2026-03-21', '2026-13-01')),
+  /Fecha de planilla inválida/,
+);
+assert.throws(
+  () => parseOfficialFemebalSheet(fixture.replace('2026-03-21', '2023-02-29')),
+  /Fecha de planilla inválida/,
+);
+assert.throws(() => parseOfficialFemebalSheet(fixture.replace('20:15:00', '25:15:00')), /Hora de planilla inválida/);
+assert.throws(() => parseOfficialFemebalSheet(fixture.replace('20:15:00', '20:75:00')), /Hora de planilla inválida/);
+assert.throws(() => parseOfficialFemebalSheet(fixture.replace('20:15:00', '20:15:60')), /Hora de planilla inválida/);
+const leapDayFixture = fixture.replace('2026-03-21', '2024-02-29').replace('20:15:00', '23:59:59');
+const leapDayParsed = parseOfficialFemebalSheet(leapDayFixture);
+assert.equal(leapDayParsed.fecha, '2024-02-29');
+assert.equal(leapDayParsed.hora, '23:59:59');
+
 console.log('✓ planilla-core: formato estándar y extracción n8n Cloud validados');
