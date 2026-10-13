@@ -128,6 +128,27 @@ function scoreFromPeriods(periods, label) {
   return periods.pt + periods.st + periods.pte + periods.ste;
 }
 
+
+function isValidIsoCalendarDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1) return false;
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day <= days[month - 1];
+}
+
+function assertValidSheetDateTime(fecha, hora) {
+  if (!isValidIsoCalendarDate(fecha)) throw new Error('Fecha de planilla inválida');
+  const match = /^(\d{2}):(\d{2}):(\d{2})$/.exec(hora);
+  if (!match || Number(match[1]) > 23 || Number(match[2]) > 59 || Number(match[3]) > 59) {
+    throw new Error('Hora de planilla inválida');
+  }
+}
+
 export function parseOfficialFemebalSheet(text) {
   if (typeof text !== 'string' || !text.trim()) throw new Error('La planilla está vacía');
 
@@ -140,6 +161,7 @@ export function parseOfficialFemebalSheet(text) {
 
   const fecha = requireMatch(flat, /(?:^|\n)Fecha:\s*\n?(\d{4}-\d{2}-\d{2})(?:\n|$)/i, 'fecha');
   const hora = requireMatch(flat, /(?:^|\n)Hora:\s*\n?(\d{2}:\d{2}:\d{2})(?:\n|$)/i, 'hora');
+  assertValidSheetDateTime(fecha, hora);
   const scope = requireMatch(flat, /(?:^|\n)Categoria\s*-\s*Division:\s*\n?([^\n]+)/i, 'categoría/división');
   const scopeParts = scope.split(/\s+-\s+/, 2);
   if (scopeParts.length !== 2) throw new Error('Categoría/división inválida');
