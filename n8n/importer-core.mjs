@@ -73,7 +73,7 @@ export function fixtureScopeKey(fixture) {
 
 export function scheduleKey(fixture) {
   const fecha = requiredText(fixture, 'fecha');
-  const dateMatch = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(fecha);
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fecha);
   if (!dateMatch || Number(dateMatch[1]) < 1) {
     throw new Error(`Fecha de fixture inválida (se espera YYYY-MM-DD): ${fecha}`);
   }
@@ -85,7 +85,7 @@ export function scheduleKey(fixture) {
   const rawTime = String(fixture?.hora ?? '').trim();
   let hora = '';
   if (rawTime) {
-    const timeMatch = /^([01]\\d|2[0-3]):([0-5]\\d)(?::([0-5]\\d))?$/.exec(rawTime);
+    const timeMatch = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/.exec(rawTime);
     if (!timeMatch) {
       throw new Error(`Hora de fixture inválida (se espera HH:mm o HH:mm:ss): ${rawTime}`);
     }
