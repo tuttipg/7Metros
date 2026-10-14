@@ -1,5 +1,33 @@
 const FEMEBAL_WEB_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
 const FEMEBAL_PLANILLA_HOST = 'djfhz848yeeat.cloudfront.net';
+const TRACKING_QUERY_KEYS = new Set(['fbclid', 'gclid', 'dclid', 'msclkid', 'mc_cid', 'mc_eid']);
+const SENSITIVE_QUERY_KEYS = new Set([
+  'auth',
+  'authorization',
+  'bearer',
+  'cookie',
+  'credential',
+  'credentials',
+  'csrf',
+  'xsrf',
+  'jwt',
+  'key',
+  'password',
+  'secret',
+  'session',
+  'token',
+]);
+const SENSITIVE_QUERY_SUFFIXES = [
+  'apikey',
+  'authkey',
+  'credential',
+  'credentials',
+  'password',
+  'privatekey',
+  'secret',
+  'sessionid',
+  'token',
+];
 
 function rawPathFromHttpsUrl(value) {
   const raw = String(value ?? '');
@@ -11,6 +39,24 @@ function assertUnambiguousRawHttpsInput(raw) {
   if(/[\\\u0000-\u001f\u007f]/.test(raw)) {
     throw new Error('URL FEMEBAL con caracteres ambiguos/normalizables rechazada');
   }
+}
+
+function hasTrackingQuery(url) {
+  for (const [key] of url.searchParams) {
+    const normalized = key.toLowerCase();
+    if (normalized.startsWith('utm_') || TRACKING_QUERY_KEYS.has(normalized)) return true;
+  }
+  return false;
+}
+
+function hasSensitiveQuery(url) {
+  for (const [key] of url.searchParams) {
+    const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (SENSITIVE_QUERY_KEYS.has(normalized) || SENSITIVE_QUERY_SUFFIXES.some((suffix) => normalized.endsWith(suffix))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function canonicalizeOfficialFemebalUrl(value, { pdf = false } = {}) {
@@ -31,7 +77,11 @@ export function canonicalizeOfficialFemebalUrl(value, { pdf = false } = {}) {
   if (url.port && url.port !== '443') throw new Error(`Puerto FEMEBAL fuera de allowlist: ${url.port}`);
   if (url.hash) throw new Error('URL FEMEBAL con fragmento rechazada');
 
-  if (!pdf) return url.toString();
+  if (!pdf) {
+    if (hasTrackingQuery(url)) throw new Error('URL FEMEBAL con tracking query rechazada');
+    if (hasSensitiveQuery(url)) throw new Error('URL FEMEBAL con query sensible rechazada');
+    return url.toString();
+  }
 
   if (url.search) throw new Error('PDF FEMEBAL con query string rechazada');
 
@@ -56,4 +106,6 @@ export const OFFICIAL_FEMEBAL_URL_POLICY = Object.freeze({
   web_hosts: Object.freeze([...FEMEBAL_WEB_HOSTS]),
   planilla_host: FEMEBAL_PLANILLA_HOST,
   pdf_paths: Object.freeze(['/wp-content/uploads/', '/pdf_planillas/']),
+  tracking_query_keys: Object.freeze([...TRACKING_QUERY_KEYS]),
+  sensitive_query_keys: Object.freeze([...SENSITIVE_QUERY_KEYS]),
 });
