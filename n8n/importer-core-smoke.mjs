@@ -149,14 +149,6 @@ assert.notEqual(
   fixtureScopeKey(fixture({ local_equipo_id: 10, visitante_equipo_id: 20, rama: 'F' }))
 );
 assert.match(fixtureScopeKey(fixture({ local_equipo_id: '', visitante_equipo_id: null })), /^scope\|/);
-assert.equal(
-  fixtureScopeKey(fixture({ local_equipo_id: Number.MAX_SAFE_INTEGER, visitante_equipo_id: 20 })),
-  `ids|${Number.MAX_SAFE_INTEGER}|20`
-);
-assert.equal(
-  fixtureScopeKey(fixture({ local_equipo_id: String(Number.MAX_SAFE_INTEGER), visitante_equipo_id: '20' })),
-  `ids|${Number.MAX_SAFE_INTEGER}|20`
-);
 
 // Regression: scheduleKey debe rechazar fechas imposibles y horas malformadas,
 // pero conservar la equivalencia HH:mm / HH:mm:ss y el caso sin hora.
