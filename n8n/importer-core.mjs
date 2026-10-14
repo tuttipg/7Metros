@@ -63,7 +63,7 @@ export function fixtureScopeKey(fixture) {
   if (localId || visitanteId) {
     if (!localId || !visitanteId) throw new Error('Fixture con un solo equipo_id resuelto');
     if (localId === visitanteId) throw new Error('Local y visitante no pueden ser el mismo equipo');
-    return `ids|${localId}|${visitanteId}`;
+    return `ids|${rama}|${normalizeText(categoria)}|${normalizeText(division)}|${localId}|${visitanteId}`;
   }
   const local = normalizeText(requiredText(fixture, 'local'));
   const visitante = normalizeText(requiredText(fixture, 'visitante'));
@@ -73,7 +73,24 @@ export function fixtureScopeKey(fixture) {
 
 export function scheduleKey(fixture) {
   const fecha = requiredText(fixture, 'fecha');
-  const hora = String(fixture?.hora ?? '').trim().slice(0, 5);
+  const dateMatch = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(fecha);
+  if (!dateMatch || Number(dateMatch[1]) < 1) {
+    throw new Error(`Fecha de fixture inválida (se espera YYYY-MM-DD): ${fecha}`);
+  }
+  const parsedDate = new Date(`${fecha}T00:00:00.000Z`);
+  if (Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== fecha) {
+    throw new Error(`Fecha de fixture inexistente: ${fecha}`);
+  }
+
+  const rawTime = String(fixture?.hora ?? '').trim();
+  let hora = '';
+  if (rawTime) {
+    const timeMatch = /^([01]\\d|2[0-3]):([0-5]\\d)(?::([0-5]\\d))?$/.exec(rawTime);
+    if (!timeMatch) {
+      throw new Error(`Hora de fixture inválida (se espera HH:mm o HH:mm:ss): ${rawTime}`);
+    }
+    hora = `${timeMatch[1]}:${timeMatch[2]}`;
+  }
   return `${fecha}|${hora || 'sin-hora'}`;
 }
 
