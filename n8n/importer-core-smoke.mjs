@@ -135,7 +135,19 @@ for (const malformed of [
     `visitante ID inválido debe fallar cerrado: ${String(malformed)}`
   );
 }
-assert.match(fixtureScopeKey(fixture({ local_equipo_id: '10', visitante_equipo_id: '20' })), /^ids\|10\|20$/);
+assert.equal(fixtureScopeKey(fixture({ local_equipo_id: '10', visitante_equipo_id: '20' })), 'ids|M|mayores|lhc hipotecario seguros|10|20');
+assert.notEqual(
+  fixtureScopeKey(fixture({ local_equipo_id: 10, visitante_equipo_id: 20 })),
+  fixtureScopeKey(fixture({ local_equipo_id: 10, visitante_equipo_id: 20, categoria: 'Juveniles' }))
+);
+assert.notEqual(
+  fixtureScopeKey(fixture({ local_equipo_id: 10, visitante_equipo_id: 20 })),
+  fixtureScopeKey(fixture({ local_equipo_id: 10, visitante_equipo_id: 20, division: 'A' }))
+);
+assert.notEqual(
+  fixtureScopeKey(fixture({ local_equipo_id: 10, visitante_equipo_id: 20 })),
+  fixtureScopeKey(fixture({ local_equipo_id: 10, visitante_equipo_id: 20, rama: 'F' }))
+);
 assert.match(fixtureScopeKey(fixture({ local_equipo_id: '', visitante_equipo_id: null })), /^scope\|/);
 assert.equal(
   fixtureScopeKey(fixture({ local_equipo_id: Number.MAX_SAFE_INTEGER, visitante_equipo_id: 20 })),
