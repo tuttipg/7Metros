@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { fixtureScopeKey, prioritizeFixtureSchedules, validateDiscoveryManifest } from './importer-core.mjs';
+import { fixtureScopeKey, prioritizeFixtureSchedules, scheduleKey, validateDiscoveryManifest } from './importer-core.mjs';
 
 function fixture(overrides = {}) {
   return {
@@ -135,8 +135,8 @@ for (const malformed of [
     `visitante ID inválido debe fallar cerrado: ${String(malformed)}`
   );
 }
-assert.match(fixtureScopeKey(fixture({ local_equipo_id: '10', visitante_equipo_id: '20' })), /^ids\\|10\\|20$/);
-assert.match(fixtureScopeKey(fixture({ local_equipo_id: '', visitante_equipo_id: null })), /^scope\\|/);
+assert.match(fixtureScopeKey(fixture({ local_equipo_id: '10', visitante_equipo_id: '20' })), /^ids\|10\|20$/);
+assert.match(fixtureScopeKey(fixture({ local_equipo_id: '', visitante_equipo_id: null })), /^scope\|/);
 assert.equal(
   fixtureScopeKey(fixture({ local_equipo_id: Number.MAX_SAFE_INTEGER, visitante_equipo_id: 20 })),
   `ids|${Number.MAX_SAFE_INTEGER}|20`
@@ -146,4 +146,17 @@ assert.equal(
   `ids|${Number.MAX_SAFE_INTEGER}|20`
 );
 
-console.log('✓ importer-core: manifest gate, strict IDs, scopes, reprogramaciones, duplicados y fail-closed OK');
+// Regression: scheduleKey debe rechazar fechas imposibles y horas malformadas,
+// pero conservar la equivalencia HH:mm / HH:mm:ss y el caso sin hora.
+assert.equal(scheduleKey(fixture({ fecha: '2026-09-05', hora: '18:00' })), '2026-09-05|18:00');
+assert.equal(scheduleKey(fixture({ fecha: '2026-09-05', hora: '18:00:00' })), '2026-09-05|18:00');
+assert.equal(scheduleKey(fixture({ fecha: '2026-09-05', hora: '' })), '2026-09-05|sin-hora');
+assert.equal(scheduleKey(fixture({ fecha: '2026-09-05', hora: '   ' })), '2026-09-05|sin-hora');
+for (const badDate of ['2026-2-05', '2026-02-30', '2026-13-01', '0000-01-01', 'yesterday']) {
+  assert.throws(() => scheduleKey(fixture({ fecha: badDate })), /Fecha de fixture/);
+}
+for (const badTime of ['18:00junk', '24:00', '18:60', '18:00:99', '6:00', '18']) {
+  assert.throws(() => scheduleKey(fixture({ hora: badTime })), /Hora de fixture/);
+}
+
+console.log('✓ importer-core: manifest gate, strict IDs, scopes, schedules, reprogramaciones, duplicados y fail-closed OK');
