@@ -33,6 +33,23 @@ for (const route of manifest.routes) {
   seenCanonical.add(canonicalDeclared);
 }
 
+for (const url of [
+  'https://femebal.com/programaciones/?utm_source=google',
+  'https://femebal.com/programaciones/?fbclid=abc',
+  'https://femebal.com/programaciones/?accessToken=placeholder',
+  'https://femebal.com/programaciones/?session_id=placeholder',
+  'https://femebal.com/programaciones/?api_key=placeholder',
+]) {
+  assert.throws(() => canonicalizeOfficialFemebalUrl(url), /tracking query|query sensible/);
+}
+
+for (const url of [
+  'https://femebal.com/programaciones/?fase=apertura',
+  'https://femebal.com/programaciones/?fecha=3&sortKey=fecha',
+]) {
+  assert.doesNotThrow(() => canonicalizeOfficialFemebalUrl(url));
+}
+
 assert.equal(manifest.coverage?.official_fixture_routes_observed, manifest.routes.length);
 assert.equal(manifest.coverage?.routes_with_explicit_public_femebal_link, manifest.routes.length);
 assert.equal(manifest.coverage?.routes_automatically_probed, 0);
