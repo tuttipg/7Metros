@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 jobs:
   tournamenttracker-pdf-work-item:
     runs-on: ubuntu-latest
