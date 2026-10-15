@@ -34,10 +34,23 @@ const baseScope = {
 assert.equal(resolveEquipoExact(equipos, baseScope).state, 'scope_ambiguo');
 assert.equal(resolveEquipoExact(equipos, { ...baseScope, club_id: '1', temporada_id: '2026' }).state, 'scope_ambiguo');
 
-// IDs coercibles pero ambiguos/malformados deben fallar cerrado: no Number("01"), true, "1e2", etc.
+// IDs del selector coercibles pero ambiguos/malformados deben fallar cerrado.
 for (const bad of ['01', '1.0', '1e1', '+1', ' 1', '1 ', true, false, 1.5, 0, -1, Infinity, '9007199254740992', {}, []]) {
   assert.throws(() => resolveEquipoExact(equipos, { ...baseScope, club_id: bad }), /club_id debe ser un entero positivo/);
   assert.throws(() => resolveEquipoExact(equipos, { ...baseScope, temporada_id: bad }), /temporada_id debe ser un entero positivo/);
+}
+
+// Datos internos también deben usar IDs decimales canónicos: Number("01") no debe igualar 1.
+const malformedInternalIds = [
+  { ...equipos[0], club_id: '01' },
+  { ...equipos[0], temporada_id: '2026.0' },
+  { ...equipos[0], id: '0101' },
+];
+for (const malformed of malformedInternalIds) {
+  assert.equal(
+    resolveEquipoExact([malformed], { ...baseScope, equipo_codigo: 'A' }).state,
+    malformed.id === '0101' ? 'integrity_error' : 'equipo_no_resuelto',
+  );
 }
 
 const resolved = resolveJugadoresExact(
@@ -49,6 +62,28 @@ assert.equal(resolved.equipo.id, 101);
 assert.deepEqual(resolved.jugadores.map((row) => row.jugador_id), [11, 12]);
 assert.ok(resolved.jugadores.every((row) => row.equipo_id === 101));
 assert.ok(!resolved.jugadores.some((row) => row.jugador_id === 13));
+
+const stringInternalIds = resolveJugadoresExact(
+  {
+    equipos: equipos.map((row) => ({ ...row, id: String(row.id), club_id: String(row.club_id), temporada_id: String(row.temporada_id) })),
+    planteles: planteles.map((row) => ({ ...row, equipo_id: String(row.equipo_id), jugador_id: String(row.jugador_id) })),
+    jugadores: jugadores.map((row) => ({ ...row, id: String(row.id) })),
+  },
+  { ...baseScope, equipo_codigo: 'A' },
+);
+assert.equal(stringInternalIds.state, 'resolved');
+assert.deepEqual(stringInternalIds.jugadores.map((row) => row.jugador_id), [11, 12]);
+
+const malformedRosterId = resolveJugadoresExact(
+  {
+    equipos,
+    planteles: [...planteles.filter((row) => row.equipo_id === 101), { id: 99, jugador_id: '01', equipo_id: 101 }],
+    jugadores,
+  },
+  { ...baseScope, equipo_codigo: 'A' },
+);
+assert.equal(malformedRosterId.state, 'integrity_error');
+assert.deepEqual(malformedRosterId.missing_player_ids, [null]);
 
 const junior = resolveJugadoresExact(
   { equipos, planteles, jugadores },
@@ -76,4 +111,4 @@ const broken = resolveJugadoresExact(
 assert.equal(broken.state, 'integrity_error');
 assert.deepEqual(broken.missing_player_ids, [999]);
 
-console.log('✓ player-scope-core: scope exacto, IDs estrictos, ambigüedad fail-closed y join de plantel validados');
+console.log('✓ player-scope-core: scope exacto, IDs estrictos, normalización interna, ambigüedad fail-closed y join de plantel validados');
