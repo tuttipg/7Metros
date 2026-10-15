@@ -8,7 +8,7 @@ const expected = { fecha: '2026-03-21', local: 'Argentinos Juniors', visitante: 
 const selection = {
   dry_run: true, network_used: false, auth_used: false, write_enabled: false, expected_match_checked: true,
   pdf_url: PDF_URL, expected_match: expected,
-  match: { planillas: [{ pdf: PDF_URL }] },
+  match: { fecha: expected.fecha, local: expected.local, visitante: expected.visitante, goles_local: expected.goles_local, goles_visitante: expected.goles_visitante, planillas: [{ pdf: PDF_URL }] },
   provenance: { source: 'tournamenttracker_decrypted_torneo_offline', verified_exact_body: true, artifact_sha256: ARTIFACT_SHA, artifact_bytes: 1234, network_used: false, auth_used: false, write_enabled: false },
 };
 const item = buildTournamentTrackerPdfWorkItem(selection);
