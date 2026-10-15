@@ -41,8 +41,9 @@ function decodeSinglePathSegment(rawSegment) {
 
 function validatePublicIndexSource(sourceUrl, targetCanonicalUrl, evidence) {
   if (sourceUrl.pathname !== '/search') throw new Error('La evidencia public_index requiere una página de búsqueda explícita');
-  const query = sourceUrl.searchParams.get('q');
-  if (!query) throw new Error('La evidencia public_index requiere una consulta de búsqueda explícita');
+  const queries = sourceUrl.searchParams.getAll('q');
+  if (queries.length !== 1 || !queries[0]) throw new Error('La evidencia public_index requiere exactamente una consulta de búsqueda explícita');
+  const query = queries[0];
   const normalizedQuery = query.toLowerCase();
   if (!normalizedQuery.includes('femebal') || !normalizedQuery.includes('tournament-tracker')) throw new Error('La consulta public_index debe referenciar FEMEBAL TournamentTracker');
   const target = new URL(targetCanonicalUrl);
@@ -102,7 +103,7 @@ export function canonicalizeIndexedTournamentTrackerRoute(value) {
   if (url.protocol !== 'https:') throw new Error('Ruta indexada TournamentTracker requiere HTTPS');
   if (url.port && url.port !== '443') throw new Error('Ruta TournamentTracker no admite puertos HTTPS no estándar');
   if (!FEMEBAL_HOSTS.has(url.hostname.toLowerCase())) throw new Error('Host TournamentTracker no permitido');
-  if (url.username || url.password) throw new Error('Ruta TournamentTracker no admite credenciales en URL');
+  if (url.username || url.password) throw new Error('Ruta TournamentTracker no admite credenciales');
   if (url.hash) throw new Error('Ruta TournamentTracker no admite fragments');
   if (url.search) throw new Error('Ruta indexada TournamentTracker no admite query strings');
   if (!url.pathname.startsWith(INDEXED_ROUTE_PREFIX)) throw new Error('Prefijo TournamentTracker no permitido');
