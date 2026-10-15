@@ -30,10 +30,15 @@ const baseScope = {
   rama: 'M',
 };
 
-const ambiguous = resolveEquipoExact(equipos, baseScope);
-assert.equal(ambiguous.state, 'scope_ambiguo');
-assert.equal(ambiguous.candidates.length, 2);
-assert.equal(ambiguous.disambiguation_required, 'equipo_codigo');
+// Scope válido: decimal canónico como número o string.
+assert.equal(resolveEquipoExact(equipos, baseScope).state, 'scope_ambiguo');
+assert.equal(resolveEquipoExact(equipos, { ...baseScope, club_id: '1', temporada_id: '2026' }).state, 'scope_ambiguo');
+
+// IDs coercibles pero ambiguos/malformados deben fallar cerrado: no Number("01"), true, "1e2", etc.
+for (const bad of ['01', '1.0', '1e1', '+1', ' 1', '1 ', true, false, 1.5, 0, -1, Infinity, '9007199254740992', {}, []]) {
+  assert.throws(() => resolveEquipoExact(equipos, { ...baseScope, club_id: bad }), /club_id debe ser un entero positivo/);
+  assert.throws(() => resolveEquipoExact(equipos, { ...baseScope, temporada_id: bad }), /temporada_id debe ser un entero positivo/);
+}
 
 const resolved = resolveJugadoresExact(
   { equipos, planteles, jugadores },
@@ -71,4 +76,4 @@ const broken = resolveJugadoresExact(
 assert.equal(broken.state, 'integrity_error');
 assert.deepEqual(broken.missing_player_ids, [999]);
 
-console.log('✓ player-scope-core: scope exacto, ambigüedad fail-closed y join de plantel validados');
+console.log('✓ player-scope-core: scope exacto, IDs estrictos, ambigüedad fail-closed y join de plantel validados');
