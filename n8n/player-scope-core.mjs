@@ -1,8 +1,16 @@
 const REQUIRED_SCOPE_FIELDS = ['club_id', 'temporada_id', 'categoria', 'division', 'rama'];
 
 function positiveInteger(value, label) {
-  const number = Number(value);
-  if (!Number.isInteger(number) || number <= 0) throw new Error(`${label} debe ser un entero positivo`);
+  if (value === null || value === undefined || value === '') throw new Error(`${label} debe ser un entero positivo`);
+  let number;
+  if (typeof value === 'number') {
+    number = value;
+  } else if (typeof value === 'string' && /^[1-9][0-9]*$/.test(value)) {
+    number = Number(value);
+  } else {
+    throw new Error(`${label} debe ser un entero positivo decimal canónico`);
+  }
+  if (!Number.isSafeInteger(number) || number <= 0) throw new Error(`${label} debe ser un entero positivo seguro`);
   return number;
 }
 
