@@ -75,10 +75,11 @@ for (const badEvidence of [
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/fixture-publico?credential=redacted' },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: observedPublicIndexedRoute },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/tournament-tracker/OTROTOKEN=' },
-  // Provenance hardening: encoded or malformed spellings must not hide a circular TournamentTracker source.
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/%74ournament-tracker/OTROTOKEN=' },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/%2574ournament-tracker/OTROTOKEN=' },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/fixture-%ZZpublico' },
+  // Provenance hardening: multiple q values are ambiguous and must never select only the first value.
+  { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: `${publicEvidence.sourceUrl}&q=site%3Afemebal.com%2Ftournament-tracker%2FOTROTOKEN%3D`, resultUrl: observedPublicIndexedRoute },
 ]) {
   const rejected = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: badEvidence });
   assert.equal(rejected.state, 'probe_not_authorized');
