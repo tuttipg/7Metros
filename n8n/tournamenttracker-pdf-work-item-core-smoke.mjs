@@ -29,7 +29,7 @@ for (const [patch,re] of [
   [{match:{...base.match,local:'Ferro Carril Oeste',visitante:'Argentinos Juniors'}},/no coincide exactamente con expected_match/],
   [{match:{...base.match,fecha:'2026-03-22'}},/no coincide exactamente con expected_match/],
   [{match:{...base.match,goles_local:21}},/no coincide exactamente con expected_match/],
-  [{expected_match:{...base.expected_match,fecha:'2026-02-30'}},/fecha esperada/],
+  [{expected_match:{...base.expected_match,fecha:'2026-02-30'}},/Fecha esperada no es una fecha calendario válida/],
   [{expected_match:{...base.expected_match,goles_local:-1}},/Marcador local esperado inválido/],
   [{expected_match:{...base.expected_match,local:''}},/Equipo local esperado inválido/],
 ]) await assert.rejects(async()=>buildTournamentTrackerPdfWorkItem({...base,...patch}),re);
