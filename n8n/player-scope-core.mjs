@@ -14,6 +14,15 @@ function positiveInteger(value, label) {
   return number;
 }
 
+function dataPositiveInteger(value) {
+  if (typeof value === 'number') return Number.isSafeInteger(value) && value > 0 ? value : null;
+  if (typeof value === 'string' && /^[1-9][0-9]*$/.test(value)) {
+    const number = Number(value);
+    return Number.isSafeInteger(number) && number > 0 ? number : null;
+  }
+  return null;
+}
+
 function requiredText(value, label) {
   const text = String(value ?? '').trim();
   if (!text) throw new Error(`${label} es obligatorio`);
@@ -42,8 +51,10 @@ function rowText(value) {
 }
 
 function exactBaseScopeMatch(team, scope) {
-  return Number(team?.club_id) === scope.club_id
-    && Number(team?.temporada_id) === scope.temporada_id
+  const clubId = dataPositiveInteger(team?.club_id);
+  const temporadaId = dataPositiveInteger(team?.temporada_id);
+  return clubId === scope.club_id
+    && temporadaId === scope.temporada_id
     && rowText(team?.categoria) === scope.categoria
     && rowText(team?.division) === scope.division
     && rowText(team?.rama) === scope.rama;
@@ -51,9 +62,9 @@ function exactBaseScopeMatch(team, scope) {
 
 function publicCandidate(team) {
   return {
-    id: Number(team.id),
-    club_id: Number(team.club_id),
-    temporada_id: Number(team.temporada_id),
+    id: dataPositiveInteger(team.id),
+    club_id: dataPositiveInteger(team.club_id),
+    temporada_id: dataPositiveInteger(team.temporada_id),
     categoria: rowText(team.categoria),
     division: rowText(team.division),
     rama: rowText(team.rama),
@@ -91,7 +102,7 @@ export function resolveEquipoExact(equipos, rawScope) {
   }
 
   const equipo = candidates[0];
-  if (!Number.isInteger(Number(equipo.id)) || Number(equipo.id) <= 0) {
+  if (!dataPositiveInteger(equipo.id)) {
     return {
       state: 'integrity_error',
       scope,
@@ -118,12 +129,12 @@ export function resolveJugadoresExact({ equipos, planteles, jugadores }, rawScop
     return { ...teamResolution, plantel: [], jugadores: [] };
   }
 
-  const equipoId = Number(teamResolution.equipo.id);
-  const rosterRows = planteles.filter((row) => Number(row?.equipo_id) === equipoId);
+  const equipoId = dataPositiveInteger(teamResolution.equipo.id);
+  const rosterRows = planteles.filter((row) => dataPositiveInteger(row?.equipo_id) === equipoId);
   const playerById = new Map();
   for (const player of jugadores) {
-    const id = Number(player?.id);
-    if (Number.isInteger(id) && id > 0) playerById.set(id, player);
+    const id = dataPositiveInteger(player?.id);
+    if (id !== null) playerById.set(id, player);
   }
 
   const seenPlayerIds = new Set();
@@ -132,9 +143,9 @@ export function resolveJugadoresExact({ equipos, planteles, jugadores }, rawScop
   const missingPlayerIds = [];
 
   for (const roster of rosterRows) {
-    const playerId = Number(roster?.jugador_id);
-    if (!Number.isInteger(playerId) || playerId <= 0 || !playerById.has(playerId)) {
-      missingPlayerIds.push(Number.isFinite(playerId) ? playerId : null);
+    const playerId = dataPositiveInteger(roster?.jugador_id);
+    if (playerId === null || !playerById.has(playerId)) {
+      missingPlayerIds.push(playerId);
       continue;
     }
     if (seenPlayerIds.has(playerId)) {
