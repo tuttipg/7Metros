@@ -35,10 +35,11 @@ function dateFromHorario(value, label) {
   return `${match[1]}-${match[2]}-${match[3]}`;
 }
 
-function adaptMatch(match, phaseIndex, zoneIndex, matchIndex) {
+function adaptMatch(match, torneoId, phaseIndex, zoneIndex, matchIndex) {
   requireObject(match, `Partido ${phaseIndex}/${zoneIndex}/${matchIndex}`);
   const planillas = requireArray(match.planillas, `planillas de partido ${phaseIndex}/${zoneIndex}/${matchIndex}`);
   return {
+    tournamenttracker_torneo_id: torneoId,
     tournamenttracker_match_id: requireString(match.id, `id de partido ${phaseIndex}/${zoneIndex}/${matchIndex}`),
     fase_id: requireString(match.__fase_id, `fase id ${phaseIndex}/${zoneIndex}/${matchIndex}`),
     zona_id: requireString(match.__zona_id, `zona id ${phaseIndex}/${zoneIndex}/${matchIndex}`),
@@ -74,9 +75,9 @@ export function adaptTournamentTrackerTorneoOffline({ torneo, evidence }) {
     zonas.forEach((zona, zoneIndex) => {
       requireObject(zona, `Zona ${phaseIndex}/${zoneIndex}`);
       const zonaId = requireString(zona.id, `Zona ${phaseIndex}/${zoneIndex}.id`);
-      const zonaPartidos = requireArray(zona.partidos, `Zona ${phaseIndex}/${zoneIndex}.partidos`);
+      const zonaPartidos = requireArray(zona.partidos, `partidos de zona ${phaseIndex}/${zoneIndex}`);
       zonaPartidos.forEach((match, matchIndex) => {
-        partidos.push(adaptMatch({ ...match, __fase_id: faseId, __zona_id: zonaId }, phaseIndex, zoneIndex, matchIndex));
+        partidos.push(adaptMatch({ ...match, __fase_id: faseId, __zona_id: zonaId }, torneoId, phaseIndex, zoneIndex, matchIndex));
       });
     });
   });
