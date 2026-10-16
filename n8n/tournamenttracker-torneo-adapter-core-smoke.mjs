@@ -32,6 +32,7 @@ const control = {
 const fixture = adaptTournamentTrackerTorneoOffline({ torneo: control, evidence });
 assert.equal(fixture.source, 'tournamenttracker_offline_fixture');
 assert.equal(fixture.partidos.length, 1);
+assert.equal(fixture.partidos[0].tournamenttracker_torneo_id, '775');
 assert.equal(fixture.partidos[0].fecha, '2026-03-21');
 assert.equal(fixture.partidos[0].goles_local, 20);
 assert.equal(fixture.partidos[0].goles_visitante, 27);
