@@ -113,6 +113,9 @@ def _validate_html_response(response, *, max_bytes:int=MAX_HTML_BYTES)->None:
         if not STRICT_DECIMAL.fullmatch(normalized): raise ValueError("Content-Length HTML inválido")
         declared=int(normalized)
         if declared > max_bytes: raise ValueError(f"Respuesta HTML declarada fuera de límite: {declared} bytes")
+        response._7metros_declared_content_length=declared
+    else:
+        response._7metros_declared_content_length=None
 
 def get_text(url:str,timeout=DEFAULT_TIMEOUT_SECONDS, *, max_bytes:int=MAX_HTML_BYTES)->str:
     max_bytes=_validate_max_html_bytes(max_bytes); timeout=_validate_timeout_seconds(timeout); canonical=_canonical_official_page_url(url)
@@ -120,6 +123,8 @@ def get_text(url:str,timeout=DEFAULT_TIMEOUT_SECONDS, *, max_bytes:int=MAX_HTML_
     with build_opener(SafeRedirectHandler()).open(req,timeout=timeout) as r:
         _canonical_official_page_url(r.geturl()); _validate_html_response(r,max_bytes=max_bytes); body=r.read(max_bytes+1)
         if len(body)>max_bytes: raise ValueError(f"Respuesta HTML excede límite de {max_bytes} bytes")
+        declared=getattr(r,'_7metros_declared_content_length',None)
+        if declared is not None and len(body)!=declared: raise ValueError(f"Respuesta HTML truncada: Content-Length declara {declared} bytes, recibidos {len(body)} bytes")
         return body.decode('utf-8',errors='replace')
 
 def links_from_html(html_text:str): p=LinkParser(); p.feed(html_text); return p.links
