@@ -12,19 +12,21 @@ SHA-256 del bundle: `1c4d137233e2524f8491a332caad17e6058fc44d0228568fb746f0377f8
 
 ### Confirmado en código 1.1.3
 
-El cliente confirma el flujo:
+El cliente confirma el flujo estático:
 
 `nombre → /search → athleteId → /athletes/{id} → /users/athlete-profile/{id} → /athletes/{id}/tournaments → teamId/clubId/tournamentId`
 
-También confirma un bootstrap guest legítimo:
+También se observó en el bundle un bootstrap guest:
 
 `POST /init-onboarding` (sin Authorization) → `accessToken` / `refreshToken` → `Authorization: Bearer <accessToken>` para las lecturas normales.
 
+**Importante:** esta secuencia es evidencia de código analizado, no una instrucción operativa para el discovery SAFE de 7Metros. El repositorio autónomo no debe ejecutar ni solicitar ese bootstrap, obtener tokens, conservarlos o enviar `Authorization`.
+
 ### Runtime en esta sesión
 
-Se intentó llegar a `POST /init-onboarding` desde el entorno de ejecución de ChatGPT. La resolución DNS falló **antes de cualquier respuesta HTTP** (`Could not resolve host`). Por lo tanto no existe todavía una muestra runtime verificable desde este entorno; no se reinterpretó el fallo como 401/403, no se ejecutaron GETs anónimos alternativos y no se inventaron IDs.
+La documentación histórica registraba un intento de llegar a `POST /init-onboarding` desde el entorno de ejecución de ChatGPT, con fallo DNS antes de cualquier respuesta HTTP. Ese resultado no constituye una muestra runtime verificable y no debe reinterpretarse como 401/403.
 
-El archivo `data/femebal/discovery/players/guest_probe.py` permite obtener una muestra de **un solo jugador** desde una red normal respetando el guest flow de 1.1.3.
+El archivo `data/femebal/discovery/players/guest_probe.py` fue convertido en un **placeholder SAFE sin red**: no realiza requests, no obtiene tokens y termina indicando que el runtime guest está deshabilitado. La evidencia utilizable para este frente queda limitada al contrato estático y a documentación/análisis de código.
 
 ## 2. Endpoints exactos de athletes
 
@@ -41,7 +43,7 @@ El archivo `data/femebal/discovery/players/guest_probe.py` permite obtener una m
 | Posición y dorsal | GET | `/athletes/formation/positionAndNumber?athleteIds=<ids>` | Confirmado en código |
 | MVP awards | GET | `/athletes/{athleteId}/mvp-awards` | Confirmado en código |
 | Perfil comunitario | GET | `/users/athlete-profile/{athleteId}` | Confirmado en código |
-| Ficha federativa | GET | `/athletes/{athleteId}/federative-card` | Confirmado; no incluido en probe por `documentNumber` |
+| Ficha federativa | GET | `/athletes/{athleteId}/federative-card` | Confirmado; no usar para discovery autónomo |
 | Buscar por documento | GET | `/athletes/document/{documentNumber}` | Confirmado; no usar para discovery |
 | Top scorers por partido | GET | `/athletes/topScorers/{matchId}` | Confirmado; fuera de alcance |
 
@@ -112,7 +114,7 @@ clubName
 status
 ```
 
-Como contiene `documentNumber`, se documenta estáticamente pero se excluye del probe mínimo.
+Como contiene `documentNumber`, se documenta estáticamente pero se excluye del discovery runtime autónomo.
 
 ## 5. IDs y relaciones
 
@@ -154,31 +156,32 @@ Campos: `id`, `description`, `startDate`, `endDate`, `previousSeasonId`.
 
 ### Dorsal y posición: límite semántico pendiente
 
-La app usa `/athletes/formation/positionAndNumber?athleteIds=...` dentro de una formación de equipo/torneo y consume `position` y `shirtNumber` (con fallback observado a `number`). Sin embargo, la URL recibe solo athleteIds, no teamId/tournamentId. El código estático no permite asegurar si dorsal/posición son globales/current, derivados del contexto actual o una proyección backend del último plantel. Debe resolverse con runtime antes de modelarlo como histórico por temporada.
+La app usa `/athletes/formation/positionAndNumber?athleteIds=...` dentro de una formación de equipo/torneo y consume `position` y `shirtNumber` (con fallback observado a `number`). Sin embargo, la URL recibe solo athleteIds, no teamId/tournamentId. El código estático no permite asegurar si dorsal/posición son globales/current, derivados del contexto actual o una proyección backend del último plantel. Debe resolverse con evidencia runtime legítima antes de modelarlo como histórico por temporada.
 
-## 7. Flujo reproducible recomendado
+## 7. Flujo SAFE recomendado
 
-1. `POST /init-onboarding`.
-2. Mantener `accessToken` solo en memoria como Bearer.
-3. `GET /search?query=<nombre>&type=athletes&skip=0`.
-4. Seleccionar un resultado sin adivinar y conservar `athlete.id`.
-5. `GET /athletes/{id}`.
-6. `GET /users/athlete-profile/{id}`.
-7. `GET /athletes/{id}/tournaments`.
-8. Leer `team.id`, `team.club.id`, `tournament.id`.
-9. Para ese mismo único id, opcionalmente consultar `default-team`, `club-id` y `positionAndNumber`.
+Para el discovery autónomo de 7Metros **no se ejecuta el guest bootstrap ni se solicitan tokens**.
 
-No es necesario consultar partidos ni resultados para demostrar esta relación.
+1. Usar únicamente evidencia pública ya observada o documentación/análisis estático legítimo.
+2. Mantener los templates de endpoints como contrato estático, sin inventar IDs ni respuestas.
+3. Si aparece una fuente pública anónima independiente, validarla por separado antes de considerar un GET.
+4. No usar `/athletes/document/...` ni rutas de escritura/verificación.
+5. No usar el flujo `POST /init-onboarding → token → Authorization` dentro del runtime SAFE.
+6. No escribir en Supabase ni en producción.
+
+No es necesario consultar partidos ni resultados para demostrar la relación estática de jugadores.
 
 ## 8. Muestra real
 
-**Pendiente de runtime.** No se incluye ningún athleteId ficticio.
+**Pendiente de runtime legítimo.** No se incluye ningún athleteId ficticio.
 
-`data/femebal/discovery/players/players-preview.pending.json` conserva un preview vacío hasta que exista respuesta real. El probe propuesto busca puntualmente `Agustin Unzner`; no fija ni presupone su ID y se detiene si la búsqueda es ambigua.
+`data/femebal/discovery/players/players-preview.pending.json` conserva un preview vacío hasta que exista una respuesta real y autorizada por el alcance SAFE. No se fija ni presupone ningún ID.
 
 ## 9. Guardrails aplicados
 
 - sin credenciales privadas;
+- sin obtención ni uso de tokens;
+- sin cookies ni headers `Authorization`;
 - sin bypass de autenticación;
 - sin `/athletes/document/...` runtime;
 - sin `federative-card` runtime;
