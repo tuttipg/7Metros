@@ -133,6 +133,10 @@ def classify_page(url:str,title:str)->Source|None:
     text=f"{title} {url}".lower()
     if 'reprogram' in text: return Source(url,title,'reprogramacion',None,None)
     if 'programacion' not in text and 'programación' not in text: return None
+    parsed=urlparse(url)
+    # Exact, previously observed official grouped publication; keep the general scope gate strict.
+    if parsed.hostname in FEMEBAL_WEB_HOSTS and parsed.path == '/programacion-sabado-13-y-domingo-14-de-junio/':
+        return Source(url,title,'fecha_normal','apertura',None)
     if 'metropolitano' not in text: return None
     phase='apertura' if 'apertura' in text else 'clausura' if 'clausura' in text else None
     m=re.search(r'fecha[-\s]+(\d{1,2})',text); rnd=int(m.group(1)) if m else None
