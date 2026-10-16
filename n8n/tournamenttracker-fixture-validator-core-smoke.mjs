@@ -29,6 +29,14 @@ check('normalización de identidad', () => {
   assert.equal(accent.pdf_url,pdf);
 });
 
+check('marcador alternativo del mismo cruce no sustituye al control', () => {
+  const sameDayDifferentScore={...control,goles_local:29,goles_visitante:36,planillas:[{pdf}]};
+  assert.throws(
+    () => validateTournamentTrackerFixtureOffline({fixture:{...fixture,partidos:[sameDayDifferentScore]},expected}),
+    /No existe coincidencia exacta/
+  );
+});
+
 check('network fail-closed', () => assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,network_used:true},expected}),/network_used=false/));
 check('auth fail-closed', () => assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,auth_used:true},expected}),/autenticación/));
 check('write fail-closed', () => assert.throws(()=>validateTournamentTrackerFixtureOffline({fixture:{...fixture,write_enabled:true},expected}),/escritura/));
