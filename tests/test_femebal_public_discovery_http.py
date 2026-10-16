@@ -111,6 +111,11 @@ class HttpBoundaryTests(unittest.TestCase):
         self.assertEqual(result, '<html/>')
         self.assertEqual(response.read_size, 65)
 
+    def test_rejects_truncated_body_against_content_length(self):
+        response = FakeResponse(b'<html/>', content_type='text/html', content_length=20)
+        with self.assertRaises(ValueError): self._fetch(response, max_bytes=64)
+        self.assertEqual(response.read_size, 65)
+
     def test_rejects_actual_oversize_without_content_length(self):
         response = FakeResponse(b'x' * 65, content_type='text/html')
         with self.assertRaises(ValueError): self._fetch(response, max_bytes=64)
