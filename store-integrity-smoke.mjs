@@ -80,7 +80,7 @@ store.prepareDataset({
 assert.deepEqual(store.state.teams.map(row => row.id).sort((a,b)=>a-b), [101,102,103], 'equipos con club inexistente, temporada ajena o ID inválido deben descartarse en store');
 assert.deepEqual(store.state.rosters.map(row => row.id).sort((a,b)=>a-b), [1,2,3,4], 'planteles con refs externas o equipos ya descartados deben descartarse');
 assert.deepEqual(store.state.matches.map(row => row.id).sort((a,b)=>a-b), [201,202,203], 'partidos con ID inválido, parciales, externos o ligados a equipo descartado deben fallar cerrados');
-for (const invalidId of [0, -1, 1.5, 9007199254740992, '01', 'no-numérico', null]) {
+for (const invalidId of [NaN, 0, -1, 1.5, 9007199254740992, '01', 'no-numérico', null]) {
   assert.equal(store.state.index.matchById.has(invalidId), false, `ID de partido inválido no debe indexarse: ${String(invalidId)}`);
 }
 assert.deepEqual(store.state.participations.map(row => row.id).sort((a,b)=>a-b), [1,2,3,4], 'participaciones huérfanas, externas, sin refs o con equipo ajeno al partido deben descartarse');
