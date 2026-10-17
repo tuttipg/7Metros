@@ -52,7 +52,14 @@ store.prepareDataset({
     {id:204,fecha:'2026-09-10',local_equipo_id:101,visitante_equipo_id:999,estado:'finalizado',goles_local:31,goles_visitante:20},
     {id:205,fecha:'2026-09-11',local_equipo_id:999,visitante_equipo_id:102,estado:'finalizado',goles_local:20,goles_visitante:31},
     {id:206,fecha:'2026-09-12',local_equipo_id:998,visitante_equipo_id:999,estado:'finalizado',goles_local:22,goles_visitante:21},
-    {id:207,fecha:'2026-09-13',local_equipo_id:104,visitante_equipo_id:101,estado:'finalizado',goles_local:22,goles_visitante:21}
+    {id:207,fecha:'2026-09-13',local_equipo_id:104,visitante_equipo_id:101,estado:'finalizado',goles_local:22,goles_visitante:21},
+    {id:'no-numérico',fecha:'2026-09-14',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:27,goles_visitante:25},
+    {id:null,fecha:'2026-09-15',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:27,goles_visitante:25},
+    {id:0,fecha:'2026-09-16',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:27,goles_visitante:25},
+    {id:-1,fecha:'2026-09-17',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:27,goles_visitante:25},
+    {id:1.5,fecha:'2026-09-18',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:27,goles_visitante:25},
+    {id:9007199254740992,fecha:'2026-09-19',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:27,goles_visitante:25},
+    {id:'01',fecha:'2026-09-20',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:27,goles_visitante:25}
   ],
   participaciones: [
     {id:1,partido_id:201,jugador_id:11,equipo_id:101,goles:10},
@@ -72,7 +79,10 @@ store.prepareDataset({
 
 assert.deepEqual(store.state.teams.map(row => row.id).sort((a,b)=>a-b), [101,102,103], 'equipos con club inexistente, temporada ajena o ID inválido deben descartarse en store');
 assert.deepEqual(store.state.rosters.map(row => row.id).sort((a,b)=>a-b), [1,2,3,4], 'planteles con refs externas o equipos ya descartados deben descartarse');
-assert.deepEqual(store.state.matches.map(row => row.id).sort((a,b)=>a-b), [201,202,203], 'partidos parciales, externos o ligados a equipo descartado deben fallar cerrados');
+assert.deepEqual(store.state.matches.map(row => row.id).sort((a,b)=>a-b), [201,202,203], 'partidos con ID inválido, parciales, externos o ligados a equipo descartado deben fallar cerrados');
+for (const invalidId of [NaN, 0, -1, 1.5, 9007199254740992, '01', 'no-numérico', null]) {
+  assert.equal(store.state.index.matchById.has(invalidId), false, `ID de partido inválido no debe indexarse: ${String(invalidId)}`);
+}
 assert.deepEqual(store.state.participations.map(row => row.id).sort((a,b)=>a-b), [1,2,3,4], 'participaciones huérfanas, externas, sin refs o con equipo ajeno al partido deben descartarse');
 assert.equal(store.state.index.rosterByPlayer.has(999), false);
 assert.equal(store.state.index.rosterByTeam.has(999), false);
