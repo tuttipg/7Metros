@@ -60,6 +60,19 @@ function validateMatch(match, index) {
   };
 }
 
+function validateTournamentIdentity(fixture, partidos) {
+  if (fixture.tournamenttracker_torneo_id === undefined || fixture.tournamenttracker_torneo_id === null) return;
+  const torneoId = requireNonEmptyString(String(fixture.tournamenttracker_torneo_id), 'tournamenttracker_torneo_id');
+  for (const [index, match] of partidos.entries()) {
+    if (match.tournamenttracker_torneo_id === undefined || match.tournamenttracker_torneo_id === null) {
+      throw new Error(`Partido ${index} sin tournamenttracker_torneo_id mientras el fixture declara uno`);
+    }
+    if (String(match.tournamenttracker_torneo_id) !== torneoId) {
+      throw new Error(`Partido ${index} con tournamenttracker_torneo_id inconsistente con el fixture`);
+    }
+  }
+}
+
 export function validateTournamentTrackerFixtureOffline({ fixture, expected }) {
   if (!fixture || typeof fixture !== 'object' || Array.isArray(fixture)) throw new Error('Fixture TournamentTracker inválido');
   if (fixture.source !== 'tournamenttracker_offline_fixture') throw new Error('source del fixture inválido');
@@ -68,8 +81,10 @@ export function validateTournamentTrackerFixtureOffline({ fixture, expected }) {
   if (fixture.write_enabled !== false) throw new Error('El fixture no puede habilitar escritura');
   if (!Array.isArray(fixture.partidos)) throw new Error('partidos debe ser array');
 
+  const partidos = fixture.partidos.map(validateMatch);
+  validateTournamentIdentity(fixture, partidos);
   const wanted = validateExpected(expected);
-  const matches = fixture.partidos.map(validateMatch).filter(match =>
+  const matches = partidos.filter(match =>
     match.fecha === wanted.fecha
     && normalizeIdentity(match.local) === normalizeIdentity(wanted.local)
     && normalizeIdentity(match.visitante) === normalizeIdentity(wanted.visitante)
