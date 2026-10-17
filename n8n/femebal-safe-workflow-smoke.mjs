@@ -42,6 +42,28 @@ for (const secretMarker of secretMarkers) {
   assert.ok(!serialized.includes(secretMarker), `El workflow contiene marcador sensible/prohibido: ${secretMarker}`);
 }
 
+// Los Code nodes son ejecutables: además de bloquear tipos de nodos de red/escritura,
+// inspeccionamos su código y parámetros para evitar que una variante del blueprint
+// reintroduzca acceso de red, persistencia o secretos sin cambiar el tipo de nodo.
+const forbiddenExecutableMarkers = [
+  'fetch(',
+  'axios',
+  'got(',
+  'process.env',
+  'supabase',
+  '$http',
+  'credential',
+  'authorization',
+  'cookie',
+  'set-cookie',
+];
+for (const node of workflow.nodes) {
+  const executableSurface = JSON.stringify(node.parameters ?? {}).toLowerCase();
+  for (const marker of forbiddenExecutableMarkers) {
+    assert.ok(!executableSurface.includes(marker), `El nodo ${node.name} contiene superficie ejecutable prohibida: ${marker}`);
+  }
+}
+
 const byName = new Map(workflow.nodes.map((node) => [node.name, node]));
 const extract = byName.get('Extract PDF');
 assert.ok(extract, 'Falta nodo Extract PDF');
