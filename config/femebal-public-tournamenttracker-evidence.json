@@ -5,11 +5,11 @@
   "auth_used": false,
   "write_enabled": false,
   "automatic_probe_allowed": false,
-  "observed_at": "2026-09-29",
+  "observed_at": "2026-10-17",
   "source": {
     "url": "https://femebal.com/fixtures-disponibles-para-la-liga-hipotecario-seguros-y-la-liga-plata/",
     "published": "2026-02-24",
-    "description": "Página pública oficial FEMEBAL que enlaza explícitamente los cuatro fixtures Apertura 2026 de Liga de Honor Hipotecario Seguros y Liga de Honor Plata."
+    "description": "Página pública oficial FEMEBAL que enlaza explícitamente los cuatro fixtures Apertura 2026 de Liga de Honor Hipotecario Seguros y Liga de Honor Plata. Revalidada públicamente el 2026-10-17."
   },
   "routes": [
     {
@@ -48,6 +48,7 @@
   "limitations": [
     "Las rutas públicas requieren JavaScript para renderizar su contenido; este manifest no ejecuta bundles ni endpoints.",
     "Una ruta de fixture observada no demuestra por sí sola una relación partido → planilla.",
-    "Los contadores de partidos/planillas permanecen en cero hasta obtener evidencia pública reproducible sin inferir endpoints, IDs o tokens."
+    "Los contadores de partidos/planillas permanecen en cero hasta obtener evidencia pública reproducible sin inferir endpoints, IDs o tokens.",
+    "La revalidación pública del 2026-10-17 confirmó la página oficial y el enlace del fixture de Liga de Honor Hipotecario Seguros Caballeros, pero no expuso una relación pública directa partido → planilla."
   ]
 }
