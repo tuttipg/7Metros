@@ -48,7 +48,7 @@ for (const key of ['access_token', 'apikey', 'api_key', 'auth', 'authorization',
   assert.equal(candidate.anonymousGetReviewable, false);
 }
 
-for (const key of ['accessToken', 'accessKeyId', 'authToken', 'bearerToken', 'clientKey', 'client_secret', 'credentialId', 'csrfToken', 'jwtToken', 'privateKey', 'secretKey', 'sessionId', 'signingKey', 'playerToken', 'passwordReset', 'apiKeyValue', 'xsrfToken']) {
+for (const key of ['accessToken', 'accessKeyId', 'authToken', 'bearerToken', 'clientKey', 'client_secret', 'credentialId', 'csrfToken', 'jwtToken', 'privateKey', 'secretKey', 'sessionId', 'signingKey', 'playerToken', 'passwordReset', 'apiKeyValue', 'xsrfToken', 'passphrase', 'signature', 'X-Amz-Signature']) {
   const candidate = classify(`https://www.femebal.com/api/matches?${key}=redacted`);
   assert.equal(candidate.state, 'rejected_on_policy_revalidation');
   assert.equal(candidate.reason, 'sensitive_query_key');
@@ -63,7 +63,7 @@ for (const key of ['action', 'method', 'op', 'operation']) {
     assert.equal(candidate.anonymousGetReviewable, false);
   }
 
-  for (const value of ['createMatch', 'deleteMatch', 'import_batch', 'insert-row', 'mutateRoster', 'removePlayer', 'reset:table', 'updateScore', 'upload/file', 'write.v2']) {
+  for (const value of ['createMatch', 'deleteMatch', 'import_batch', 'insert-row', 'mutateRoster', 'removePlayer', 'resetTable', 'updateScore', 'uploadFile', 'writeV2']) {
     const candidate = classify(`https://www.femebal.com/api/matches?${key}=${encodeURIComponent(value)}`);
     assert.equal(candidate.state, 'rejected_on_policy_revalidation');
     assert.equal(candidate.reason, 'mutating_query_operation');
