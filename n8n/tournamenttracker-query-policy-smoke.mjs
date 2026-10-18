@@ -63,7 +63,7 @@ for (const key of ['action', 'method', 'op', 'operation']) {
     assert.equal(candidate.anonymousGetReviewable, false);
   }
 
-  for (const value of ['createMatch', 'deleteMatch', 'import_batch', 'insert-row', 'mutateRoster', 'removePlayer', 'resetTable', 'updateScore', 'uploadFile', 'writeV2']) {
+  for (const value of ['createMatch', 'deleteMatch', 'import_batch', 'insert-row', 'mutateRoster', 'removePlayer', 'reset:table', 'updateScore', 'upload/file', 'write.v2']) {
     const candidate = classify(`https://www.femebal.com/api/matches?${key}=${encodeURIComponent(value)}`);
     assert.equal(candidate.state, 'rejected_on_policy_revalidation');
     assert.equal(candidate.reason, 'mutating_query_operation');
