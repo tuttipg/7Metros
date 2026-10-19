@@ -10,8 +10,16 @@ const STATIC_JAVASCRIPT_CONTENT_TYPES = new Set([
 ]);
 export const TOURNAMENTTRACKER_MAX_STATIC_ASSET_BYTES = 5 * 1024 * 1024;
 
+function assertUnambiguousRawUrlInput(raw) {
+  if (/[\\\u0000-\u001f\u007f]/.test(raw)) {
+    throw new Error('URL TournamentTracker con caracteres ambiguos/normalizables rechazada');
+  }
+}
+
 export function canonicalizeFemebalTournamentTrackerUrl(value) {
-  const url = new URL(String(value ?? ''));
+  const raw = String(value ?? '');
+  assertUnambiguousRawUrlInput(raw);
+  const url = new URL(raw);
   if (url.protocol !== 'https:') throw new Error('TournamentTracker requiere HTTPS');
   if (!ALLOWED_HOSTS.has(url.hostname.toLowerCase())) throw new Error('Host TournamentTracker no permitido');
   if (url.port) throw new Error('TournamentTracker no admite puertos HTTPS no estándar');
@@ -39,8 +47,9 @@ export function canonicalizeFemebalTournamentTrackerUrl(value) {
 }
 
 export function canonicalizeTournamentTrackerStaticAssetUrl(value, baseUrl = FEMEBAL_TOURNAMENTTRACKER_URL) {
-  const base = canonicalizeFemebalTournamentTrackerUrl(baseUrl);
   const rawValue = String(value ?? '');
+  assertUnambiguousRawUrlInput(rawValue);
+  const base = canonicalizeFemebalTournamentTrackerUrl(baseUrl);
   const url = new URL(rawValue, base);
 
   if (url.protocol !== 'https:') throw new Error('Asset TournamentTracker requiere HTTPS');
@@ -173,13 +182,14 @@ export function classifyTournamentTrackerStaticAssetResponse({
   finalUrl,
   maxBytes = TOURNAMENTTRACKER_MAX_STATIC_ASSET_BYTES,
 }) {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0 || maxBytes > TOURNAMENTTRACKER_MAX_STATIC_ASSET_BYTES) {
+    throw new RangeError(`maxBytes debe ser un entero positivo y no superar ${TOURNAMENTTRACKER_MAX_STATIC_ASSET_BYTES} bytes`);
+  }
   const status = Number.isFinite(Number(statusCode)) ? Number(statusCode) : null;
   const text = String(body ?? '');
   const bodyBytes = new TextEncoder().encode(text).byteLength;
   const bodySha256 = createHash('sha256').update(text, 'utf8').digest('hex');
-  const byteLimit = Number.isSafeInteger(maxBytes) && maxBytes > 0
-    ? maxBytes
-    : TOURNAMENTTRACKER_MAX_STATIC_ASSET_BYTES;
+  const byteLimit = maxBytes;
 
   let canonicalFinalUrl = null;
   try {

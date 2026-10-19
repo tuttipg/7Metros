@@ -59,6 +59,18 @@ for (const unsafeAsset of [
   assert.throws(() => canonicalizeTournamentTrackerStaticAssetUrl(unsafeAsset));
 }
 
+for (const ambiguousAsset of [
+  String.raw`./static\js\raw-backslash.js`,
+  './static/js/raw\tmain.js',
+  './static/js/raw\nmain.js',
+  './static/js/raw\rmain.js',
+  './static/js/raw\u007fmain.js',
+]) {
+  assert.throws(() => canonicalizeTournamentTrackerStaticAssetUrl(ambiguousAsset));
+}
+
+assert.throws(() => canonicalizeFemebalTournamentTrackerUrl('https://www.femebal.com\t/tournament-tracker/?noAdv=0'));
+
 const shellWithAssets = `
 <!doctype html><html><head>
 <link rel="preload" href="/tournament-tracker/static/js/runtime.1.js" as="script">
@@ -201,6 +213,30 @@ const multibyteLimit = classifyTournamentTrackerStaticAssetResponse({
 assert.equal(multibyteLimit.state, 'body_too_large');
 assert.equal(multibyteLimit.bodyBytes, 4);
 
+const assetLimit = TOURNAMENTTRACKER_MAX_STATIC_ASSET_BYTES;
+const belowAssetLimit = classifyTournamentTrackerStaticAssetResponse({
+  statusCode: 200, body: 'x'.repeat(assetLimit - 1), contentType: 'application/javascript', finalUrl: safeAssetUrl,
+});
+assert.equal(belowAssetLimit.state, 'public_static_javascript');
+assert.equal(belowAssetLimit.bodyBytes, assetLimit - 1);
+
+const atAssetLimit = classifyTournamentTrackerStaticAssetResponse({
+  statusCode: 200, body: 'x'.repeat(assetLimit), contentType: 'application/javascript', finalUrl: safeAssetUrl,
+});
+assert.equal(atAssetLimit.state, 'public_static_javascript');
+assert.equal(atAssetLimit.bodyBytes, assetLimit);
+
+const aboveAssetLimit = classifyTournamentTrackerStaticAssetResponse({
+  statusCode: 200, body: 'x'.repeat(assetLimit + 1), contentType: 'application/javascript', finalUrl: safeAssetUrl,
+});
+assert.equal(aboveAssetLimit.state, 'body_too_large');
+assert.equal(aboveAssetLimit.bodyBytes, assetLimit + 1);
+
+for (const invalidLimit of [0, -1, 1.5, null, Number.MAX_SAFE_INTEGER + 1, assetLimit + 1]) {
+  assert.throws(() => classifyTournamentTrackerStaticAssetResponse({
+    statusCode: 200, body: 'x', contentType: 'application/javascript', finalUrl: safeAssetUrl, maxBytes: invalidLimit,
+  }), /maxBytes/);
+}
 const plan = buildTournamentTrackerPublicProbePlan();
 assert.equal(plan.length, 1);
 assert.equal(plan[0].method, 'GET');
