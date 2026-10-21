@@ -18,9 +18,13 @@ function assertUnambiguousRawUrlInput(raw) {
 
 function assertUnambiguousRawPathSegments(raw) {
   const path = String(raw).split(/[?#]/, 1)[0];
-  const pathSegments = path.split(/[\\/]+/);
+  const pathWithoutRelativePrefix = path.startsWith('./') ? path.slice(2) : path;
+  const pathSegments = pathWithoutRelativePrefix.split(/[\\/]+/);
   if (pathSegments.some((segment) => segment === '.' || segment === '..')) {
     throw new Error('URL TournamentTracker con segmentos de path ambiguos rechazada');
+  }
+  if (path.startsWith('../') || path === '..') {
+    throw new Error('URL TournamentTracker con traversal relativo rechazado');
   }
 }
 
