@@ -26,6 +26,16 @@ function requireIsoDate(value, label) {
   return text;
 }
 
+function requireClock(value, label) {
+  if (typeof value !== 'string' || !/^\d{2}:\d{2}(?::\d{2})?$/.test(value.trim())) throw new Error(`${label} inválida`);
+  return value.trim().slice(0, 5);
+}
+
+function requireText(value, label) {
+  if (typeof value !== 'string' || !value.trim()) throw new Error(`${label} inválido`);
+  return value.trim();
+}
+
 function requireScore(value, label) {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${label} inválido`);
   return value;
@@ -35,8 +45,11 @@ function validateExpectedMatch(expected) {
   requireObject(expected, 'Partido esperado');
   return {
     fecha: requireIsoDate(expected.fecha, 'Fecha esperada'),
-    local: typeof expected.local === 'string' && expected.local.trim() ? expected.local.trim() : (() => { throw new Error('Equipo local esperado inválido'); })(),
-    visitante: typeof expected.visitante === 'string' && expected.visitante.trim() ? expected.visitante.trim() : (() => { throw new Error('Equipo visitante esperado inválido'); })(),
+    hora: requireClock(expected.hora, 'Hora esperada'),
+    categoria: requireText(expected.categoria, 'Categoría esperada'),
+    division: requireText(expected.division, 'División esperada'),
+    local: requireText(expected.local, 'Equipo local esperado'),
+    visitante: requireText(expected.visitante, 'Equipo visitante esperado'),
     goles_local: requireScore(expected.goles_local, 'Marcador local esperado'),
     goles_visitante: requireScore(expected.goles_visitante, 'Marcador visitante esperado'),
   };
@@ -45,18 +58,24 @@ function validateExpectedMatch(expected) {
 function validateSelectedMatch(match, expected) {
   requireObject(match, 'Partido seleccionado');
   const fecha = requireIsoDate(match.fecha, 'Fecha del partido seleccionado');
-  const local = typeof match.local === 'string' && match.local.trim() ? match.local.trim() : (() => { throw new Error('Equipo local seleccionado inválido'); })();
-  const visitante = typeof match.visitante === 'string' && match.visitante.trim() ? match.visitante.trim() : (() => { throw new Error('Equipo visitante seleccionado inválido'); })();
+  const hora = requireClock(match.hora, 'Hora del partido seleccionado');
+  const categoria = requireText(match.categoria, 'Categoría del partido seleccionado');
+  const division = requireText(match.division, 'División del partido seleccionado');
+  const local = requireText(match.local, 'Equipo local seleccionado');
+  const visitante = requireText(match.visitante, 'Equipo visitante seleccionado');
   const golesLocal = requireScore(match.goles_local, 'Marcador local seleccionado');
   const golesVisitante = requireScore(match.goles_visitante, 'Marcador visitante seleccionado');
   if (fecha !== expected.fecha
+      || hora !== expected.hora
+      || normalizeIdentity(categoria) !== normalizeIdentity(expected.categoria)
+      || normalizeIdentity(division) !== normalizeIdentity(expected.division)
       || normalizeIdentity(local) !== normalizeIdentity(expected.local)
       || normalizeIdentity(visitante) !== normalizeIdentity(expected.visitante)
       || golesLocal !== expected.goles_local
       || golesVisitante !== expected.goles_visitante) {
     throw new Error('El partido seleccionado no coincide exactamente con expected_match');
   }
-  return { fecha, local, visitante, goles_local: golesLocal, goles_visitante: golesVisitante };
+  return { fecha, hora, categoria, division, local, visitante, goles_local: golesLocal, goles_visitante: golesVisitante };
 }
 
 export function buildTournamentTrackerPdfWorkItem(selection) {
