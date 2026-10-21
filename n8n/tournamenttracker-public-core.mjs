@@ -16,6 +16,14 @@ function assertUnambiguousRawUrlInput(raw) {
   }
 }
 
+function assertUnambiguousRawPathSegments(raw) {
+  const path = String(raw).split(/[?#]/, 1)[0];
+  const pathSegments = path.split(/[\\/]+/);
+  if (pathSegments.some((segment) => segment === '.' || segment === '..')) {
+    throw new Error('URL TournamentTracker con segmentos de path ambiguos rechazada');
+  }
+}
+
 export function canonicalizeFemebalTournamentTrackerUrl(value) {
   const raw = String(value ?? '');
   assertUnambiguousRawUrlInput(raw);
@@ -49,6 +57,7 @@ export function canonicalizeFemebalTournamentTrackerUrl(value) {
 export function canonicalizeTournamentTrackerStaticAssetUrl(value, baseUrl = FEMEBAL_TOURNAMENTTRACKER_URL) {
   const rawValue = String(value ?? '');
   assertUnambiguousRawUrlInput(rawValue);
+  assertUnambiguousRawPathSegments(rawValue);
   const base = canonicalizeFemebalTournamentTrackerUrl(baseUrl);
   const url = new URL(rawValue, base);
 
