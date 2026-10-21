@@ -50,6 +50,18 @@ function assertExpectedMatch(parsed, expected) {
     if (typeof expected.fecha !== 'string') throw new Error('Fecha esperada inválida');
     if (parsed.fecha !== expected.fecha) throw new Error(`Fecha inesperada: ${parsed.fecha}`);
   }
+  if (expected.hora !== undefined) {
+    if (typeof expected.hora !== 'string' || !/^\d{2}:\d{2}(?::\d{2})?$/.test(expected.hora)) throw new Error('Hora esperada inválida');
+    if (parsed.hora.slice(0, 5) !== expected.hora.slice(0, 5)) throw new Error(`Hora inesperada: ${parsed.hora}`);
+  }
+  if (expected.categoria !== undefined) {
+    if (typeof expected.categoria !== 'string' || !expected.categoria.trim()) throw new Error('Categoría esperada inválida');
+    if (normalizeIdentity(parsed.categoria) !== normalizeIdentity(expected.categoria)) throw new Error(`Categoría inesperada: ${parsed.categoria}`);
+  }
+  if (expected.division !== undefined) {
+    if (typeof expected.division !== 'string' || !expected.division.trim()) throw new Error('División esperada inválida');
+    if (normalizeIdentity(parsed.division) !== normalizeIdentity(expected.division)) throw new Error(`División inesperada: ${parsed.division}`);
+  }
   if (expected.local !== undefined) {
     if (typeof expected.local !== 'string' || !expected.local.trim()) throw new Error('Equipo local esperado inválido');
     if (normalizeIdentity(parsed.local.nombre) !== normalizeIdentity(expected.local)) throw new Error(`Equipo local inesperado: ${parsed.local.nombre}`);
@@ -80,6 +92,9 @@ export function parsePlanillaDryRun({ workItem, extractedText, expected = null }
   const expectedMatchChecked = assertExpectedMatch(parsed, expected);
   const expectedMatchEvidence = expectedMatchChecked ? {
     fecha: expected.fecha,
+    hora: expected.hora,
+    categoria: expected.categoria,
+    division: expected.division,
     local: expected.local.trim(),
     visitante: expected.visitante.trim(),
     goles_local: expected.goles_local,
