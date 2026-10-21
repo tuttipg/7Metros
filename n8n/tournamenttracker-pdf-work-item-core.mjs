@@ -27,8 +27,15 @@ function requireIsoDate(value, label) {
 }
 
 function requireClock(value, label) {
-  if (typeof value !== 'string' || !/^\d{2}:\d{2}(?::\d{2})?$/.test(value.trim())) throw new Error(`${label} inválida`);
-  return value.trim().slice(0, 5);
+  if (typeof value !== 'string') throw new Error(`${label} inválida`);
+  const text = value.trim();
+  const match = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(text);
+  if (!match) throw new Error(`${label} inválida`);
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const seconds = match[3] === undefined ? 0 : Number(match[3]);
+  if (hours > 23 || minutes > 59 || seconds > 59) throw new Error(`${label} inválida`);
+  return text.slice(0, 5);
 }
 
 function requireText(value, label) {
