@@ -55,6 +55,9 @@ for (const unsafeAsset of [
   'https://www.femebal.com/tournament-tracker/%2f..%2fstatic%2fjs%2fmain.js',
   'https://www.femebal.com/tournament-tracker/static%2fjs%2fmain.js',
   'https://www.femebal.com/tournament-tracker/static%5cjs%5cmain.js',
+  './static/js/../main.js',
+  '/foo/./bar.js',
+  '/foo/../bar.js',
 ]) {
   assert.throws(() => canonicalizeTournamentTrackerStaticAssetUrl(unsafeAsset));
 }
