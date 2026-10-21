@@ -51,7 +51,8 @@ Argentinos Juniors 20
 Equipo visitante
 Ferro Carril Oeste 27
 ${players}`;
-const result=parsePlanillaDryRun({workItem,extractedText,expected:{fecha:'2026-03-21',local:'Argentinos Juniors',visitante:'Ferro Carril Oeste',goles_local:20,goles_visitante:27}});
+const expectedMatch={fecha:'2026-03-21',hora:'20:15',categoria:'Mayores',division:'LHC Hipotecario Seguros',local:'Argentinos Juniors',visitante:'Ferro Carril Oeste',goles_local:20,goles_visitante:27};
+const result=parsePlanillaDryRun({workItem,extractedText,expected:expectedMatch});
 assert.equal(result.dry_run,true); assert.equal(result.write_enabled,false); assert.equal(result.auth_used,false);
 assert.equal(result.validation.expected_match_checked,true);
 assert.equal(result.source_url,sourceUrl);
@@ -59,6 +60,9 @@ assert.equal(result.source.pdf_url,sourceUrl);
 assert.equal(result.source.provenance,'public_explicit_link');
 assert.equal(result.source.document_type,'planilla_partido_pdf');
 assert.equal(result.parsed.resumen.jugadores,32); assert.equal(result.parsed.resumen.goles,47);
+assert.equal(result.validation.expected_match_evidence.hora,'20:15');
+assert.equal(result.validation.expected_match_evidence.categoria,'Mayores');
+assert.equal(result.validation.expected_match_evidence.division,'LHC Hipotecario Seguros');
 
 const canonicalized=parsePlanillaDryRun({workItem:{...workItem,url:explicit443,source:{...workItem.source,pdf_url:explicit443}},extractedText});
 assert.equal(canonicalized.source_url,sourceUrl);
@@ -68,6 +72,9 @@ assert.equal(parsePlanillaDryRun({workItem,extractedText,expected:{}}).validatio
 assert.equal(parsePlanillaDryRun({workItem,extractedText,expected:{goles_visitante:27}}).validation.expected_match_checked,false);
 assert.throws(()=>parsePlanillaDryRun({workItem,extractedText,expected:true}),/Identidad esperada inválida/);
 assert.throws(()=>parsePlanillaDryRun({workItem,extractedText,expected:{local:true}}),/Equipo local esperado inválido/);
+assert.throws(()=>parsePlanillaDryRun({workItem,extractedText,expected:{hora:'18:30'}}),/Hora inesperada/);
+assert.throws(()=>parsePlanillaDryRun({workItem,extractedText,expected:{categoria:'Primera'}}),/Categoría inesperada/);
+assert.throws(()=>parsePlanillaDryRun({workItem,extractedText,expected:{division:'LHC Hipotecario Seguros Damas'}}),/División inesperada/);
 
 assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,method:'POST'},extractedText}),/GET/);
 assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,source:{...workItem.source,provenance:undefined}},extractedText}),/provenance/i);
@@ -86,4 +93,4 @@ for (const badUrl of [
 ]) {
   assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,url:badUrl,source:{...workItem.source,pdf_url:badUrl}},extractedText}));
 }
-console.log('✓ planilla-dry-run: contrato SAFE, expected identity fail-closed, provenance y partido control validados');
+console.log('✓ planilla-dry-run: contrato SAFE, identidad completa (fecha/hora/categoría/división/equipos/marcador), provenance y partido control validados');
