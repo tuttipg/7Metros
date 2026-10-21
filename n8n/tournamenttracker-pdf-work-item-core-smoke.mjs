@@ -4,8 +4,8 @@ import { buildTournamentTrackerPdfWorkItem } from './tournamenttracker-pdf-work-
 const PDF='https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf';
 const base={
   dry_run:true,network_used:false,auth_used:false,write_enabled:false,expected_match_checked:true,
-  expected_match:{fecha:'2026-03-21',local:'Argentinos Juniors',visitante:'Ferro Carril Oeste',goles_local:20,goles_visitante:27},
-  match:{fecha:'2026-03-21',local:'Argentinos Juniors',visitante:'Ferro Carril Oeste',goles_local:20,goles_visitante:27,planillas:[{pdf:PDF}]},
+  expected_match:{fecha:'2026-03-21',hora:'20:15',categoria:'Mayores',division:'LHC Hipotecario Seguros',local:'Argentinos Juniors',visitante:'Ferro Carril Oeste',goles_local:20,goles_visitante:27},
+  match:{fecha:'2026-03-21',hora:'20:15',categoria:'Mayores',division:'LHC Hipotecario Seguros',local:'Argentinos Juniors',visitante:'Ferro Carril Oeste',goles_local:20,goles_visitante:27,planillas:[{pdf:PDF}]},
   pdf_url:PDF,
   provenance:{artifact_sha256:'a'.repeat(64),artifact_bytes:1234,verified_exact_body:true,source:'tournamenttracker_decrypted_torneo_offline',network_used:false,auth_used:false,write_enabled:false},
 };
@@ -16,7 +16,7 @@ assert.equal(out.url,PDF);assert.equal(out.source.pdf_url,PDF);assert.equal(out.
 assert.equal(out.source.torneo_artifact_sha256,'a'.repeat(64));assert.equal(out.source.torneo_artifact_bytes,1234);assert.equal(out.source.torneo_verified_exact_body,true);
 assert.deepEqual(out.expected_match,base.expected_match);
 assert.deepEqual(out.source.selected_match,{
-  fecha:'2026-03-21',local:'Argentinos Juniors',visitante:'Ferro Carril Oeste',goles_local:20,goles_visitante:27,
+  fecha:'2026-03-21',hora:'20:15',categoria:'Mayores',division:'LHC Hipotecario Seguros',local:'Argentinos Juniors',visitante:'Ferro Carril Oeste',goles_local:20,goles_visitante:27,
 });
 
 for (const [patch,re] of [
@@ -28,10 +28,15 @@ for (const [patch,re] of [
   [{match:{...base.match,goles_visitante:26}},/no coincide exactamente con expected_match/],
   [{match:{...base.match,local:'Ferro Carril Oeste',visitante:'Argentinos Juniors'}},/no coincide exactamente con expected_match/],
   [{match:{...base.match,fecha:'2026-03-22'}},/no coincide exactamente con expected_match/],
-  [{match:{...base.match,goles_local:21}},/no coincide exactamente con expected_match/],
+  [{match:{...base.match,hora:'18:30'}},/no coincide exactamente con expected_match/],
+  [{match:{...base.match,categoria:'Primera'}},/no coincide exactamente con expected_match/],
+  [{match:{...base.match,division:'Otra división'}},/no coincide exactamente con expected_match/],
   [{expected_match:{...base.expected_match,fecha:'2026-02-30'}},/Fecha esperada no es una fecha calendario válida/],
+  [{expected_match:{...base.expected_match,hora:'99:99'}},/Hora esperada inválida/],
   [{expected_match:{...base.expected_match,goles_local:-1}},/Marcador local esperado inválido/],
   [{expected_match:{...base.expected_match,local:''}},/Equipo local esperado inválido/],
+  [{expected_match:{...base.expected_match,categoria:''}},/Categoría esperada inválido/],
+  [{expected_match:{...base.expected_match,division:''}},/División esperada inválido/],
 ]) await assert.rejects(async()=>buildTournamentTrackerPdfWorkItem({...base,...patch}),re);
 
-console.log('✓ TournamentTracker verified Torneo → exact control match → official PDF work-item provenance bridge SAFE/fail-closed OK');
+console.log('✓ TournamentTracker verified Torneo → exact control match identity → official PDF work-item provenance SAFE/fail-closed OK');
