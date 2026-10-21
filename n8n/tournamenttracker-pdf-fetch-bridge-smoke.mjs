@@ -4,11 +4,20 @@ import { fetchOfficialFemebalPdf } from './official-pdf-fetch-core.mjs';
 
 const PDF_URL = 'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf';
 const ARTIFACT_SHA = 'a'.repeat(64);
-const expected = { fecha: '2026-03-21', local: 'Argentinos Juniors', visitante: 'Ferro Carril Oeste', goles_local: 20, goles_visitante: 27 };
+const expected = {
+  fecha: '2026-03-21',
+  hora: '20:15',
+  categoria: 'Mayores',
+  division: 'LHC Hipotecario Seguros',
+  local: 'Argentinos Juniors',
+  visitante: 'Ferro Carril Oeste',
+  goles_local: 20,
+  goles_visitante: 27,
+};
 const selection = {
   dry_run: true, network_used: false, auth_used: false, write_enabled: false, expected_match_checked: true,
   pdf_url: PDF_URL, expected_match: expected,
-  match: { fecha: expected.fecha, local: expected.local, visitante: expected.visitante, goles_local: expected.goles_local, goles_visitante: expected.goles_visitante, planillas: [{ pdf: PDF_URL }] },
+  match: { ...expected, planillas: [{ pdf: PDF_URL }] },
   provenance: { source: 'tournamenttracker_decrypted_torneo_offline', verified_exact_body: true, artifact_sha256: ARTIFACT_SHA, artifact_bytes: 1234, network_used: false, auth_used: false, write_enabled: false },
 };
 const item = buildTournamentTrackerPdfWorkItem(selection);
@@ -37,4 +46,4 @@ for (const mutate of [
   await assert.rejects(() => fetchOfficialFemebalPdf(mutate(item), { fetchImpl: async () => { networkCalled = true; return response(); } }));
   assert.equal(networkCalled, false);
 }
-console.log('✓ TournamentTracker verified Torneo selection -> official PDF SAFE fetch boundary + SHA-256 + pre-network fail-closed regression OK');
+console.log('✓ TournamentTracker verified Torneo selection -> exact control match identity -> official PDF SAFE fetch boundary + SHA-256 + pre-network fail-closed regression OK');
