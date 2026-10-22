@@ -24,6 +24,12 @@ for (const unsafe of [
   'https://www.femebal.com:444/tournament-tracker/RUdVX3VkfFc=',
   'https://www.femebal.com/tournament-tracker/',
   'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc=/extra',
+  'https://www.femebal.com/tournament-tracker/../secret',
+  'https://www.femebal.com/tournament-tracker/./token',
+  'https://www.femebal.com/tournament-tracker/%2e%2e/secret',
+  'https://www.femebal.com/tournament-tracker/%2e/token',
+  'https://www.femebal.com/tournament-tracker/a/../token',
+  'https://www.femebal.com/tournament-tracker/a/./token',
   'https://www.femebal.com/tournament-tracker/..%2Fsecret',
   'https://www.femebal.com/tournament-tracker/token%5Cescape',
   'https://www.femebal.com/tournament-tracker/token%252Fescape',
@@ -78,7 +84,6 @@ for (const badEvidence of [
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/%74ournament-tracker/OTROTOKEN=' },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/%2574ournament-tracker/OTROTOKEN=' },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/fixture-%ZZpublico' },
-  // Provenance hardening: multiple q values are ambiguous and must never select only the first value.
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: `${publicEvidence.sourceUrl}&q=site%3Afemebal.com%2Ftournament-tracker%2FOTROTOKEN%3D`, resultUrl: observedPublicIndexedRoute },
 ]) {
   const rejected = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: badEvidence });
@@ -106,9 +111,6 @@ assert.equal(bingEvidence.state, 'reviewed_anonymous_get_only');
 const explicitLinkEvidence = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: { kind: 'explicit_public_link', observedUrl: canonicalObservedRoute, sourceUrl: 'https://www.femebal.com/fixture-publico?season=2026' } });
 assert.equal(explicitLinkEvidence.state, 'reviewed_anonymous_get_only');
 
-// Real public FEMEBAL evidence published on 2026-02-24 for the LHC Caballeros Apertura 2026 fixture.
-// This is intentionally a provenance regression only: the returned GET remains anonymous, review-only,
-// and automaticProbeAllowed=false. The test performs no network request.
 const realLhcObservedRoute = 'https://www.femebal.com/tournament-tracker/RUdVX3VheVA%3D';
 const realLhcCanonicalRoute = 'https://www.femebal.com/tournament-tracker/RUdVX3VheVA=';
 const realLhcEvidence = {
