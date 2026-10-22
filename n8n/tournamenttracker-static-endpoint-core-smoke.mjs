@@ -94,6 +94,7 @@ assert.equal(policy.constraints.manualReviewRequiredBeforeAnyGet, true);
 assert.equal(policy.constraints.percentEncodedPathsBlocked, true);
 assert.equal(policy.constraints.nonstandardHttpsPortsBlocked, true);
 assert.equal(policy.constraints.ambiguousRawUrlCharactersBlocked, true);
+assert.equal(policy.constraints.ambiguousRawPathSegmentsBlocked, true);
 assert.equal(policy.constraints.compoundSensitivePathPrefixesBlocked, true);
 assert.equal(policy.constraints.compoundMutatingPathPrefixesBlocked, true);
 assert.deepEqual(policy.candidates, [
@@ -172,6 +173,35 @@ for (const candidate of [backslashPolicyCandidate, controlPolicyCandidate]) {
   assert.equal(candidate.reason, 'ambiguous_raw_url_characters');
   assert.equal(candidate.anonymousGetReviewable, false);
 }
+
+// Raw dot segments must be rejected before WHATWG URL normalization can erase them.
+const rawDotSegmentBody = `
+  const dot = "https://www.femebal.com/api/./matches";
+  const dotDot = "https://www.femebal.com/api/../matches";
+  const nested = "https://www.femebal.com/api/v1/../../matches";
+`;
+const rawDotSegmentExtraction = extractTournamentTrackerExplicitHttpsCandidates({
+  body: rawDotSegmentBody,
+  assetClassification: classifyBody(rawDotSegmentBody),
+});
+assert.equal(rawDotSegmentExtraction.candidates.length, 0);
+assert.equal(rawDotSegmentExtraction.rejectedCount, 3);
+
+// Dot-like text inside the query is not a path traversal and remains reviewable GET-only.
+const queryDotBody = 'const queryOnly = "https://www.femebal.com/api/matches?path=../matches";';
+const queryDotExtraction = extractTournamentTrackerExplicitHttpsCandidates({
+  body: queryDotBody,
+  assetClassification: classifyBody(queryDotBody),
+});
+assert.deepEqual(queryDotExtraction.candidates, [
+  {
+    url: 'https://www.femebal.com/api/matches?path=../matches',
+    hostScope: 'femebal_same_organization',
+    evidence: 'explicit_https_string_literal',
+    probeAllowed: false,
+    requiresPolicyReview: true,
+  },
+]);
 
 const policyBody = `
   const admin = "https://www.femebal.com/admin/matches";
