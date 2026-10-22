@@ -160,10 +160,17 @@ function isSensitiveOrMutatingPathSegment(segment) {
   return [...MUTATING_QUERY_VALUES].some((operation) => normalized.startsWith(operation));
 }
 
+function hasAmbiguousRawPathSegment(raw) {
+  const match = raw.match(/^https:\/\/[^/?#]*(\/[^?#]*)?(?:[?#]|$)/i);
+  if (!match?.[1]) return false;
+  return match[1].split('/').some((segment) => segment === '.' || segment === '..');
+}
+
 function classifyExplicitHttpsLiteral(rawValue) {
   const raw = String(rawValue ?? '');
   if (!raw || raw.length > MAX_EXPLICIT_URL_LENGTH) return { accepted: false, reason: 'invalid_length' };
   if (AMBIGUOUS_RAW_URL_CHARS.test(raw)) return { accepted: false, reason: 'ambiguous_raw_url_characters' };
+  if (hasAmbiguousRawPathSegment(raw)) return { accepted: false, reason: 'ambiguous_raw_path_segment' };
   if (raw.includes('${')) return { accepted: false, reason: 'template_interpolation' };
 
   let url;
@@ -420,6 +427,7 @@ export function classifyTournamentTrackerCandidatePolicy(extractionResult) {
       percentEncodedPathsBlocked: true,
       nonstandardHttpsPortsBlocked: true,
       ambiguousRawUrlCharactersBlocked: true,
+      ambiguousRawPathSegmentsBlocked: true,
       manualReviewRequiredBeforeAnyGet: true,
     },
   };
