@@ -14,6 +14,26 @@ function rejectAmbiguousRawUrl(value, label) {
   return raw;
 }
 
+function rejectRawTraversalSegments(rawUrl, label) {
+  const raw = String(rawUrl ?? '');
+  const schemeIndex = raw.indexOf('://');
+  if (schemeIndex < 0) return raw;
+  const authorityEnd = raw.indexOf('/', schemeIndex + 3);
+  if (authorityEnd < 0) return raw;
+  const pathAndSuffix = raw.slice(authorityEnd);
+  const suffixIndex = pathAndSuffix.search(/[?#]/);
+  const rawPath = suffixIndex >= 0 ? pathAndSuffix.slice(0, suffixIndex) : pathAndSuffix;
+  for (const segment of rawPath.split('/')) {
+    if (!segment) continue;
+    let decoded;
+    try { decoded = decodeURIComponent(segment); } catch { continue; }
+    if (decoded === '.' || decoded === '..') {
+      throw new Error(`${label} no admite segmentos raw . o .. antes de normalizar la URL`);
+    }
+  }
+  return raw;
+}
+
 function normalizeQueryName(name) {
   return String(name ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -98,7 +118,7 @@ function validatePublicEvidence(targetCanonicalUrl, evidence) {
 }
 
 export function canonicalizeIndexedTournamentTrackerRoute(value) {
-  const rawUrl = rejectAmbiguousRawUrl(value, 'Ruta TournamentTracker');
+  const rawUrl = rejectRawTraversalSegments(rejectAmbiguousRawUrl(value, 'Ruta TournamentTracker'), 'Ruta TournamentTracker');
   const url = new URL(rawUrl);
   if (url.protocol !== 'https:') throw new Error('Ruta indexada TournamentTracker requiere HTTPS');
   if (url.port && url.port !== '443') throw new Error('Ruta TournamentTracker no admite puertos HTTPS no estándar');
