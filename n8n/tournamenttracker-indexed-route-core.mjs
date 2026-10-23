@@ -68,7 +68,11 @@ function validatePublicIndexSource(sourceUrl, targetCanonicalUrl, evidence) {
   if (!normalizedQuery.includes('femebal') || !normalizedQuery.includes('tournament-tracker')) throw new Error('La consulta public_index debe referenciar FEMEBAL TournamentTracker');
   const target = new URL(targetCanonicalUrl);
   const exactRoute = target.pathname.toLowerCase();
-  if (!normalizedQuery.includes(exactRoute)) throw new Error('La consulta public_index debe vincular la ruta TournamentTracker exacta observada');
+  // Match the exact FEMEBAL host + route, not a route that is merely a prefix of a longer token.
+  const exactRoutePattern = new RegExp("(?:^|[\\s\"'(])(?:site:)?(?:https?://)?(?:www\\.)?femebal\\.com" + exactRoute + "(?=$|[\\s\"'&),])", 'i');
+  if (!exactRoutePattern.test(query)) {
+    throw new Error('La consulta public_index debe vincular la ruta TournamentTracker exacta observada');
+  }
   if (!evidence.resultUrl) throw new Error('La evidencia public_index requiere la URL de resultado público observada');
   const resultUrl = canonicalizeIndexedTournamentTrackerRoute(evidence.resultUrl);
   if (resultUrl !== targetCanonicalUrl) throw new Error('El resultado public_index observado no corresponde a la ruta solicitada');
