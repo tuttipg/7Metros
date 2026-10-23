@@ -16,6 +16,7 @@ jobs:
       matrix:
         test:
           - n8n/importer-core-smoke.mjs
+          - n8n/official-url-policy-smoke.mjs
           - n8n/discovery-manifest-bridge-smoke.mjs
           - n8n/planilla-core-smoke.mjs
           - n8n/planilla-dry-run-core-smoke.mjs
