@@ -71,6 +71,8 @@ for (const badEvidence of [
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search?q=site%3Afemebal.com%2Ftournament-tracker' },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.bing.com/search?q=site%3Afemebal.com%2Ftournament-tracker%2FOTROTOKEN%3D' },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: publicEvidence.sourceUrl },
+  { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search?q=site%3Afemebal.com%2Ftournament-tracker%2FRUdVX3VkfFc%3Dextra', resultUrl: observedPublicIndexedRoute },
+  { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search?q=site%3Aevilfemebal.com%2Ftournament-tracker%2FRUdVX3VkfFc%3D', resultUrl: observedPublicIndexedRoute },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: publicEvidence.sourceUrl, resultUrl: 'https://www.femebal.com/tournament-tracker/OTROTOKEN=' },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search?q=femebal+tournament-tracker&accessToken=redacted' },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.bing.com/search?q=femebal+tournament-tracker&session_id=redacted' },
