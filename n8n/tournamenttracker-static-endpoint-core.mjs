@@ -163,7 +163,9 @@ function isSensitiveOrMutatingPathSegment(segment) {
 function hasAmbiguousRawPathSegment(raw) {
   const match = raw.match(/^https:\/\/[^/?#]*(\/[^?#]*)?(?:[?#]|$)/i);
   if (!match?.[1]) return false;
-  return match[1].split('/').some((segment) => segment === '.' || segment === '..');
+  // WHATWG URL normalizes these raw spellings before url.pathname can be inspected.
+  const ambiguousDotSegments = new Set(['.', '..', '%2e', '.%2e', '%2e.', '%2e%2e']);
+  return match[1].split('/').some((segment) => ambiguousDotSegments.has(segment.toLowerCase()));
 }
 
 function classifyExplicitHttpsLiteral(rawValue) {
