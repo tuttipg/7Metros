@@ -17,16 +17,34 @@ const SENSITIVE_QUERY_KEYS = new Set([
   'session',
   'token',
 ]);
-const SENSITIVE_QUERY_SUFFIXES = [
+const SENSITIVE_QUERY_COMPOUND_TOKENS = [
+  'accesskey',
+  'accesskeyid',
+  'accesstoken',
   'apikey',
+  'auth',
   'authkey',
+  'authorization',
+  'authtoken',
+  'bearer',
+  'clientkey',
+  'clientsecret',
+  'cookie',
   'credential',
   'credentials',
+  'csrf',
+  'jwt',
+  'passphrase',
   'password',
   'privatekey',
   'secret',
+  'secretkey',
+  'session',
   'sessionid',
+  'signature',
+  'signingkey',
   'token',
+  'xsrf',
 ];
 
 function rawPathFromHttpsUrl(value) {
@@ -52,7 +70,9 @@ function hasTrackingQuery(url) {
 function hasSensitiveQuery(url) {
   for (const [key] of url.searchParams) {
     const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (SENSITIVE_QUERY_KEYS.has(normalized) || SENSITIVE_QUERY_SUFFIXES.some((suffix) => normalized.endsWith(suffix))) {
+    if (SENSITIVE_QUERY_KEYS.has(normalized) || SENSITIVE_QUERY_COMPOUND_TOKENS.some((token) => (
+      normalized === token || normalized.startsWith(token) || normalized.endsWith(token)
+    ))) {
       return true;
     }
   }
