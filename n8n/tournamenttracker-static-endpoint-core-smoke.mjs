@@ -179,23 +179,27 @@ const rawDotSegmentBody = `
   const dot = "https://www.femebal.com/api/./matches";
   const dotDot = "https://www.femebal.com/api/../matches";
   const nested = "https://www.femebal.com/api/v1/../../matches";
+  const encodedDot = "https://www.femebal.com/api/%2e/matches";
+  const encodedDotDot = "https://www.femebal.com/api/%2e%2e/matches";
+  const mixedDotDotA = "https://www.femebal.com/api/.%2e/matches";
+  const mixedDotDotB = "https://www.femebal.com/api/%2e./matches";
 `;
 const rawDotSegmentExtraction = extractTournamentTrackerExplicitHttpsCandidates({
   body: rawDotSegmentBody,
   assetClassification: classifyBody(rawDotSegmentBody),
 });
 assert.equal(rawDotSegmentExtraction.candidates.length, 0);
-assert.equal(rawDotSegmentExtraction.rejectedCount, 3);
+assert.equal(rawDotSegmentExtraction.rejectedCount, 7);
 
 // Dot-like text inside the query is not a path traversal and remains reviewable GET-only.
-const queryDotBody = 'const queryOnly = "https://www.femebal.com/api/matches?path=../matches";';
+const queryDotBody = 'const queryOnly = "https://www.femebal.com/api/matches?path=../matches&next=%2e%2e/x";';
 const queryDotExtraction = extractTournamentTrackerExplicitHttpsCandidates({
   body: queryDotBody,
   assetClassification: classifyBody(queryDotBody),
 });
 assert.deepEqual(queryDotExtraction.candidates, [
   {
-    url: 'https://www.femebal.com/api/matches?path=../matches',
+    url: 'https://www.femebal.com/api/matches?path=../matches&next=%2e%2e/x',
     hostScope: 'femebal_same_organization',
     evidence: 'explicit_https_string_literal',
     probeAllowed: false,
