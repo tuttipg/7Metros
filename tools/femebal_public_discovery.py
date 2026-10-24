@@ -20,7 +20,7 @@ MAX_TIMEOUT_SECONDS=30
 ALLOWED_HTML_MEDIA_TYPES={"text/html","application/xhtml+xml"}
 TRACKING_QUERY_KEYS={"fbclid","gclid","dclid","msclkid","mc_cid","mc_eid"}
 SENSITIVE_QUERY_KEYS={"auth","authorization","bearer","cookie","credential","credentials","csrf","xsrf","jwt","key","password","secret","session","token"}
-SENSITIVE_QUERY_SUFFIXES=("apikey","authkey","credential","credentials","password","privatekey","secret","sessionid","token")
+SENSITIVE_QUERY_COMPOUND_TOKENS=("accesstoken","accesskey","accesskeyid","apikey","auth","authorization","bearer","clientkey","cookie","credential","credentials","csrf","jwt","passphrase","password","privatekey","secret","secretkey","session","signature","signingkey","token","xsrf")
 AMBIGUOUS_RAW_URL_CHARS=re.compile(r'[\\\x00-\x1f\x7f]')
 STRICT_DECIMAL=re.compile(r'^\d+$')
 DOCUMENT_TYPES=('programacion_pdf','planilla_partido_pdf')
@@ -62,7 +62,7 @@ def _has_tracking_query(query:str)->bool:
 def _has_sensitive_query(query:str)->bool:
     for key,_ in parse_qsl(query,keep_blank_values=True):
         normalized=re.sub(r'[^a-z0-9]','',key.lower())
-        if normalized in SENSITIVE_QUERY_KEYS or any(normalized.endswith(suffix) for suffix in SENSITIVE_QUERY_SUFFIXES): return True
+        if normalized in SENSITIVE_QUERY_KEYS or any(normalized.startswith(token) or normalized.endswith(token) for token in SENSITIVE_QUERY_COMPOUND_TOKENS): return True
     return False
 
 def _canonical_official_page_url(url:str)->str:
