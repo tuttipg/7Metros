@@ -1,0 +1,8 @@
+{
+  "contractVersion": "femebal-community-1.1.3",
+  "runtimeConfirmed": false,
+  "status": "pending_guest_runtime_sample",
+  "targetQuery": "Agustin Unzner",
+  "records": [],
+  "note": "No athlete ID is inserted until returned by the real FEMEBAL/LarrySport API through the normal guest flow."
+}
