@@ -15,9 +15,19 @@ class SensitiveFemebalQueryTests(unittest.TestCase):
             'https://femebal.com/programaciones/?client_secret=placeholder',
             'https://femebal.com/programaciones/?privateKey=placeholder',
             'https://femebal.com/programaciones/?session_id=placeholder',
+            'https://femebal.com/programaciones/?apiKeyValue=placeholder',
             'https://femebal.com/programaciones/?password=placeholder',
             'https://femebal.com/programaciones/?Authorization=placeholder',
             'https://femebal.com/programaciones/?cookie=placeholder',
+            'https://femebal.com/programaciones/?key=placeholder',
+            'https://femebal.com/programaciones/?apiKeyValue=placeholder',
+            'https://femebal.com/programaciones/?accessTokenValue=placeholder',
+            'https://femebal.com/programaciones/?authTokenValue=placeholder',
+            'https://femebal.com/programaciones/?clientKey=placeholder',
+            'https://femebal.com/programaciones/?privateKeyExtra=placeholder',
+            'https://femebal.com/programaciones/?sessionIdExtra=placeholder',
+            'https://femebal.com/programaciones/?playerToken=placeholder',
+            'https://femebal.com/programaciones/?signingKeyValue=placeholder',
         ]
         for url in bad:
             with self.subTest(url=url):
