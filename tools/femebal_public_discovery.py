@@ -75,8 +75,12 @@ def _canonical_official_page_url(url:str)->str:
 
 def _document_type_for_official_pdf(url:str)->str|None:
     if _has_ambiguous_raw_url_chars(url): return None
+    try:
+        _assert_allowed(url,allow_planilla=True)
+    except ValueError:
+        return None
     p=urlparse(url)
-    if p.scheme!="https" or p.query or p.fragment: return None
+    if p.query or p.fragment: return None
     if '%' in p.path or any(segment in {'.','..'} for segment in p.path.split('/')): return None
     if not p.path.lower().endswith('.pdf'): return None
     if p.hostname in FEMEBAL_WEB_HOSTS and p.path.startswith('/wp-content/uploads/'): return 'programacion_pdf'
