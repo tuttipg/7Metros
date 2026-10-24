@@ -15,7 +15,6 @@ class SensitiveFemebalQueryTests(unittest.TestCase):
             'https://femebal.com/programaciones/?client_secret=placeholder',
             'https://femebal.com/programaciones/?privateKey=placeholder',
             'https://femebal.com/programaciones/?session_id=placeholder',
-            'https://femebal.com/programaciones/?apiKeyValue=placeholder',
             'https://femebal.com/programaciones/?password=placeholder',
             'https://femebal.com/programaciones/?Authorization=placeholder',
             'https://femebal.com/programaciones/?cookie=placeholder',
@@ -46,6 +45,7 @@ class SensitiveFemebalQueryTests(unittest.TestCase):
         for target in [
             'https://femebal.com/programaciones/?accessToken=placeholder',
             'https://femebal.com/programaciones/?session_id=placeholder',
+            'https://femebal.com/programaciones/?apiKeyValue=placeholder',
         ]:
             with self.subTest(target=target):
                 with self.assertRaises(ValueError):
