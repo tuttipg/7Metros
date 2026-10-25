@@ -55,6 +55,10 @@ Cada work item de planilla fija `GET`, `allow_redirects=false`, `auth_used=false
 
 La respuesta debe exponer un `ReadableStream` con `getReader()`. La lectura es incremental y aplica el límite de bytes durante la descarga: si el cuerpo supera `maxBytes`, cancela el reader y falla antes de acumular el resto del archivo en memoria. Esto cubre también respuestas sin `Content-Length`. Una respuesta sin streaming falla cerrado; no existe fallback a `arrayBuffer()` y las regresiones verifican que ese método no se invoque.
 
+El contrato de tamaño y tiempo es explícito: `maxBytes` vale 12 MiB por defecto y ese es también el techo inmutable; una llamada puede reducirlo (mínimo 1 KiB), pero no aumentarlo. `timeoutMs` vale 15 s por defecto, admite valores entre 100 ms y 30 s y no puede superar ese techo. `AbortController` es obligatorio: al vencer el plazo se aborta la solicitud y se falla cerrado. Las regresiones comprueban que overrides fuera de rango se rechacen antes de la red y que una solicitud que no resuelve active el aborto.
+
+La respuesta debe tener el media type exacto `application/pdf` (se permiten parámetros MIME, por ejemplo `application/pdf; charset=binary`); valores como `application/pdfx` se rechazan. `Content-Encoding` puede estar ausente o ser `identity`; cualquier otro valor se bloquea para que el tamaño/hash se calculen sobre los bytes esperados sin una transformación de contenido no contemplada. `Content-Length`, si aparece, debe ser decimal entero seguro, no exceder el límite y coincidir con el tamaño real leído. El fetcher no sigue redirects y sólo acepta HTTP 200.
+
 La salida de esa etapa sigue siendo DRY RUN (`write_enabled=false`, `auth_used=false`) y entrega bytes en memoria; no guarda archivos ni escribe en Supabase. Además calcula un SHA-256 determinístico sobre los bytes exactos descargados y expone `source_url`, `content_type`, `byte_length` y `sha256` como metadata de proveniencia.
 
 ### Extracción PDF → texto con n8n nativo
