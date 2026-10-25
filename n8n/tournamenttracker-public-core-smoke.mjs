@@ -32,6 +32,12 @@ for (const unsafe of [
   'https://www.femebal.com/tournament-tracker/?noAdv=0&noAdv=0',
   'https://www.femebal.com/tournament-tracker/#x',
   'https://www.femebal.com/otra-ruta/?noAdv=0',
+  'https://www.femebal.com/other/../tournament-tracker/?noAdv=0',
+  'https://www.femebal.com/%2e%2e/tournament-tracker/?noAdv=0',
+  'https://www.femebal.com/other/%2e%2e/tournament-tracker/?noAdv=0',
+  'https://www.femebal.com/.%2e/tournament-tracker/?noAdv=0',
+  'https://www.femebal.com/tournament-tracker/./?noAdv=0',
+  'https://www.femebal.com/tournament-tracker/%2e/?noAdv=0',
 ]) {
   assert.throws(() => canonicalizeFemebalTournamentTrackerUrl(unsafe));
 }
