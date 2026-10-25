@@ -20,8 +20,16 @@ function assertUnambiguousRawPathSegments(raw) {
   const path = String(raw).split(/[?#]/, 1)[0];
   const pathWithoutRelativePrefix = path.startsWith('./') ? path.slice(2) : path;
   const pathSegments = pathWithoutRelativePrefix.split(/[\\/]+/);
-  if (pathSegments.some((segment) => segment === '.' || segment === '..')) {
-    throw new Error('URL TournamentTracker con segmentos de path ambiguos rechazada');
+  for (const segment of pathSegments) {
+    let decodedSegment;
+    try {
+      decodedSegment = decodeURIComponent(segment);
+    } catch {
+      throw new Error('URL TournamentTracker con percent-encoding de path inválido rechazada');
+    }
+    if (decodedSegment === '.' || decodedSegment === '..') {
+      throw new Error('URL TournamentTracker con segmentos de path ambiguos rechazada');
+    }
   }
   if (path.startsWith('../') || path === '..') {
     throw new Error('URL TournamentTracker con traversal relativo rechazado');
@@ -31,6 +39,7 @@ function assertUnambiguousRawPathSegments(raw) {
 export function canonicalizeFemebalTournamentTrackerUrl(value) {
   const raw = String(value ?? '');
   assertUnambiguousRawUrlInput(raw);
+  assertUnambiguousRawPathSegments(raw);
   const url = new URL(raw);
   if (url.protocol !== 'https:') throw new Error('TournamentTracker requiere HTTPS');
   if (!ALLOWED_HOSTS.has(url.hostname.toLowerCase())) throw new Error('Host TournamentTracker no permitido');
