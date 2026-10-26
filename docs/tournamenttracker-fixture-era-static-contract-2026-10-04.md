@@ -65,6 +65,8 @@ The static chain is now explicit:
 
 The smoke regression uses the already-known control expectations (Argentinos Juniors 20–27 Ferro, 2026-03-21 and the previously known planilla filename) as synthetic input; it is a regression fixture, not new runtime evidence.
 
+`n8n/tournamenttracker-torneo-artifact-core.mjs` verifies that the supplied UTF-8 body matches the supplied byte length and SHA-256, but this check alone cannot authenticate the artifact's origin. Its output therefore labels the source `offline_artifact_origin_unverified`, sets `origin_verified=false` and `publicly_discovered=false`, and declares `verification_scope=body_matches_supplied_digest_and_length`. Caller-supplied claims `origin_verified=true` or `publicly_discovered=true` are rejected. These flags are intentionally propagated through the fixture validator; a matching digest must never promote the synthetic control fixture to a publicly discovered planilla.
+
 ## Negative/unknown findings
 
 - This static analysis does **not** independently confirm tournament `775` at runtime.
