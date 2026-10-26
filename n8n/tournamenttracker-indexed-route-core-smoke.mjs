@@ -110,7 +110,7 @@ assert.equal(reviewed.evidence.resultUrl, canonicalObservedRoute);
 const bingEvidence = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: { kind: 'public_index', observedUrl: canonicalObservedRoute, sourceUrl: 'https://www.bing.com/search?q=site%3Afemebal.com%2Ftournament-tracker%2FRUdVX3VkfFc%3D', resultUrl: canonicalObservedRoute } });
 assert.equal(bingEvidence.state, 'reviewed_anonymous_get_only');
 
-const explicitLinkEvidence = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: { kind: 'explicit_public_link', observedUrl: canonicalObservedRoute, sourceUrl: 'https://www.femebal.com/fixture-publico?season=2026' } });
+const explicitLinkEvidence = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: { kind: 'explicit_public_link', observedUrl: canonicalObservedRoute, linkedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/fixture-publico?season=2026' } });
 assert.equal(explicitLinkEvidence.state, 'reviewed_anonymous_get_only');
 
 const realLhcObservedRoute = 'https://www.femebal.com/tournament-tracker/RUdVX3VheVA%3D';
@@ -118,6 +118,7 @@ const realLhcCanonicalRoute = 'https://www.femebal.com/tournament-tracker/RUdVX3
 const realLhcEvidence = {
   kind: 'explicit_public_link',
   observedUrl: realLhcObservedRoute,
+  linkedUrl: realLhcObservedRoute,
   sourceUrl: 'https://femebal.com/fixtures-disponibles-para-la-liga-hipotecario-seguros-y-la-liga-plata/',
 };
 const realLhcReviewed = buildReviewedIndexedTournamentTrackerGet(realLhcObservedRoute, { publicEvidence: realLhcEvidence });
