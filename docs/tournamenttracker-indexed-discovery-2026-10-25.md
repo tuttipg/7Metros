@@ -35,6 +35,12 @@ La política SAFE de 7Metros mantiene estas rutas como **review-only**:
 - Para `explicit_public_link`, el envelope debe incluir `linkedUrl` con el `href` exacto observado en la página fuente; el validador lo canonicaliza y exige que coincida con la ruta objetivo.
 - Esta validación es estructural: no descarga ni demuestra por sí sola que `sourceUrl` contenga realmente ese enlace. La relación fuente → `linkedUrl` debe revisarse manualmente antes de considerar la evidencia suficiente; sin `linkedUrl` exacto no se construye un GET revisable.
 
+## Nuevo candidato indexado evaluado — 2026-10-26 (control negativo)
+
+Una búsqueda pública devolvió la ruta indexada [TournamentTracker de FEMEBAL](https://www.femebal.com/tournament-tracker/RUdVX3Vkf1w%3D), cuyo fragmento de índice identifica **“Super 8 Hipotecario Seguros Liga Honor Caballeros”** y muestra cruces del 9, 15 y 16 de marzo. Al abrir la ruta directamente durante esta revisión, la respuesta visible volvió a ser sólo el shell SPA (“You need to enable JavaScript to run this app.”).
+
+Clasificación: **ruta indexada observada, no evidencia del partido control**. La competición y las fechas que aparecen en el fragmento no establecen una relación con Apertura 2026 / LHC del 21/03/2026. Como el contenido actual no se pudo verificar en el HTML visible y el fragmento indexado es de otra competición, no se añadió esta ruta al manifiesto de fixtures objetivo, no se ejecutó un GET a endpoints descubiertos y no se infirió ningún identificador ni PDF. Se conserva como ejemplo negativo para evitar reutilizar tokens de torneos distintos.
+
 ## Limitación importante
 
 En esta ejecución no se encontró evidencia suficiente para afirmar que una ruta indexada concreta corresponde al torneo Apertura/LHC 2026 ni, específicamente, al partido Argentinos Juniors 20–27 Ferro del 21/03/2026.
