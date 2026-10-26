@@ -221,6 +221,10 @@ const policyBody = `
   const staticAsset = "https://www.femebal.com/tournament-tracker/static/js/runtime.js";
   const reviewable = "https://femebal.com/api/public/fixtures?season=2026";
   const readOperation = "https://www.femebal.com/api/getMatches?season=2026";
+  const ordinarySortKey = "https://www.femebal.com/api/public/fixtures?sortKey=date";
+  const exactSensitiveKey = "https://www.femebal.com/api/public/fixtures?key=placeholder";
+  const compoundApiKey = "https://www.femebal.com/api/public/fixtures?apiKey=placeholder";
+  const compoundPrivateKey = "https://www.femebal.com/api/public/fixtures?privateKey=placeholder";
 `;
 const policyExtraction = extractTournamentTrackerExplicitHttpsCandidates({
   body: policyBody,
@@ -246,6 +250,20 @@ for (const url of [
 assert.equal(byUrl.get('https://www.femebal.com/tournament-tracker/static/js/runtime.js').state, 'static_resource_not_endpoint');
 assert.equal(byUrl.get('https://femebal.com/api/public/fixtures?season=2026').state, 'femebal_public_get_reviewable');
 assert.equal(byUrl.get('https://www.femebal.com/api/getMatches?season=2026').state, 'femebal_public_get_reviewable');
+
+// Keep Node policy aligned with Python: sortKey is an ordinary read filter,
+// while exact/compound key names that can carry credentials remain fail-closed.
+assert.equal(byUrl.get('https://www.femebal.com/api/public/fixtures?sortKey=date').state, 'femebal_public_get_reviewable');
+for (const url of [
+  'https://www.femebal.com/api/public/fixtures?key=placeholder',
+  'https://www.femebal.com/api/public/fixtures?apiKey=placeholder',
+  'https://www.femebal.com/api/public/fixtures?privateKey=placeholder',
+]) {
+  const candidate = byUrl.get(url);
+  assert.equal(candidate.state, 'rejected_on_policy_revalidation');
+  assert.equal(candidate.reason, 'sensitive_query_key');
+  assert.equal(candidate.anonymousGetReviewable, false);
+}
 assert.equal(classifiedPolicyBody.candidates.every((item) => item.probeAllowed === false), true);
 
 const invalidPolicySource = classifyTournamentTrackerCandidatePolicy({
