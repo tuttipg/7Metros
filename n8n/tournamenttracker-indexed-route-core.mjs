@@ -87,10 +87,18 @@ function decodeEvidenceSourcePath(pathname) {
   return decoded;
 }
 
-function validateExplicitPublicLinkSource(sourceUrl, targetCanonicalUrl) {
+function validateExplicitPublicLinkSource(sourceUrl, targetCanonicalUrl, evidence) {
   const decodedPath = decodeEvidenceSourcePath(sourceUrl.pathname);
   if (decodedPath.toLowerCase().startsWith(INDEXED_ROUTE_PREFIX)) throw new Error('La evidencia explicit_public_link no puede usar TournamentTracker como fuente circular');
   if (sourceUrl.toString() === targetCanonicalUrl) throw new Error('La evidencia explicit_public_link no puede ser la propia ruta objetivo');
+  if (typeof evidence.linkedUrl !== 'string' || !evidence.linkedUrl) {
+    throw new Error('La evidencia explicit_public_link requiere el href público observado');
+  }
+  const linkedUrl = canonicalizeIndexedTournamentTrackerRoute(evidence.linkedUrl);
+  if (linkedUrl !== targetCanonicalUrl) {
+    throw new Error('El href público observado no corresponde a la ruta TournamentTracker solicitada');
+  }
+  return linkedUrl;
 }
 
 function validatePublicEvidence(targetCanonicalUrl, evidence) {
@@ -110,15 +118,16 @@ function validatePublicEvidence(targetCanonicalUrl, evidence) {
 
   const sourceHost = sourceUrl.hostname.toLowerCase();
   let resultUrl = null;
+  let linkedUrl = null;
   if (kind === 'public_index') {
     if (!PUBLIC_INDEX_HOSTS.has(sourceHost)) throw new Error('La evidencia public_index requiere una fuente de índice público permitida');
     resultUrl = validatePublicIndexSource(sourceUrl, targetCanonicalUrl, evidence);
   }
   if (kind === 'explicit_public_link') {
     if (!FEMEBAL_HOSTS.has(sourceHost)) throw new Error('La evidencia explicit_public_link requiere una fuente oficial FEMEBAL');
-    validateExplicitPublicLinkSource(sourceUrl, targetCanonicalUrl);
+    linkedUrl = validateExplicitPublicLinkSource(sourceUrl, targetCanonicalUrl, evidence);
   }
-  return { kind, observedUrl, sourceUrl: sourceUrl.toString(), ...(resultUrl ? { resultUrl } : {}) };
+  return { kind, observedUrl, sourceUrl: sourceUrl.toString(), ...(resultUrl ? { resultUrl } : {}), ...(linkedUrl ? { linkedUrl } : {}) };
 }
 
 export function canonicalizeIndexedTournamentTrackerRoute(value) {
