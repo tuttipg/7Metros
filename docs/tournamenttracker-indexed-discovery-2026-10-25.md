@@ -32,6 +32,8 @@ La política SAFE de 7Metros mantiene estas rutas como **review-only**:
 - Sin ejecución de JavaScript.
 - Sin GET automático: `automaticProbeAllowed=false`.
 - La evidencia debe identificar la URL observada y su procedencia.
+- Para `explicit_public_link`, el envelope debe incluir `linkedUrl` con el `href` exacto observado en la página fuente; el validador lo canonicaliza y exige que coincida con la ruta objetivo.
+- Esta validación es estructural: no descarga ni demuestra por sí sola que `sourceUrl` contenga realmente ese enlace. La relación fuente → `linkedUrl` debe revisarse manualmente antes de considerar la evidencia suficiente; sin `linkedUrl` exacto no se construye un GET revisable.
 
 ## Limitación importante
 
