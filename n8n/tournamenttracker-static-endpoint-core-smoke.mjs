@@ -259,11 +259,11 @@ for (const url of [
   'https://www.femebal.com/api/public/fixtures?apiKey=placeholder',
   'https://www.femebal.com/api/public/fixtures?privateKey=placeholder',
 ]) {
-  const candidate = byUrl.get(url);
-  assert.equal(candidate.state, 'rejected_on_policy_revalidation');
-  assert.equal(candidate.reason, 'sensitive_query_key');
-  assert.equal(candidate.anonymousGetReviewable, false);
+  // Sensitive-query URLs are rejected by extraction before policy classification,
+  // so they must never appear in the candidate map.
+  assert.equal(byUrl.has(url), false, `sensitive query candidate escaped extraction: ${url}`);
 }
+assert.ok(policyExtraction.rejectedCount >= 3);
 assert.equal(classifiedPolicyBody.candidates.every((item) => item.probeAllowed === false), true);
 
 const invalidPolicySource = classifyTournamentTrackerCandidatePolicy({
