@@ -224,6 +224,7 @@ const policyBody = `
   const ordinarySortKey = "https://www.femebal.com/api/public/fixtures?sortKey=date";
   const exactSensitiveKey = "https://www.femebal.com/api/public/fixtures?key=placeholder";
   const compoundApiKey = "https://www.femebal.com/api/public/fixtures?apiKey=placeholder";
+  const compoundClientSecret = "https://www.femebal.com/api/public/fixtures?clientSecretValue=placeholder";
   const compoundPrivateKey = "https://www.femebal.com/api/public/fixtures?privateKey=placeholder";
 `;
 const policyExtraction = extractTournamentTrackerExplicitHttpsCandidates({
@@ -257,6 +258,7 @@ assert.equal(byUrl.get('https://www.femebal.com/api/public/fixtures?sortKey=date
 for (const url of [
   'https://www.femebal.com/api/public/fixtures?key=placeholder',
   'https://www.femebal.com/api/public/fixtures?apiKey=placeholder',
+  'https://www.femebal.com/api/public/fixtures?clientSecretValue=placeholder',
   'https://www.femebal.com/api/public/fixtures?privateKey=placeholder',
 ]) {
   // Sensitive-query URLs are rejected by extraction before policy classification,
