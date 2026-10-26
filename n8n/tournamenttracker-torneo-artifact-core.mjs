@@ -20,6 +20,10 @@ export function verifyAndAdaptTournamentTrackerTorneoArtifactOffline({ rawArtifa
   if (evidence.network_used !== false) throw new Error('La evidencia exige network_used=false');
   if (evidence.auth_used !== false) throw new Error('La evidencia no puede usar autenticación');
   if (evidence.write_enabled !== false) throw new Error('La evidencia no puede habilitar escritura');
+  // An offline parser can verify body/digest consistency, but cannot establish where the
+  // artifact came from. Reject caller-supplied claims that would promote it to public evidence.
+  if (evidence.origin_verified === true) throw new Error('El artefacto offline no puede declarar origin_verified=true');
+  if (evidence.publicly_discovered === true) throw new Error('El artefacto offline no puede declarar publicly_discovered=true');
 
   if (typeof rawArtifact !== 'string' || !rawArtifact.length) throw new Error('Artefacto Torneo vacío o inválido');
   const bytes = Buffer.byteLength(rawArtifact, 'utf8');
@@ -47,6 +51,11 @@ export function verifyAndAdaptTournamentTrackerTorneoArtifactOffline({ rawArtifa
       artifact_sha256: actualSha256,
       artifact_bytes: bytes,
       verified_exact_body: true,
+      body_matches_supplied_digest_and_length: true,
+      verification_scope: 'body_matches_supplied_digest_and_length',
+      source_classification: 'offline_artifact_origin_unverified',
+      origin_verified: false,
+      publicly_discovered: false,
       source: evidence.source,
       network_used: false,
       auth_used: false,
