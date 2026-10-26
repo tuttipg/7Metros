@@ -21,16 +21,24 @@ const evidence = {
 
 const fixture = verifyAndAdaptTournamentTrackerTorneoArtifactOffline({ rawArtifact, evidence });
 assert.equal(fixture.provenance.verified_exact_body, true);
+assert.equal(fixture.provenance.body_matches_supplied_digest_and_length, true);
+assert.equal(fixture.provenance.verification_scope, 'body_matches_supplied_digest_and_length');
+assert.equal(fixture.provenance.source_classification, 'offline_artifact_origin_unverified');
+assert.equal(fixture.provenance.origin_verified, false);
+assert.equal(fixture.provenance.publicly_discovered, false);
 assert.equal(fixture.provenance.artifact_sha256, sha256);
 assert.equal(fixture.partidos.length, 1);
 const validated = validateTournamentTrackerFixtureOffline({ fixture, expected: {
   fecha: '2026-03-21', local: 'Argentinos Juniors', visitante: 'Ferro Carril Oeste', goles_local: 20, goles_visitante: 27,
 } });
-assert.match(validated.pdf_url, /5ce377051ea0acb1\.pdf$/);
+assert.match(validated.pdf_url, /5ce377051ea0acb1\\.pdf$/);
 assert.equal(validated.provenance.verified_exact_body, true);
 assert.equal(validated.provenance.artifact_sha256, sha256);
 assert.equal(validated.provenance.artifact_bytes, Buffer.byteLength(rawArtifact, 'utf8'));
 assert.equal(validated.provenance.source, 'tournamenttracker_decrypted_torneo_offline');
+assert.equal(validated.provenance.origin_verified, false);
+assert.equal(validated.provenance.publicly_discovered, false);
+assert.equal(validated.provenance.verification_scope, 'body_matches_supplied_digest_and_length');
 assert.equal(validated.provenance.network_used, false);
 assert.equal(validated.provenance.auth_used, false);
 assert.equal(validated.provenance.write_enabled, false);
@@ -39,6 +47,8 @@ assert.throws(() => verifyAndAdaptTournamentTrackerTorneoArtifactOffline({ rawAr
 assert.throws(() => verifyAndAdaptTournamentTrackerTorneoArtifactOffline({ rawArtifact, evidence: { ...evidence, artifact_sha256: '0'.repeat(64) } }), /artifact_sha256 no coincide/);
 assert.throws(() => verifyAndAdaptTournamentTrackerTorneoArtifactOffline({ rawArtifact, evidence: { ...evidence, artifact_bytes: evidence.artifact_bytes + 1 } }), /artifact_bytes no coincide/);
 assert.throws(() => verifyAndAdaptTournamentTrackerTorneoArtifactOffline({ rawArtifact, evidence: { ...evidence, network_used: true } }), /network_used=false/);
+assert.throws(() => verifyAndAdaptTournamentTrackerTorneoArtifactOffline({ rawArtifact, evidence: { ...evidence, origin_verified: true } }), /origin_verified=true/);
+assert.throws(() => verifyAndAdaptTournamentTrackerTorneoArtifactOffline({ rawArtifact, evidence: { ...evidence, publicly_discovered: true } }), /publicly_discovered=true/);
 assert.throws(() => verifyAndAdaptTournamentTrackerTorneoArtifactOffline({ rawArtifact: 'x'.repeat(MAX_TORNEO_ARTIFACT_BYTES + 1), evidence }), /límite SAFE/);
 
 const invalidJson = '{"id":"775"';
