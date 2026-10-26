@@ -28,6 +28,7 @@ const SENSITIVE_COMPOUND_QUERY_TOKENS = new Set([
   'authorization',
   'bearer',
   'clientkey',
+  'clientsecret',
   'cookie',
   'credential',
   'credentials',
