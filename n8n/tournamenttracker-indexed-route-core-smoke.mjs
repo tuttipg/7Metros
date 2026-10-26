@@ -80,6 +80,7 @@ for (const badEvidence of [
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://evil.example/fixture-publico' },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com:444/fixture-publico' },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/fixture-publico?api_key=redacted' },
+  { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/fixture-publico', linkedUrl: 'https://www.femebal.com/tournament-tracker/OTROTOKEN=' },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/fixture-publico?credential=redacted' },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: observedPublicIndexedRoute },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/tournament-tracker/OTROTOKEN=' },
@@ -112,6 +113,7 @@ assert.equal(bingEvidence.state, 'reviewed_anonymous_get_only');
 
 const explicitLinkEvidence = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: { kind: 'explicit_public_link', observedUrl: canonicalObservedRoute, linkedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/fixture-publico?season=2026' } });
 assert.equal(explicitLinkEvidence.state, 'reviewed_anonymous_get_only');
+assert.equal(explicitLinkEvidence.evidence.linkedUrl, canonicalObservedRoute);
 
 const realLhcObservedRoute = 'https://www.femebal.com/tournament-tracker/RUdVX3VheVA%3D';
 const realLhcCanonicalRoute = 'https://www.femebal.com/tournament-tracker/RUdVX3VheVA=';
