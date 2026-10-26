@@ -31,7 +31,7 @@ assert.equal(fixture.partidos.length, 1);
 const validated = validateTournamentTrackerFixtureOffline({ fixture, expected: {
   fecha: '2026-03-21', local: 'Argentinos Juniors', visitante: 'Ferro Carril Oeste', goles_local: 20, goles_visitante: 27,
 } });
-assert.match(validated.pdf_url, /5ce377051ea0acb1\\.pdf$/);
+assert.match(validated.pdf_url, /5ce377051ea0acb1\.pdf$/);
 assert.equal(validated.provenance.verified_exact_body, true);
 assert.equal(validated.provenance.artifact_sha256, sha256);
 assert.equal(validated.provenance.artifact_bytes, Buffer.byteLength(rawArtifact, 'utf8'));
