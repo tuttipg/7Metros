@@ -39,3 +39,13 @@ La planilla conocida `5ce377051ea0acb1.pdf` debe seguir tratándose como **artef
 ## Regla operativa
 
 No promover una ruta a `publicly_discovered=true` ni autorizar un GET real sólo porque un fixture estático o una prueba sintética contiene un `linkedUrl` que coincide con la ruta. La transición requiere evidencia pública observada y trazable.
+
+## Corrección de comparación de rutas — 2026-10-27
+
+La revisión estática encontró que la comprobación de una consulta de buscador convertía a minúsculas el path objetivo y usaba una expresión regular case-insensitive. Como los tokens opacos de la ruta son sensibles a mayúsculas/minúsculas, una consulta que mostrara una variante en minúsculas podía coincidir con una ruta distinta, aunque el campo separado `resultUrl` declarara la ruta correcta.
+
+La validación ahora normaliza únicamente el prefijo de host (cuyo nombre DNS sí es case-insensitive) y compara el path del token de forma exacta. La regresión en `n8n/tournamenttracker-indexed-route-core-smoke.mjs` verifica que un resultado con token en minúsculas se rechace aunque `resultUrl` afirme la ruta objetivo.
+
+Validación posterior al cambio: los cuatro workflows asociados al HEAD `6a79a6f69def81b0f01f6f9b3f4693e8b0b405dd` terminaron exitosamente: Validate 7Metros #704, FEMEBAL SAFE smoke #90, TournamentTracker PDF work-item #94 y PDF extraction provenance #86.
+
+La corrección sólo endurece la comparación de evidencia declarada; no realiza consultas de red ni modifica `automaticProbeAllowed=false`. Supabase y producción permanecen sin escrituras.
