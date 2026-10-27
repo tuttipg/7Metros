@@ -67,10 +67,13 @@ function validatePublicIndexSource(sourceUrl, targetCanonicalUrl, evidence) {
   const normalizedQuery = query.toLowerCase();
   if (!normalizedQuery.includes('femebal') || !normalizedQuery.includes('tournament-tracker')) throw new Error('La consulta public_index debe referenciar FEMEBAL TournamentTracker');
   const target = new URL(targetCanonicalUrl);
-  const exactRoute = target.pathname.toLowerCase();
-  // Match the exact FEMEBAL host + route, not a route that is merely a prefix of a longer token.
-  const exactRoutePattern = new RegExp("(?:^|[\\s\"'(])(?:site:)?(?:https?://)?(?:www\\.)?femebal\\.com" + exactRoute + "(?=$|[\\s\"'&),])", 'i');
-  if (!exactRoutePattern.test(query)) {
+  // Hostnames are case-insensitive, but the opaque TournamentTracker path token is case-sensitive.
+  // Normalize only the source host/prefix; never lowercase the token-bearing path.
+  const normalizedQueryForRoute = query.replace(/(?:site:)?(?:https?:\/\/)?(?:www\.)?femebal\.com/gi, (host) => host.toLowerCase());
+  const exactRoute = target.pathname;
+  // Match the exact FEMEBAL host + case-sensitive route, not a route that is merely a prefix of a longer token.
+  const exactRoutePattern = new RegExp("(?:^|[\\s\\\"'(])(?:site:)?(?:https?://)?(?:www\\.)?femebal\\.com" + exactRoute + "(?=$|[\\s\\\"'&),])");
+  if (!exactRoutePattern.test(normalizedQueryForRoute)) {
     throw new Error('La consulta public_index debe vincular la ruta TournamentTracker exacta observada');
   }
   if (!evidence.resultUrl) throw new Error('La evidencia public_index requiere la URL de resultado público observada');
