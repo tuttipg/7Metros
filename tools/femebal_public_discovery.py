@@ -29,7 +29,15 @@ PUBLIC_EXPLICIT_LINK_PROVENANCE='public_explicit_link'
 class LinkParser(HTMLParser):
     def __init__(self): super().__init__(); self.links=[]; self._href=None; self._text=[]
     def handle_starttag(self,tag,attrs):
-        if tag.lower()=="a": self._href=dict(attrs).get("href"); self._text=[]
+        if tag.lower() != "a":
+            return
+        # HTMLParser preserves duplicate attributes in attrs. Never let dict(attrs)
+        # silently choose one href from ambiguous, potentially conflicting evidence.
+        self._href = None
+        self._text = []
+        href_values = [value for name, value in attrs if name.lower() == "href"]
+        if len(href_values) == 1:
+            self._href = href_values[0]
     def handle_data(self,data):
         if self._href is not None: self._text.append(data)
     def handle_endtag(self,tag):
