@@ -8,8 +8,8 @@ const SENSITIVE_QUERY_NAME_PARTS = ['apikey', 'accesskey', 'accesstoken', 'autht
 
 function rejectAmbiguousRawUrl(value, label) {
   const raw = String(value ?? '');
-  if (raw.includes('\\') || /[\u0000-\u001F\u007F]/.test(raw)) {
-    throw new Error(`${label} contiene backslash o caracteres de control ambiguos`);
+  if (raw.includes('\\') || /\s/.test(raw) || /[\u0000-\u001F\u007F]/.test(raw)) {
+    throw new Error(label + ' contiene backslash, whitespace o caracteres de control ambiguos');
   }
   return raw;
 }
