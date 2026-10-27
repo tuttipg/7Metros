@@ -74,6 +74,8 @@ for (const badEvidence of [
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search?q=site%3Afemebal.com%2Ftournament-tracker%2FRUdVX3VkfFc%3Dextra', resultUrl: observedPublicIndexedRoute },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search?q=site%3Aevilfemebal.com%2Ftournament-tracker%2FRUdVX3VkfFc%3D', resultUrl: observedPublicIndexedRoute },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: publicEvidence.sourceUrl, resultUrl: 'https://www.femebal.com/tournament-tracker/OTROTOKEN=' },
+  // The opaque route token is case-sensitive: a lowercase path in the search query must not attest the mixed-case target, even if resultUrl claims the target.
+  { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search?q=site%3Afemebal.com%2Ftournament-tracker%2Frudvx3vkffc%3D', resultUrl: observedPublicIndexedRoute },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search?q=femebal+tournament-tracker&accessToken=redacted' },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.bing.com/search?q=femebal+tournament-tracker&session_id=redacted' },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search?q=femebal+tournament-tracker' },
