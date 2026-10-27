@@ -51,6 +51,14 @@ function rejectSensitiveQueryNames(url, label) {
 function decodeSinglePathSegment(rawSegment) {
   const raw = String(rawSegment ?? '');
   if (!raw || raw.length > MAX_ROUTE_TOKEN_LENGTH * 3) throw new Error('Token TournamentTracker vacío o demasiado largo');
+  // The official fixture link percent-encodes the trailing "=" padding as %3D.
+  // Do not accept percent-encoded token characters: they create alternate raw spellings
+  // for an opaque route and make evidence comparison less strict.
+  const literalToken = /^[A-Za-z0-9_-]+={0,2}$/.test(raw);
+  const encodedPaddingToken = /^[A-Za-z0-9_-]+(?:%3[dD]){1,2}$/.test(raw);
+  if (!literalToken && !encodedPaddingToken) {
+    throw new Error('Token TournamentTracker contiene percent-encoding no permitido');
+  }
   let decoded;
   try { decoded = decodeURIComponent(raw); } catch { throw new Error('Token TournamentTracker con percent-encoding inválido'); }
   if (!decoded || decoded.length > MAX_ROUTE_TOKEN_LENGTH) throw new Error('Token TournamentTracker vacío o demasiado largo');
