@@ -51,6 +51,11 @@ class PdfSource: page_url:str; page_title:str; pdf_url:str; anchor_text:str; doc
 
 def _has_ambiguous_raw_url_chars(url:str)->bool: return bool(AMBIGUOUS_RAW_URL_CHARS.search(str(url)))
 
+def _has_ambiguous_raw_path(value:str)->bool:
+    try: path=urlparse(str(value)).path
+    except ValueError: return True
+    return '%' in path or any(segment in {'.','..'} for segment in path.split('/'))
+
 def _assert_allowed(url:str, *, allow_planilla:bool=False)->None:
     if _has_ambiguous_raw_url_chars(url): raise ValueError(f"URL con caracteres ambiguos/normalizables rechazada: {url!r}")
     p=urlparse(url); allowed_hosts=set(FEMEBAL_WEB_HOSTS)
@@ -74,7 +79,9 @@ def _has_sensitive_query(query:str)->bool:
     return False
 
 def _canonical_official_page_url(url:str)->str:
-    _assert_allowed(url); p=urlparse(url)
+    _assert_allowed(url)
+    if _has_ambiguous_raw_path(url): raise ValueError(f"URL FEMEBAL con path ambiguo/normalizable rechazada: {url!r}")
+    p=urlparse(url)
     if p.fragment: raise ValueError(f"URL FEMEBAL con fragmento rechazada: {url}")
     if _has_tracking_query(p.query): raise ValueError(f"URL FEMEBAL con tracking query rechazada: {url}")
     if _has_sensitive_query(p.query): raise ValueError(f"URL FEMEBAL con query sensible rechazada: {url}")
@@ -103,6 +110,7 @@ def _canonical_official_pdf_url(url:str)->str:
 
 class SafeRedirectHandler(HTTPRedirectHandler):
     def redirect_request(self,req,fp,code,msg,headers,newurl):
+        if _has_ambiguous_raw_path(newurl): raise ValueError(f"Redirect FEMEBAL con path ambiguo/normalizable rechazado: {newurl!r}")
         absolute=urljoin(req.full_url,newurl); canonical=_canonical_official_page_url(absolute)
         return super().redirect_request(req,fp,code,msg,headers,canonical)
 
@@ -157,6 +165,7 @@ def classify_page(url:str,title:str)->Source|None:
 def discover_pages(index_html:str,base=PROGRAMACIONES_URL):
     out={}
     for href,text in links_from_html(index_html):
+        if _has_ambiguous_raw_path(href): continue
         raw_url=urljoin(base,href)
         try: url=_canonical_official_page_url(raw_url)
         except ValueError: continue
@@ -193,6 +202,7 @@ def merge_pages(index_pages:list[Source],seed_pages:list[Source])->list[Source]:
 def discover_pdfs(page_html:str,source:Source):
     out={}
     for href,text in links_from_html(page_html):
+        if _has_ambiguous_raw_path(href): continue
         raw_url=urljoin(source.page_url,href)
         try: url=_canonical_official_pdf_url(raw_url)
         except ValueError: continue

@@ -53,6 +53,11 @@ function rawPathFromHttpsUrl(value) {
   return match ? (match[1] || '/') : '';
 }
 
+function hasAmbiguousRawPath(value) {
+  const rawPath = rawPathFromHttpsUrl(value);
+  return !rawPath || rawPath.includes('%') || rawPath.split('/').some((segment) => segment === '.' || segment === '..');
+}
+
 function assertUnambiguousRawHttpsInput(raw) {
   if(/[\\\u0000-\u001f\u007f]/.test(raw)) {
     throw new Error('URL FEMEBAL con caracteres ambiguos/normalizables rechazada');
@@ -98,6 +103,7 @@ export function canonicalizeOfficialFemebalUrl(value, { pdf = false } = {}) {
   if (url.hash) throw new Error('URL FEMEBAL con fragmento rechazada');
 
   if (!pdf) {
+    if (hasAmbiguousRawPath(raw)) throw new Error('URL FEMEBAL con path ambiguo/normalizable rechazado');
     if (hasTrackingQuery(url)) throw new Error('URL FEMEBAL con tracking query rechazada');
     if (hasSensitiveQuery(url)) throw new Error('URL FEMEBAL con query sensible rechazada');
     return url.toString();
@@ -108,8 +114,7 @@ export function canonicalizeOfficialFemebalUrl(value, { pdf = false } = {}) {
   // Keep parity with the Python discovery: official PDFs observed by 7Metros use
   // plain path segments. Reject encoded and dot-segment spellings before URL()
   // normalization can turn two raw inputs into a misleadingly equivalent path.
-  const rawPath = rawPathFromHttpsUrl(raw);
-  if (!rawPath || rawPath.includes('%') || rawPath.split('/').some((segment) => segment === '.' || segment === '..')) {
+  if (hasAmbiguousRawPath(raw)) {
     throw new Error('PDF FEMEBAL con path ambiguo/normalizable rechazado');
   }
 
