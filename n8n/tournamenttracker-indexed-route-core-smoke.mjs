@@ -16,6 +16,8 @@ const publicEvidence = {
 
 assert.equal(canonicalizeIndexedTournamentTrackerRoute(observedPublicIndexedRoute), canonicalObservedRoute);
 assert.equal(canonicalizeIndexedTournamentTrackerRoute('https://femebal.com:443/tournament-tracker/RUdVX3VkfFc='), canonicalObservedRoute);
+// The official URL encodes only the trailing base64 padding; lowercase hex is equivalent.
+assert.equal(canonicalizeIndexedTournamentTrackerRoute('https://www.femebal.com/tournament-tracker/RUdVX3VkfFc%3d'), canonicalObservedRoute);
 
 for (const unsafe of [
   ' https://www.femebal.com/tournament-tracker/RUdVX3VkfFc= ',
@@ -36,6 +38,11 @@ for (const unsafe of [
   'https://www.femebal.com/tournament-tracker/token%5Cescape',
   'https://www.femebal.com/tournament-tracker/token%252Fescape',
   'https://www.femebal.com/tournament-tracker/token.with.dot',
+  // Percent-encoded token characters must not create alternate raw spellings.
+  'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc%41',
+  'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc%2D',
+  'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc%5F',
+  'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc%253D',
   'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc=?clubId=0',
   'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc=#x',
 ]) assert.throws(() => canonicalizeIndexedTournamentTrackerRoute(unsafe));
