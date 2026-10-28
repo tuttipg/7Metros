@@ -36,13 +36,28 @@ La ruta usa un token opaco proveniente de un enlace público observado; no fue i
 
 Esta evidencia acredita una **entrada pública al fixture LHC**, no la presencia del encuentro Argentinos Juniors 20–27 Ferro del 21/03/2026 ni la disponibilidad de su planilla. No se ejecutó JavaScript ni se intentó descubrir rutas o IDs derivados del token.
 
+## Nueva ruta LHC masculina observada en índice público (28/10/2026)
+
+Una búsqueda pública reciente devolvió otra página FEMEBAL/TournamentTracker indexada:
+
+- URL observada: https://www.femebal.com/tournament-tracker/RUdVX3RkflE%3D
+- Resultado indexado: https://www.femebal.com/tournament-tracker/RUdVX3RkflE%3D
+- Título/clasificación visible en el índice: **Torneo Metropolitano Clausura | Mayores - LHC Hipotecario Seguros - Masculino**.
+- Actualización indicada por el resultado: **26/10/2026 14:47**.
+- Muestra indexada: partidos de la Fecha 11 del Clausura, incluidos encuentros del 22–24/10/2026.
+
+El token de la ruta se tomó literalmente de un resultado público indexado; no se generó, modificó ni enumeró. La página abierta directamente volvió a mostrar únicamente el shell **“You need to enable JavaScript to run this app.”**; por eso, los datos visibles proceden del índice público y no de una inspección completa de la aplicación.
+
+Esta ruta es una fuente nueva y útil para confirmar que existe una superficie TournamentTracker indexada para **LHC masculina del Clausura 2026**, pero **no es evidencia del partido control de marzo**: la muestra corresponde a la Fecha 11 de octubre. La búsqueda exacta no aportó una página indexada que vincule el encuentro del 21/03/2026 con su planilla. No se siguieron rutas derivadas, no se enumeraron tokens y no se hicieron probes a endpoints internos.
+
 ## Estado SAFE
 
 - Fixture oficial: **confirmado** mediante la programación pública FEMEBAL.
 - Ruta pública de entrada al fixture LHC: **enlace explícito registrado; shell SPA observado el 28/10/2026**.
-- Partido control dentro de esa ruta: **no verificado**.
+- Ruta LHC masculina de Clausura 2026: **encontrada en índice público; muestra de octubre, no el partido control**.
+- Partido control dentro de TournamentTracker: **no verificado**.
 - Planilla pública FEMEBAL trazable al partido: **pendiente**.
-- Sólo se consultaron páginas públicas enlazadas explícitamente; no se enumeraron IDs ni se infirieron rutas.
+- Sólo se consultaron páginas públicas e índices; no se enumeraron IDs ni se infirieron rutas.
 - Sin autenticación, cookies, tokens de sesión ni encabezados de autorización.
 - Sin ejecución de JavaScript remoto.
 - Sin escrituras en Supabase ni producción.
