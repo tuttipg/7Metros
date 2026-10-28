@@ -14,15 +14,17 @@ Registrar evidencia pública secundaria que permita validar la identidad del par
 
 ## Evidencia pública secundaria
 
-### 365Scores
+### 365Scores — URL corregida el 28/10/2026
 
-La búsqueda pública de 365Scores devuelve el enfrentamiento histórico y lista explícitamente:
+La página pública de enfrentamientos directos de **Liga de Honor Oro** muestra la entrada:
 
 `Argentinos Juniors Liga de Honor Oro 20 - 27 Ferro Carril Oeste 21/03/2026`
 
-Fuente observada:
+URL observada en la búsqueda pública:
 
-https://www.365scores.com/fi/handball/match/undefined-8194/undefined-81167-81170-8194
+https://www.365scores.com/de/handball/match/liga-de-honor-oro-8181/argentinos-juniors-ferro-carril-oeste-81167-81170-8181
+
+**Corrección documental:** la URL que figuraba antes en este documento contenía el segmento `undefined-8194`, que corresponde a una página de Liga de Honor Plata, no a la ruta de Liga de Honor Oro que se está usando como corroboración. La URL corregida identifica explícitamente `liga-de-honor-oro-8181`. El acceso directo de esta revisión agotó el tiempo de espera; el resultado de búsqueda sí expuso la entrada histórica citada. Por eso se registra como evidencia secundaria de búsqueda, no como una ficha de partido abierta y verificada en su totalidad.
 
 Esta fuente sirve para corroborar identidad, competición, clubes, fecha y marcador. **No demuestra la existencia ni la URL de una planilla FEMEBAL** y no debe convertirse en una fuente de importación.
 
@@ -59,7 +61,7 @@ Las fuentes secundarias no se usan para enumerar tokens, descubrir endpoints int
 ## Estado
 
 - Fixture oficial: **confirmado** por la programación FEMEBAL.
-- Identidad y marcador 20–27: **corroborados por fuentes secundarias**.
+- Identidad y marcador 20–27: **corroborados por fuentes secundarias**; 365Scores corregido a la ruta de Liga de Honor Oro.
 - Marca temporal Sofascore: **discrepante en un día** respecto de la programación local; conservar ambas representaciones sin normalización silenciosa.
 - Enlace público FEMEBAL/TournamentTracker al partido concreto: **pendiente**.
 - Planilla pública FEMEBAL trazable al partido: **pendiente**.
