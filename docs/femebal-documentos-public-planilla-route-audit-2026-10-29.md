@@ -6,7 +6,7 @@ Una búsqueda web pública encontró y permitió abrir un PDF oficial de FEMEBAL
 
 https://www.femebal.com/documentos/Semi%201%20AAAJ%20B%20-%20Temperley.pdf
 
-El PDF de dos páginas se titula “Datos del partido” y expone una planilla cerrada con metadatos de temporada, torneo, rama, categoría, división, fecha, árbitros, marcador, dorsales, nombres, goles y sanciones. El contenido identifica un encuentro femenino de Mayores de 2023 entre Argentinos Juniors B y Temperley, marcador 14–25.
+El PDF de dos páginas se titula “Datos del partido” y expone una planilla cerrada con metadatos de temporada, torneo, rama, categoría, división, fecha, árbitros, marcador, dorsales, nombres, goles y sanciones. El contenido identifica un encuentro femenino de Mayores de 2023 entre Argentinos Juniors B y Temperley, marcador 27–25.
 
 ## Relevancia para el descubrimiento
 
@@ -16,7 +16,7 @@ La fuente demuestra que existe al menos una planilla oficial pública indexable 
 
 ## Comparación con el partido de control
 
-El PDF hallado no corresponde al control Argentinos Juniors 20–27 Ferro del 21/03/2026. Es de 2023, rama femenina, Argentinos Juniors B–Temperley, marcador 14–25. Se registra como evidencia de una familia de documentos, no como evidencia del partido control.
+El PDF hallado no corresponde al control Argentinos Juniors 20–27 Ferro del 21/03/2026. Es de 2023, rama femenina, Argentinos Juniors B–Temperley, marcador 27–25. Se registra como evidencia de una familia de documentos, no como evidencia del partido control.
 
 Para el control siguen pendientes una referencia pública oficial inequívoca y el enlace a su planilla final.
 
