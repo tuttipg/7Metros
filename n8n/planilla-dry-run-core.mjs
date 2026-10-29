@@ -78,7 +78,13 @@ function assertExpectedMatch(parsed, expected) {
     if (!Number.isSafeInteger(expected.goles_visitante) || expected.goles_visitante < 0) throw new Error('Marcador visitante esperado inválido');
     if (parsed.visitante.goles !== expected.goles_visitante) throw new Error(`Marcador visitante inesperado: ${parsed.visitante.goles}`);
   }
+  // Mark identity as fully checked only when every required discriminator was supplied
+  // and matched above. Partial expectations may still validate supplied fields, but must
+  // never be reported downstream as a complete match identity check.
   return typeof expected.fecha === 'string' && expected.fecha.length > 0
+    && typeof expected.hora === 'string' && /^\\d{2}:\\d{2}(?::\\d{2})?$/.test(expected.hora)
+    && typeof expected.categoria === 'string' && expected.categoria.trim().length > 0
+    && typeof expected.division === 'string' && expected.division.trim().length > 0
     && typeof expected.local === 'string' && expected.local.trim().length > 0
     && typeof expected.visitante === 'string' && expected.visitante.trim().length > 0
     && Number.isSafeInteger(expected.goles_local) && expected.goles_local >= 0
