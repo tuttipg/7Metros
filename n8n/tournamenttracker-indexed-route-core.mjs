@@ -4,7 +4,7 @@ const MAX_ROUTE_TOKEN_LENGTH = 256;
 const INDEXED_ROUTE_PREFIX = '/tournament-tracker/';
 const PUBLIC_EVIDENCE_KINDS = new Set(['public_index', 'explicit_public_link']);
 const SENSITIVE_QUERY_NAMES = new Set(['auth', 'authorization', 'bearer', 'cookie', 'credential', 'credentials', 'csrf', 'jwt', 'key', 'password', 'secret', 'session', 'token', 'xsrf']);
-const SENSITIVE_QUERY_NAME_PARTS = ['apikey', 'accesskey', 'accesstoken', 'auth', 'authtoken', 'clientkey', 'clientsecret', 'credential', 'privatekey', 'secretkey', 'sessionid', 'signingkey', 'token'];
+const SENSITIVE_QUERY_NAME_PARTS = ['accesskey', 'accesskeyid', 'accesstoken', 'apikey', 'auth', 'authkey', 'authorization', 'authtoken', 'bearer', 'clientkey', 'clientsecret', 'cookie', 'credential', 'credentials', 'csrf', 'jwt', 'passphrase', 'password', 'privatekey', 'secret', 'secretkey', 'session', 'sessionid', 'signature', 'signingkey', 'token', 'xsrf'];
 
 function rejectAmbiguousRawUrl(value, label) {
   const raw = String(value ?? '');
