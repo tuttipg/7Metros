@@ -54,6 +54,24 @@ class SensitiveFemebalQueryTests(unittest.TestCase):
             with self.subTest(url=url):
                 self.assertEqual(_canonical_official_page_url(url), url)
 
+    def test_ambiguous_semicolon_query_separators_fail_closed(self):
+        # urllib.parse treats semicolons as value characters, while some servers
+        # still treat them as parameter separators. Both raw and encoded forms
+        # must be rejected before the URL can become reviewable.
+        for url in [
+            'https://femebal.com/programaciones/?season=2026;deleteMatch=1',
+            'https://femebal.com/programaciones/?season=2026%3BdeleteMatch=1',
+            'https://femebal.com/programaciones/?action=read;updateScore=27',
+        ]:
+            with self.subTest(url=url):
+                with self.assertRaisesRegex(ValueError, 'separador de query ambiguo'):
+                    _canonical_official_page_url(url)
+
+        self.assertEqual(
+            _canonical_official_page_url('https://femebal.com/programaciones/?season=2026&category=LHC'),
+            'https://femebal.com/programaciones/?season=2026&category=LHC',
+        )
+
     def test_redirects_with_sensitive_queries_fail_before_following(self):
         handler = SafeRedirectHandler()
         req = Request('https://femebal.com/programaciones/')
