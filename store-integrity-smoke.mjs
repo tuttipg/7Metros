@@ -59,7 +59,8 @@ store.prepareDataset({
     {id:-1,fecha:'2026-09-17',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:27,goles_visitante:25},
     {id:1.5,fecha:'2026-09-18',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:27,goles_visitante:25},
     {id:9007199254740992,fecha:'2026-09-19',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:27,goles_visitante:25},
-    {id:'01',fecha:'2026-09-20',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:27,goles_visitante:25}
+    {id:'01',fecha:'2026-09-20',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:27,goles_visitante:25},
+    {id:'208',fecha:'2026-09-21',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:26,goles_visitante:24}
   ],
   participaciones: [
     {id:1,partido_id:201,jugador_id:11,equipo_id:101,goles:10},
@@ -73,21 +74,26 @@ store.prepareDataset({
     {id:9,partido_id:999,jugador_id:11,equipo_id:101,goles:99},
     {id:10,partido_id:201,jugador_id:11,equipo_id:103,goles:99},
     {id:11,partido_id:204,jugador_id:11,equipo_id:101,goles:99},
-    {id:12,partido_id:207,jugador_id:11,equipo_id:101,goles:99}
+    {id:12,partido_id:207,jugador_id:11,equipo_id:101,goles:99},
+    // A participation must not attach to the non-canonical match ID "01".
+    {id:13,partido_id:1,jugador_id:11,equipo_id:101,goles:99}
   ]
 });
 
 assert.deepEqual(store.state.teams.map(row => row.id).sort((a,b)=>a-b), [101,102,103], 'equipos con club inexistente, temporada ajena o ID inválido deben descartarse en store');
 assert.deepEqual(store.state.rosters.map(row => row.id).sort((a,b)=>a-b), [1,2,3,4], 'planteles con refs externas o equipos ya descartados deben descartarse');
-assert.deepEqual(store.state.matches.map(row => row.id).sort((a,b)=>a-b), [201,202,203], 'partidos con ID inválido, parciales, externos o ligados a equipo descartado deben fallar cerrados');
+assert.deepEqual(store.state.matches.map(row => row.id).sort((a,b)=>a-b), [201,202,203,208], 'partidos con ID inválido, parciales, externos o ligados a equipo descartado deben fallar cerrados');
 for (const invalidId of [NaN, 0, -1, 1.5, 9007199254740992, '01', 'no-numérico', null]) {
   assert.equal(store.state.index.matchById.has(invalidId), false, `ID de partido inválido no debe indexarse: ${String(invalidId)}`);
 }
+assert.equal(store.state.index.matchById.has(1), false, 'el ID no canónico "01" no debe normalizarse a 1');
+assert.equal(store.state.index.matchById.has(208), true, 'un ID string entero positivo canónico debe normalizarse y aceptarse');
 assert.deepEqual(store.state.participations.map(row => row.id).sort((a,b)=>a-b), [1,2,3,4], 'participaciones huérfanas, externas, sin refs o con equipo ajeno al partido deben descartarse');
 assert.equal(store.state.index.rosterByPlayer.has(999), false);
 assert.equal(store.state.index.rosterByTeam.has(999), false);
 assert.equal(store.state.index.participationsByPlayer.has(0), false);
 assert.equal(store.state.index.participationsByMatch.has(999), false);
+assert.equal(store.state.index.participationsByMatch.has(1), false, 'la participación no debe enlazarse al partido rechazado');
 
 const juanFerroA = store.getPlayersForTeamIds(new Set([101])).find(player => player.id === 11);
 assert.equal(juanFerroA.goals, 10, 'participaciones inválidas no deben contaminar goles');
