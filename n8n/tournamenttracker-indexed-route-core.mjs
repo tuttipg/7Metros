@@ -120,7 +120,11 @@ function validatePublicEvidence(targetCanonicalUrl, evidence) {
   if (observedUrl !== targetCanonicalUrl) throw new Error('La evidencia pública no corresponde a la ruta solicitada');
 
   const rawSourceUrl = rejectAmbiguousRawUrl(evidence.sourceUrl, 'La fuente de evidencia pública');
+  // WHATWG URL exposes an empty hash/search for trailing raw delimiters ("#" / "?").
+  // Reject those spellings before parsing so evidence cannot bypass the strict URL contract.
+  if (rawSourceUrl.includes('#')) throw new Error('La fuente de evidencia pública no admite delimitadores de fragmento, ni siquiera vacíos');
   const sourceUrl = new URL(rawSourceUrl);
+  if (rawSourceUrl.includes('?') && !sourceUrl.search) throw new Error('La fuente de evidencia pública no admite delimitadores de query vacíos');
   if (sourceUrl.protocol !== 'https:') throw new Error('La fuente de evidencia pública requiere HTTPS');
   if (sourceUrl.port && sourceUrl.port !== '443') throw new Error('La fuente de evidencia pública no admite puertos HTTPS no estándar');
   if (sourceUrl.username || sourceUrl.password) throw new Error('La fuente de evidencia pública no admite credenciales en URL');
