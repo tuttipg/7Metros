@@ -31,6 +31,8 @@ const body = `
   const sensitive = "https://www.femebal.com/api/matches?token=secret";
   const creds = "https://user:pass@www.femebal.com/api/matches";
   const fragment = "https://www.femebal.com/api/matches#private";
+  const emptyQuery = "https://www.femebal.com/api/matches?";
+  const emptyFragment = "https://www.femebal.com/api/matches#";
   const interpolated = \`https://www.femebal.com/api/matches/\${id}\`;
   const relative = "/api/matches";
   const concatenatedAfter = "https://www.femebal.com/api/" + matchId;
@@ -80,7 +82,7 @@ assert.deepEqual(extracted.candidates, [
     requiresPolicyReview: true,
   },
 ]);
-assert.equal(extracted.rejectedCount, 9);
+assert.equal(extracted.rejectedCount, 11);
 assert.equal(extracted.candidates.some((item) => /secret|pass|token=/i.test(item.url)), false);
 assert.equal(extracted.candidates.some((item) => item.url.endsWith('/api/') || item.url.endsWith('/v1/')), false);
 
@@ -173,6 +175,22 @@ for (const candidate of [backslashPolicyCandidate, controlPolicyCandidate]) {
   assert.equal(candidate.reason, 'ambiguous_raw_url_characters');
   assert.equal(candidate.anonymousGetReviewable, false);
 }
+
+// Policy revalidation must also reject empty delimiters on candidates supplied outside extraction.
+const emptyDelimiterCandidates = structuredClone(extracted);
+emptyDelimiterCandidates.candidates.push(
+  { url: 'https://www.femebal.com/api/public/fixtures?', hostScope: 'femebal_same_organization', evidence: 'explicit_https_string_literal', probeAllowed: false, requiresPolicyReview: true },
+  { url: 'https://www.femebal.com/api/public/fixtures#', hostScope: 'femebal_same_organization', evidence: 'explicit_https_string_literal', probeAllowed: false, requiresPolicyReview: true },
+);
+const emptyDelimiterPolicy = classifyTournamentTrackerCandidatePolicy(emptyDelimiterCandidates);
+const emptyQueryCandidate = emptyDelimiterPolicy.candidates.find((item) => item.url.endsWith('/fixtures?'));
+const emptyFragmentCandidate = emptyDelimiterPolicy.candidates.find((item) => item.url.endsWith('/fixtures#'));
+assert.equal(emptyQueryCandidate.state, 'rejected_on_policy_revalidation');
+assert.equal(emptyQueryCandidate.reason, 'empty_query_not_allowed');
+assert.equal(emptyQueryCandidate.anonymousGetReviewable, false);
+assert.equal(emptyFragmentCandidate.state, 'rejected_on_policy_revalidation');
+assert.equal(emptyFragmentCandidate.reason, 'fragment_not_allowed');
+assert.equal(emptyFragmentCandidate.anonymousGetReviewable, false);
 
 // Raw dot segments must be rejected before WHATWG URL normalization can erase them.
 const rawDotSegmentBody = `
