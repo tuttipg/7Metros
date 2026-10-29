@@ -109,6 +109,9 @@ def _canonical_official_page_url(url:str)->str:
     # only p.query/p.fragment would silently accept those alternate spellings.
     if '#' in url: raise ValueError(f"URL FEMEBAL con delimitador de fragmento rechazado: {url}")
     if '?' in url and not p.query: raise ValueError(f"URL FEMEBAL con delimitador de query vacío rechazado: {url}")
+    # Some servers/frameworks also interpret semicolons as query separators; urllib.parse does not.
+    # Reject raw or percent-encoded semicolons to avoid parser-dependent mutation-key bypasses.
+    if re.search(r';|%3b', p.query, re.IGNORECASE): raise ValueError(f"URL FEMEBAL con separador de query ambiguo rechazado: {url}")
     if p.fragment: raise ValueError(f"URL FEMEBAL con fragmento rechazada: {url}")
     if _has_tracking_query(p.query): raise ValueError(f"URL FEMEBAL con tracking query rechazada: {url}")
     if _has_sensitive_query(p.query): raise ValueError(f"URL FEMEBAL con query sensible rechazada: {url}")
