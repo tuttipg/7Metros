@@ -117,4 +117,16 @@ for (const url of [
   assert.equal(candidate.anonymousGetReviewable, false);
 }
 
+for (const url of [
+  'https://www.femebal.com/api/%ZZ',
+  'https://www.femebal.com/api/%',
+  'https://www.femebal.com/api/%2G',
+]) {
+  const candidate = classify(url);
+  assert.equal(candidate.state, 'rejected_on_policy_revalidation');
+  assert.equal(candidate.reason, 'percent_encoded_path_not_allowed');
+  assert.equal(candidate.anonymousGetReviewable, false);
+  assert.equal(candidate.probeAllowed, false);
+}
+
 console.log('TournamentTracker sensitive/mutating query policy SAFE smoke OK');
