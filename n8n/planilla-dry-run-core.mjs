@@ -82,7 +82,7 @@ function assertExpectedMatch(parsed, expected) {
   // and matched above. Partial expectations may still validate supplied fields, but must
   // never be reported downstream as a complete match identity check.
   return typeof expected.fecha === 'string' && expected.fecha.length > 0
-    && typeof expected.hora === 'string' && /^\\d{2}:\\d{2}(?::\\d{2})?$/.test(expected.hora)
+    && typeof expected.hora === 'string' && expected.hora.trim().length > 0
     && typeof expected.categoria === 'string' && expected.categoria.trim().length > 0
     && typeof expected.division === 'string' && expected.division.trim().length > 0
     && typeof expected.local === 'string' && expected.local.trim().length > 0
