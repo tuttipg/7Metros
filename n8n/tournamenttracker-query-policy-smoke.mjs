@@ -48,7 +48,7 @@ for (const key of ['access_token', 'apikey', 'api_key', 'auth', 'authorization',
   assert.equal(candidate.anonymousGetReviewable, false);
 }
 
-for (const key of ['accessToken', 'accessKeyId', 'authToken', 'bearerToken', 'clientKey', 'client_secret', 'credentialId', 'csrfToken', 'jwtToken', 'privateKey', 'secretKey', 'sessionId', 'signingKey', 'playerToken', 'passwordReset', 'apiKeyValue', 'xsrfToken', 'passphrase', 'signature', 'X-Amz-Signature']) {
+for (const key of ['accessToken', 'accessKeyId', 'authToken', 'authValue', 'authorToken', 'bearerToken', 'clientKey', 'client_secret', 'credentialId', 'csrfToken', 'jwtToken', 'privateKey', 'secretKey', 'sessionId', 'signingKey', 'playerToken', 'passwordReset', 'apiKeyValue', 'xsrfToken', 'passphrase', 'signature', 'X-Amz-Signature']) {
   const candidate = classify(`https://www.femebal.com/api/matches?${key}=redacted`);
   assert.equal(candidate.state, 'rejected_on_policy_revalidation');
   assert.equal(candidate.reason, 'sensitive_query_key');
@@ -89,6 +89,13 @@ for (const value of ['read', 'list', 'getMatches', 'search']) {
 
 for (const key of ['actionType', 'methodName', 'operationName', 'requestAction', 'requestMethod', 'requestOperation']) {
   const candidate = classify(`https://www.femebal.com/api/matches?${key}=getMatches`);
+  assert.equal(candidate.state, 'femebal_public_get_reviewable');
+  assert.equal(candidate.anonymousGetReviewable, true);
+  assert.equal(candidate.probeAllowed, false);
+}
+
+for (const key of ['author', 'authorId']) {
+  const candidate = classify(`https://www.femebal.com/api/matches?${key}=club`);
   assert.equal(candidate.state, 'femebal_public_get_reviewable');
   assert.equal(candidate.anonymousGetReviewable, true);
   assert.equal(candidate.probeAllowed, false);
