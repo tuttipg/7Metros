@@ -38,4 +38,10 @@ Los PDFs de programación siguen siendo válidos como recursos de programación 
 
 ## Verificación
 
-Los smokes se ejecutan en CI mediante los workflows SAFE existentes. El resultado debe evaluarse sobre el HEAD final de la rama, no sobre commits intermedios.
+En el commit de código/pruebas `775becfecefd33ea74340bf41292c31742375a8e`:
+- `Validate 7Metros #766`: success.
+- `FEMEBAL SAFE smoke isolation #152`: todos los jobs reportados completados con success, incluidos `planilla-dry-run-core-smoke.mjs` y `pdf-extract-contract-smoke.mjs`.
+- `TournamentTracker PDF work-item SAFE regression #156`: success.
+- `TournamentTracker PDF extraction provenance #148`: success.
+
+El commit documental posterior debe considerarse separado del HEAD de código/pruebas; no se atribuye a ese commit una ejecución que todavía no haya sido observada.
