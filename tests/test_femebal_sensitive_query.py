@@ -21,7 +21,9 @@ class SensitiveFemebalQueryTests(unittest.TestCase):
             'https://femebal.com/programaciones/?key=placeholder',
             'https://femebal.com/programaciones/?apiKeyValue=placeholder',
             'https://femebal.com/programaciones/?accessTokenValue=placeholder',
+            'https://femebal.com/programaciones/?auth=placeholder',
             'https://femebal.com/programaciones/?authTokenValue=placeholder',
+            'https://femebal.com/programaciones/?authenticationMethod=placeholder',
             'https://femebal.com/programaciones/?clientKey=placeholder',
             'https://femebal.com/programaciones/?clientSecretValue=placeholder',
             'https://femebal.com/programaciones/?privateKeyExtra=placeholder',
@@ -43,6 +45,14 @@ class SensitiveFemebalQueryTests(unittest.TestCase):
             _canonical_official_page_url('https://femebal.com/programaciones/?fase=apertura&fecha=3&sortKey=fecha'),
             'https://femebal.com/programaciones/?fase=apertura&fecha=3&sortKey=fecha',
         )
+
+    def test_author_filters_are_not_misclassified_as_auth_material(self):
+        for url in [
+            'https://femebal.com/programaciones/?author=club',
+            'https://femebal.com/programaciones/?authorId=club',
+        ]:
+            with self.subTest(url=url):
+                self.assertEqual(_canonical_official_page_url(url), url)
 
     def test_redirects_with_sensitive_queries_fail_before_following(self):
         handler = SafeRedirectHandler()
