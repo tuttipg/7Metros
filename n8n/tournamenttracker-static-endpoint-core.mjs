@@ -193,7 +193,7 @@ function classifyExplicitHttpsLiteral(rawValue) {
   if (/[;]|%3b/i.test(rawQuery)) return { accepted: false, reason: 'ambiguous_query_separator' };
   if (!url.hostname || url.pathname === '/') return { accepted: false, reason: 'non_endpoint_root_url' };
   if (url.port && url.port !== '443') return { accepted: false, reason: 'nonstandard_https_port' };
-  if (/%[0-9a-f]{2}/i.test(url.pathname)) return { accepted: false, reason: 'percent_encoded_path_not_allowed' };
+  if (url.pathname.includes('%')) return { accepted: false, reason: 'percent_encoded_path_not_allowed' };
 
   for (const [rawKey, rawQueryValue] of url.searchParams.entries()) {
     const key = rawKey.toLowerCase();
