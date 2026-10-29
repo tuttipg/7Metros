@@ -4,12 +4,15 @@ from tools.femebal_public_discovery import (
     PdfSource,
     Source,
     _document_type_counts,
+    _is_official_upload_pdf,
     build_manifest,
     discover_pdfs,
 )
 
 PROGRAMACION = 'https://femebal.com/wp-content/uploads/2026/03/Sabado-21-3.pdf'
 PLANILLA = 'https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf'
+DOCUMENTOS_PLANILLA_CANDIDATE = 'https://www.femebal.com/documentos/Semi%201%20AAAJ%20B%20-%20Temperley.pdf'
+DOCUMENTOS_REGLAMENTO_CANDIDATE = 'https://www.femebal.com/documentos/reglamento.pdf'
 SOURCE = Source(
     'https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/',
     'Programación Fecha 1 – Torneo Metropolitano Apertura 2026',
@@ -50,6 +53,20 @@ class DocumentTypeContract(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, 'Tipo documental inesperado'):
             _document_type_counts([forged])
+
+    def test_observed_documentos_planilla_and_regulation_stay_outside_allowlist(self):
+        # A public /documentos/ PDF can be a genuine match sheet, but path/provenance
+        # alone is not enough to classify every PDF in that directory as a planilla.
+        html = PAGE + (
+            f'<a href="{DOCUMENTOS_PLANILLA_CANDIDATE}">Datos del partido</a>'
+            f'<a href="{DOCUMENTOS_REGLAMENTO_CANDIDATE}">Reglamento</a>'
+        )
+        rows = discover_pdfs(html, SOURCE)
+        urls = {row.pdf_url for row in rows}
+        self.assertEqual(urls, {PROGRAMACION, PLANILLA})
+        self.assertFalse(_is_official_upload_pdf(DOCUMENTOS_PLANILLA_CANDIDATE))
+        self.assertFalse(_is_official_upload_pdf(DOCUMENTOS_REGLAMENTO_CANDIDATE))
+        self.assertTrue(all(row.document_type in {'programacion_pdf', 'planilla_partido_pdf'} for row in rows))
 
 
 if __name__ == '__main__':
