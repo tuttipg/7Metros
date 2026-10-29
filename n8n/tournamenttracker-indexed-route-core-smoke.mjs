@@ -75,6 +75,8 @@ for (const badEvidence of [
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com:444/search?q=femebal+tournament-tracker' },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.bing.com:444/search?q=femebal+tournament-tracker' },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search?q=femebal+tournament-tracker#fragment' },
+  // Empty raw fragments are invisible in URL.hash after WHATWG normalization.
+  { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search?q=femebal+tournament-tracker#' },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://search.example/search?q=femebal+tournament-tracker' },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/maps?q=femebal+tournament-tracker' },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.google.com/search' },
@@ -97,6 +99,8 @@ for (const badEvidence of [
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/fixture-publico?api_key=redacted' },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/fixture-publico', linkedUrl: 'https://www.femebal.com/tournament-tracker/OTROTOKEN=' },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/fixture-publico?credential=redacted' },
+  { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/fixture-publico?' },
+  { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/fixture-publico#' },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: observedPublicIndexedRoute },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/tournament-tracker/OTROTOKEN=' },
   { kind: 'explicit_public_link', observedUrl: observedPublicIndexedRoute, sourceUrl: 'https://www.femebal.com/%74ournament-tracker/OTROTOKEN=' },
