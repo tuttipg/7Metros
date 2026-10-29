@@ -1,4 +1,4 @@
-import { canonicalizeOfficialFemebalUrl } from './official-url-policy.mjs';
+import { canonicalizeOfficialFemebalPlanillaUrl } from './official-url-policy.mjs';
 
 const SHA256_RE = /^[a-f0-9]{64}$/;
 
@@ -102,12 +102,12 @@ export function buildTournamentTrackerPdfWorkItem(selection) {
   if (typeof provenance.artifact_sha256 !== 'string' || !SHA256_RE.test(provenance.artifact_sha256)) throw new Error('artifact_sha256 inválido');
   if (!Number.isSafeInteger(provenance.artifact_bytes) || provenance.artifact_bytes < 1) throw new Error('artifact_bytes inválido');
 
-  const pdfUrl = canonicalizeOfficialFemebalUrl(selection.pdf_url, { pdf: true });
+  const pdfUrl = canonicalizeOfficialFemebalPlanillaUrl(selection.pdf_url);
   const expected = validateExpectedMatch(selection.expected_match);
   const match = requireObject(selection.match, 'Partido seleccionado');
   const selectedMatch = validateSelectedMatch(match, expected);
   if (!Array.isArray(match.planillas) || match.planillas.length !== 1) throw new Error('La selección debe contener exactamente una planilla');
-  const matchPdf = canonicalizeOfficialFemebalUrl(match.planillas[0]?.pdf, { pdf: true });
+  const matchPdf = canonicalizeOfficialFemebalPlanillaUrl(match.planillas[0]?.pdf);
   if (matchPdf !== pdfUrl) throw new Error('pdf_url no coincide con la planilla seleccionada');
 
   return {
