@@ -75,6 +75,32 @@ class T(unittest.TestCase):
                     _canonical_official_page_url(url)
         duplicate_index='''<html><body><a href="https://femebal.com:443/programacion-fecha-1-torneo-metropolitano-apertura-2026/">Programación Fecha 1 – Torneo Metropolitano Apertura 2026</a><a href="https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/">Programación Fecha 1 – Torneo Metropolitano Apertura 2026</a><a href="https://femebal.com/programacion-fecha-2-torneo-metropolitano-apertura-2026/#fixture">Programación Fecha 2 – Torneo Metropolitano Apertura 2026</a></body></html>'''
         rows=discover_pages(duplicate_index); self.assertEqual(len(rows),1)
+    def test_page_mutating_queries_match_tournamenttracker_fail_closed_policy(self):
+        rejected = [
+            'https://femebal.com/programaciones/?create=1',
+            'https://femebal.com/programaciones/?deleteMatch=1',
+            'https://femebal.com/programaciones/?import_batch=1',
+            'https://femebal.com/programaciones/?action=delete',
+            'https://femebal.com/programaciones/?action=deleteMatch',
+            'https://femebal.com/programaciones/?methodName=updateScore',
+            'https://femebal.com/programaciones/?operationName=import_batch',
+            'https://femebal.com/programaciones/?requestAction=write.v2',
+        ]
+        for url in rejected:
+            with self.subTest(url=url):
+                with self.assertRaisesRegex(ValueError, 'operativa/mutante'):
+                    _canonical_official_page_url(url)
+
+        # Read-only operation labels and unrelated filters remain canonicalizable.
+        for url in [
+            'https://femebal.com/programaciones/?action=read',
+            'https://femebal.com/programaciones/?action=list',
+            'https://femebal.com/programaciones/?option=update&season=2026',
+            'https://femebal.com/programaciones/?fase=apertura',
+        ]:
+            with self.subTest(url=url):
+                self.assertTrue(_canonical_official_page_url(url).startswith('https://femebal.com/'))
+
     def test_page_tracking_queries_are_rejected_fail_closed(self):
         for url in ['https://femebal.com/programaciones/?utm_source=instagram','https://femebal.com/programaciones/?UTM_CAMPAIGN=apertura','https://femebal.com/programaciones/?fbclid=abc123','https://femebal.com/programaciones/?fase=apertura&utm_medium=social']:
             with self.subTest(url=url):
