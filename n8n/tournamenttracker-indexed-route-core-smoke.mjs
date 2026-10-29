@@ -45,6 +45,9 @@ for (const unsafe of [
   'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc%253D',
   'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc=?clubId=0',
   'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc=#x',
+  // Empty delimiters must also be rejected before URL normalization can erase them.
+  'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc=?',
+  'https://www.femebal.com/tournament-tracker/RUdVX3VkfFc=#',
 ]) assert.throws(() => canonicalizeIndexedTournamentTrackerRoute(unsafe));
 
 const classified = classifyIndexedTournamentTrackerRoute(observedPublicIndexedRoute);
