@@ -80,6 +80,24 @@ for (const name of ['author', 'authorId']) {
   );
 }
 
+
+const emptyRawDelimiters = [
+  ['https://www.femebal.com/fixture#', /fragmento/],
+  ['https://www.femebal.com/fixture?', /delimitador de query vacío/],
+  ['https://www.femebal.com/fixture?season=2026#', /fragmento/],
+  ['https://www.femebal.com/wp-content/uploads/2026/03/Sabado-21-3.pdf?', /delimitador de query vacío/],
+  ['https://www.femebal.com/wp-content/uploads/2026/03/Sabado-21-3.pdf#', /fragmento/],
+  ['https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf?', /delimitador de query vacío/],
+  ['https://djfhz848yeeat.cloudfront.net/pdf_planillas/5/c/e/5ce377051ea0acb1.pdf#', /fragmento/],
+];
+for (const [candidate, expectedError] of emptyRawDelimiters) {
+  assert.throws(
+    () => canonicalizeOfficialFemebalUrl(candidate, { pdf: candidate.toLowerCase().includes('.pdf') }),
+    expectedError,
+    `Los delimitadores raw vacíos deben rechazarse: ${candidate}`,
+  );
+}
+
 const encodedSensitiveName = 'https://www.femebal.com/fixture?api%4BeyValue=redacted';
 assert.throws(
   () => canonicalizeOfficialFemebalUrl(encodedSensitiveName),
