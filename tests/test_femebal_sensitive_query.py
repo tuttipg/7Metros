@@ -26,6 +26,10 @@ class SensitiveFemebalQueryTests(unittest.TestCase):
             'https://femebal.com/programaciones/?clientSecretValue=placeholder',
             'https://femebal.com/programaciones/?privateKeyExtra=placeholder',
             'https://femebal.com/programaciones/?sessionIdExtra=placeholder',
+            'https://femebal.com/programaciones/?prefixAccessTokenSuffix=placeholder',
+            'https://femebal.com/programaciones/?prefixClientSecretSuffix=placeholder',
+            'https://femebal.com/programaciones/?prefixPrivateKeySuffix=placeholder',
+            'https://femebal.com/programaciones/?prefixSessionTokenSuffix=placeholder',
             'https://femebal.com/programaciones/?playerToken=placeholder',
             'https://femebal.com/programaciones/?signingKeyValue=placeholder',
         ]
