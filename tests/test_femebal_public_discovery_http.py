@@ -75,7 +75,7 @@ class HttpBoundaryTests(unittest.TestCase):
                     opener.assert_not_called()
 
     def test_rejects_invalid_or_excessive_timeout_before_network(self):
-        for value in (0, -1, MAX_TIMEOUT_SECONDS + 1, True, '20', None):
+        for value in (0, -1, MAX_TIMEOUT_SECONDS + 1, float('nan'), float('inf'), float('-inf'), True, '20', None):
             with self.subTest(value=value):
                 with patch('tools.femebal_public_discovery.build_opener') as opener:
                     with self.assertRaises(ValueError):
