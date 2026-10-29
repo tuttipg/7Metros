@@ -143,6 +143,11 @@ function validatePublicEvidence(targetCanonicalUrl, evidence) {
 
 export function canonicalizeIndexedTournamentTrackerRoute(value) {
   const rawUrl = rejectRawTraversalSegments(rejectAmbiguousRawUrl(value, 'Ruta TournamentTracker'), 'Ruta TournamentTracker');
+  // URL.search / URL.hash can be empty for a raw trailing '?' / '#'. Reject delimiters
+  // in the original spelling so empty query/fragment markers cannot be canonicalized away.
+  if (rawUrl.includes('?') || rawUrl.includes('#')) {
+    throw new Error('Ruta TournamentTracker no admite delimitadores de query o fragment, ni siquiera vacíos');
+  }
   const url = new URL(rawUrl);
   if (url.protocol !== 'https:') throw new Error('Ruta indexada TournamentTracker requiere HTTPS');
   if (url.port && url.port !== '443') throw new Error('Ruta TournamentTracker no admite puertos HTTPS no estándar');
