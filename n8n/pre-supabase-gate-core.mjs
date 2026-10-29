@@ -1,4 +1,4 @@
-import { canonicalizeOfficialFemebalUrl } from './official-url-policy.mjs';
+import { canonicalizeOfficialFemebalPlanillaUrl, canonicalizeOfficialFemebalUrl } from './official-url-policy.mjs';
 
 function positiveId(value) {
   if (typeof value === 'number') return Number.isSafeInteger(value) && value > 0 ? value : null;
@@ -98,8 +98,8 @@ export function validatePreSupabaseCandidate({ dryRunResult, mapping }) {
   if (dryRunResult.source.document_type !== 'planilla_partido_pdf') throw new Error('La fuente debe ser document_type=planilla_partido_pdf');
   const pageUrl = canonicalizeOfficialFemebalUrl(dryRunResult.source.page_url);
   if (!['fecha_normal', 'reprogramacion'].includes(dryRunResult.source.source_type)) throw new Error('source_type de la planilla inválido');
-  const sourceUrl = canonicalizeOfficialFemebalUrl(dryRunResult.source_url, { pdf: true });
-  const sourcePdfUrl = canonicalizeOfficialFemebalUrl(dryRunResult.source.pdf_url, { pdf: true });
+  const sourceUrl = canonicalizeOfficialFemebalPlanillaUrl(dryRunResult.source_url);
+  const sourcePdfUrl = canonicalizeOfficialFemebalPlanillaUrl(dryRunResult.source.pdf_url);
   if (sourceUrl !== sourcePdfUrl) throw new Error('La proveniencia PDF no coincide');
   const parsed = dryRunResult.parsed;
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Planilla parseada ausente');
