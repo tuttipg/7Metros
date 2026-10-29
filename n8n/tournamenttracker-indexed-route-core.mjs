@@ -4,11 +4,11 @@ const MAX_ROUTE_TOKEN_LENGTH = 256;
 const INDEXED_ROUTE_PREFIX = '/tournament-tracker/';
 const PUBLIC_EVIDENCE_KINDS = new Set(['public_index', 'explicit_public_link']);
 const SENSITIVE_QUERY_NAMES = new Set(['auth', 'authorization', 'bearer', 'cookie', 'credential', 'credentials', 'csrf', 'jwt', 'key', 'password', 'secret', 'session', 'token', 'xsrf']);
-const SENSITIVE_QUERY_NAME_PARTS = ['apikey', 'accesskey', 'accesstoken', 'authtoken', 'clientkey', 'clientsecret', 'credential', 'privatekey', 'secretkey', 'sessionid', 'signingkey', 'token'];
+const SENSITIVE_QUERY_NAME_PARTS = ['apikey', 'accesskey', 'accesstoken', 'auth', 'authtoken', 'clientkey', 'clientsecret', 'credential', 'privatekey', 'secretkey', 'sessionid', 'signingkey', 'token'];
 
 function rejectAmbiguousRawUrl(value, label) {
   const raw = String(value ?? '');
-  if (raw.includes('\\') || /\s/.test(raw) || /[\u0000-\u001F\u007F]/.test(raw)) {
+  if (raw.includes('\\\\') || /\\s/.test(raw) || /[\\u0000-\\u001F\\u007F]/.test(raw)) {
     throw new Error(label + ' contiene backslash, whitespace o caracteres de control ambiguos');
   }
   return raw;
@@ -42,7 +42,10 @@ function rejectSensitiveQueryNames(url, label) {
   for (const name of url.searchParams.keys()) {
     const normalized = normalizeQueryName(name);
     if (!normalized) continue;
-    if (SENSITIVE_QUERY_NAMES.has(normalized) || SENSITIVE_QUERY_NAME_PARTS.some((part) => normalized.includes(part))) {
+    const containsSensitivePart = SENSITIVE_QUERY_NAME_PARTS.some((part) => (
+      normalized.includes(part) && (part !== 'auth' || !normalized.startsWith('author'))
+    ));
+    if (SENSITIVE_QUERY_NAMES.has(normalized) || containsSensitivePart) {
       throw new Error(`${label} no admite nombres de query sensibles`);
     }
   }
@@ -62,7 +65,7 @@ function decodeSinglePathSegment(rawSegment) {
   let decoded;
   try { decoded = decodeURIComponent(raw); } catch { throw new Error('Token TournamentTracker con percent-encoding inválido'); }
   if (!decoded || decoded.length > MAX_ROUTE_TOKEN_LENGTH) throw new Error('Token TournamentTracker vacío o demasiado largo');
-  if (decoded.includes('/') || decoded.includes('\\') || decoded.includes('.') || decoded.includes('%')) throw new Error('Token TournamentTracker contiene separadores o caracteres ambiguos');
+  if (decoded.includes('/') || decoded.includes('\\\\') || decoded.includes('.') || decoded.includes('%')) throw new Error('Token TournamentTracker contiene separadores o caracteres ambiguos');
   if (!/^[A-Za-z0-9_-]+={0,2}$/.test(decoded)) throw new Error('Formato de token TournamentTracker no permitido');
   return decoded;
 }
@@ -77,10 +80,10 @@ function validatePublicIndexSource(sourceUrl, targetCanonicalUrl, evidence) {
   const target = new URL(targetCanonicalUrl);
   // Hostnames are case-insensitive, but the opaque TournamentTracker path token is case-sensitive.
   // Normalize only the source host/prefix; never lowercase the token-bearing path.
-  const normalizedQueryForRoute = query.replace(/(?:site:)?(?:https?:\/\/)?(?:www\.)?femebal\.com/gi, (host) => host.toLowerCase());
+  const normalizedQueryForRoute = query.replace(/(?:site:)?(?:https?:\\/\\/)?(?:www\\.)?femebal\\.com/gi, (host) => host.toLowerCase());
   const exactRoute = target.pathname;
   // Match the exact FEMEBAL host + case-sensitive route, not a route that is merely a prefix of a longer token.
-  const exactRoutePattern = new RegExp("(?:^|[\\s\\\"'(])(?:site:)?(?:https?://)?(?:www\\.)?femebal\\.com" + exactRoute + "(?=$|[\\s\\\"'&),])");
+  const exactRoutePattern = new RegExp("(?:^|[\\\\s\\\\\\\"'(])(?:site:)?(?:https?://)?(?:www\\\\.)?femebal\\\\.com" + exactRoute + "(?=$|[\\\\s\\\\\\\"'&),])");
   if (!exactRoutePattern.test(normalizedQueryForRoute)) {
     throw new Error('La consulta public_index debe vincular la ruta TournamentTracker exacta observada');
   }
@@ -121,7 +124,7 @@ function validatePublicEvidence(targetCanonicalUrl, evidence) {
 
   const rawSourceUrl = rejectAmbiguousRawUrl(evidence.sourceUrl, 'La fuente de evidencia pública');
   // WHATWG URL exposes an empty hash/search for trailing raw delimiters ("#" / "?").
-  // Reject those spellings before parsing so evidence cannot bypass the strict URL contract.
+  // Reject those spellings before parsing so empty query/fragment markers cannot be canonicalized away.
   if (rawSourceUrl.includes('#')) throw new Error('La fuente de evidencia pública no admite delimitadores de fragmento, ni siquiera vacíos');
   const sourceUrl = new URL(rawSourceUrl);
   if (rawSourceUrl.includes('?') && !sourceUrl.search) throw new Error('La fuente de evidencia pública no admite delimitadores de query vacíos');
