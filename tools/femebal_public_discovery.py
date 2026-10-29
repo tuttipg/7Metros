@@ -123,6 +123,10 @@ def _document_type_for_official_pdf(url:str)->str|None:
     except ValueError:
         return None
     p=urlparse(url)
+    # Match the strict raw-spelling policy used for official HTML URLs and Node.js:
+    # urlparse() normalizes a trailing '?' or '#' to an empty query/fragment.
+    if '#' in url: return None
+    if '?' in url and not p.query: return None
     if p.query or p.fragment: return None
     if '%' in p.path or any(segment in {'.','..'} for segment in p.path.split('/')): return None
     if not p.path.lower().endswith('.pdf'): return None
