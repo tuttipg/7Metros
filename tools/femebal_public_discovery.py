@@ -82,6 +82,12 @@ def _canonical_official_page_url(url:str)->str:
     _assert_allowed(url)
     if _has_ambiguous_raw_path(url): raise ValueError(f"URL FEMEBAL con path ambiguo/normalizable rechazada: {url!r}")
     p=urlparse(url)
+    # Match the Node.js route policy: raw fragment delimiters are always rejected,
+    # even when the fragment is empty; an empty raw query marker is also ambiguous.
+    # urlparse() reports an empty query/fragment for trailing '?' and '#', so checking
+    # only p.query/p.fragment would silently accept those alternate spellings.
+    if '#' in url: raise ValueError(f"URL FEMEBAL con delimitador de fragmento rechazado: {url}")
+    if '?' in url and not p.query: raise ValueError(f"URL FEMEBAL con delimitador de query vacío rechazado: {url}")
     if p.fragment: raise ValueError(f"URL FEMEBAL con fragmento rechazada: {url}")
     if _has_tracking_query(p.query): raise ValueError(f"URL FEMEBAL con tracking query rechazada: {url}")
     if _has_sensitive_query(p.query): raise ValueError(f"URL FEMEBAL con query sensible rechazada: {url}")
@@ -214,18 +220,16 @@ def discover_pdfs(page_html:str,source:Source):
 def _pdf_source_identity(source:PdfSource): return (source.page_url,source.document_type,source.source_type,source.phase,source.round_number,source.provenance)
 
 def _dedupe_manifest_pdfs(pdfs:list[PdfSource]):
-    by_url={}; conflicted=set(); errors=[]
+    by_url={}; errors=[]
     for source in pdfs:
-        url=source.pdf_url
-        if url in conflicted: continue
-        previous=by_url.get(url)
-        if previous is None: by_url[url]=source; continue
-        if _pdf_source_identity(previous)==_pdf_source_identity(source): continue
-        conflicted.add(url); del by_url[url]
-        errors.append({"stage":"metadata_conflict","url":url,"error":"contradictory_pdf_provenance","sources":[{"page_url":previous.page_url,"document_type":previous.document_type,"source_type":previous.source_type,"phase":previous.phase,"round_number":previous.round_number,"provenance":previous.provenance},{"page_url":source.page_url,"document_type":source.document_type,"source_type":source.source_type,"phase":source.phase,"round_number":source.round_number,"provenance":source.provenance}]})
+        previous=by_url.get(source.pdf_url)
+        if previous is None: by_url[source.pdf_url]=source
+        elif _pdf_source_identity(previous)!=_pdf_source_identity(source):
+            errors.append({"stage":"metadata_conflict","url":source.pdf_url,"error":"conflicting_public_provenance"})
+            by_url.pop(source.pdf_url,None)
     return sorted(by_url.values(),key=lambda x:x.pdf_url),errors
 
-def _document_type_counts(pdfs:list[PdfSource])->dict[str,int]:
+def _document_type_counts(pdfs:list[PdfSource]):
     counts={document_type:0 for document_type in DOCUMENT_TYPES}
     for source in pdfs:
         if source.document_type not in counts: raise ValueError(f'Tipo documental inesperado en manifest: {source.document_type}')
@@ -258,5 +262,3 @@ def main():
     Path(args.output).write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
     counts=_document_type_counts([PdfSource(**row) for row in manifest['pdfs']])
     print(json.dumps({"pages":len(manifest['pages']),"seed_pages":len(seed_pages),"pdfs":len(manifest['pdfs']),"programacion_pdfs":counts['programacion_pdf'],"planilla_partido_pdfs":counts['planilla_partido_pdf'],"fetch_errors":len(manifest['fetch_errors']),"complete":manifest['complete'],"write_enabled":False},ensure_ascii=False))
-
-if __name__=='__main__': main()
