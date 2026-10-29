@@ -9,6 +9,7 @@ Descubridor GET-only para superficies públicas oficiales de FEMEBAL. No usa log
 - detecta páginas del Torneo Metropolitano y reprogramaciones;
 - descubre únicamente adjuntos PDF publicados por FEMEBAL dentro de esos árboles explícitos;
 - rechaza PDFs con query string, fragmentos, userinfo, puertos alternativos, otros hosts CloudFront u otros paths del mismo CloudFront;
+- rechaza también queries de página que expresen operaciones mutantes (`deleteMatch`, `updateScore`, `import_batch`, `action=delete`, etc.) antes de cualquier GET; los filtros ordinarios y etiquetas explícitas de lectura siguen sujetos al resto de la política;
 - produce manifiesto con `write_enabled=false` y `auth_used=false`;
 - no interpreta un PDF como resultado final: una programación prueba fixture/fecha/hora, no marcador.
 
