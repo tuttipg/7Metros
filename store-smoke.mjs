@@ -51,13 +51,19 @@ const db = {
   partidos: [
     {id:201,fecha:'2026-09-01',hora:'20:00:00',jornada:1,local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:30,goles_visitante:28},
     {id:203,fecha:'2026-09-03',hora:'20:00:00',jornada:1,local_equipo_id:102,visitante_equipo_id:103,estado:'finalizado',goles_local:24,goles_visitante:26},
-    {id:202,fecha:'2026-09-08',hora:'20:00:00',jornada:2,local_equipo_id:102,visitante_equipo_id:101,estado:'programado',goles_local:null,goles_visitante:null}
+    {id:202,fecha:'2026-09-08',hora:'20:00:00',jornada:2,local_equipo_id:102,visitante_equipo_id:101,estado:'programado',goles_local:null,goles_visitante:null},
+    {id:null,fecha:'2026-09-09',hora:'20:00:00',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:99,goles_visitante:0},
+    {id:'not-numeric',fecha:'2026-09-10',hora:'20:00:00',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:99,goles_visitante:0},
+    {id:0,fecha:'2026-09-11',hora:'20:00:00',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:99,goles_visitante:0},
+    {id:202.5,fecha:'2026-09-12',hora:'20:00:00',local_equipo_id:101,visitante_equipo_id:102,estado:'finalizado',goles_local:99,goles_visitante:0}
   ],
   participaciones: [
     {id:1,partido_id:201,jugador_id:11,equipo_id:101,goles:10,exclusiones_2min:1,tarjeta_amarilla:0,tarjeta_roja:0},
     {id:2,partido_id:201,jugador_id:12,equipo_id:102,goles:8,exclusiones_2min:0,tarjeta_amarilla:1,tarjeta_roja:0},
     {id:3,partido_id:203,jugador_id:13,equipo_id:103,goles:6,exclusiones_2min:0,tarjeta_amarilla:0,tarjeta_roja:0},
-    {id:4,partido_id:203,jugador_id:11,equipo_id:103,goles:4,exclusiones_2min:0,tarjeta_amarilla:0,tarjeta_roja:0}
+    {id:4,partido_id:203,jugador_id:11,equipo_id:103,goles:4,exclusiones_2min:0,tarjeta_amarilla:0,tarjeta_roja:0},
+    {id:5,partido_id:null,jugador_id:11,equipo_id:101,goles:99,exclusiones_2min:0,tarjeta_amarilla:0,tarjeta_roja:0},
+    {id:6,partido_id:'not-numeric',jugador_id:11,equipo_id:101,goles:99,exclusiones_2min:0,tarjeta_amarilla:0,tarjeta_roja:0}
   ]
 };
 
@@ -104,6 +110,20 @@ assert.equal(store.state.index.rosterByPlayer.has(0), false, 'Un jugador nulo no
 assert.equal(store.getClubs().length, 3, 'A y B deben ser filas deportivas separadas');
 assert.equal(store.getPlayers().length, 4, 'Un jugador con dos planteles debe tener una fila deportiva por equipo');
 assert.equal(store.getMatches().length, 3);
+assert.deepEqual(
+  store.state.matches.map(row => row.id),
+  [201, 203, 202],
+  'Los partidos sin ID positivo entero seguro deben descartarse aunque sus equipos sean válidos'
+);
+assert.deepEqual(
+  [...store.state.index.matchById.keys()],
+  [201, 203, 202],
+  'El índice de partidos no debe contener IDs nulos, NaN, cero ni fraccionarios'
+);
+assert.equal(store.state.index.matchById.has(NaN), false);
+assert.equal(store.state.index.matchById.has(0), false);
+assert.equal(store.state.index.matchById.has(202.5), false);
+assert.equal(store.state.participations.length, 4, 'Participaciones con referencia a partidos inválidos no deben sobrevivir al filtrado');
 assert.equal(store.dataSummary().finished, 2);
 assert.equal(store.dataSummary().goals, 108);
 assert.deepEqual(store.globalDataSummary(), {
