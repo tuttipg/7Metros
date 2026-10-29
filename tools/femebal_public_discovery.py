@@ -78,6 +78,27 @@ def _has_sensitive_query(query:str)->bool:
         if normalized in SENSITIVE_QUERY_KEYS or any(token in normalized for token in SENSITIVE_QUERY_COMPOUND_TOKENS): return True
     return False
 
+MUTATING_QUERY_KEYS={"create","delete","import","insert","mutate","remove","reset","update","upload","write"}
+MUTATING_QUERY_VALUES=MUTATING_QUERY_KEYS
+OPERATION_QUERY_KEYS={"action","method","op","operation"}
+OPERATION_COMPOUND_QUERY_TOKENS={"action","method","operation"}
+
+def _has_mutating_query(query:str)->bool:
+    for key,value in parse_qsl(query,keep_blank_values=True):
+        normalized=key.strip().lower()
+        compact=re.sub(r'[^a-z0-9]','',normalized)
+        if normalized in MUTATING_QUERY_KEYS or any(compact.startswith(operation) for operation in MUTATING_QUERY_KEYS):
+            return True
+        is_operation_key=normalized in OPERATION_QUERY_KEYS or any(
+            compact.startswith(token) or compact.endswith(token)
+            for token in OPERATION_COMPOUND_QUERY_TOKENS
+        )
+        if is_operation_key:
+            operation_value=value.strip().lower()
+            if any(operation_value.startswith(operation) for operation in MUTATING_QUERY_VALUES):
+                return True
+    return False
+
 def _canonical_official_page_url(url:str)->str:
     _assert_allowed(url)
     if _has_ambiguous_raw_path(url): raise ValueError(f"URL FEMEBAL con path ambiguo/normalizable rechazada: {url!r}")
@@ -91,6 +112,7 @@ def _canonical_official_page_url(url:str)->str:
     if p.fragment: raise ValueError(f"URL FEMEBAL con fragmento rechazada: {url}")
     if _has_tracking_query(p.query): raise ValueError(f"URL FEMEBAL con tracking query rechazada: {url}")
     if _has_sensitive_query(p.query): raise ValueError(f"URL FEMEBAL con query sensible rechazada: {url}")
+    if _has_mutating_query(p.query): raise ValueError(f"URL FEMEBAL con query operativa/mutante rechazada: {url}")
     path=p.path or '/'; query=f"?{p.query}" if p.query else ''
     return f"https://{p.hostname}{path}{query}"
 
