@@ -76,7 +76,8 @@ function hasSensitiveQuery(url) {
   for (const [key] of url.searchParams) {
     const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '');
     if (SENSITIVE_QUERY_KEYS.has(normalized) || SENSITIVE_QUERY_COMPOUND_TOKENS.some((token) => (
-      normalized === token || normalized.startsWith(token) || normalized.endsWith(token)
+      (token !== 'auth' || !normalized.startsWith('author'))
+      && (normalized === token || normalized.startsWith(token) || normalized.endsWith(token))
     ))) {
       return true;
     }
