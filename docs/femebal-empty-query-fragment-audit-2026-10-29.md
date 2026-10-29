@@ -35,3 +35,19 @@ El intento de ejecutar la suite desde el entorno local no pudo clonar el reposit
 - Sin probing automático de rutas TournamentTracker.
 - Sin escrituras en Supabase ni cambios de producción.
 - La planilla pública del partido control Argentinos Juniors 20–27 Ferro (21/03/2026) sigue sin enlace oficial verificable; esta corrección no altera ese estado.
+
+## Extensión de la auditoría — URLs de evidencia TournamentTracker
+
+En la validación de `evidence.sourceUrl` de `n8n/tournamenttracker-indexed-route-core.mjs`, `new URL()` también deja `hash === ""` para un `#` raw final y `search === ""` para un `?` raw final. La comprobación anterior sólo miraba `sourceUrl.hash`, por lo que no detectaba esos delimitadores vacíos en fuentes `public_index` o `explicit_public_link`.
+
+Corrección añadida:
+- Rechazar cualquier `#` raw en la URL fuente antes de parsearla.
+- Rechazar `?` raw cuando la URL parseada no contiene query.
+- Agregar regresiones negativas para búsqueda pública y enlace explícito con delimitadores vacíos.
+
+Validación de esta extensión:
+- El commit de regresiones es `abf930d875e22582e80ad4b748d77e141b278414`.
+- Se reprodujo localmente con Node.js v22.16.0 que WHATWG URL normaliza los delimitadores vacíos a `hash/search === ""`, y que la nueva condición los rechaza sin bloquear `?season=2026`.
+- La suite completa de n8n/GitHub Actions aún no tiene una ejecución confirmada para este commit en esta auditoría.
+
+La extensión sólo valida URLs de evidencia; no hace requests, no autoriza probes y no cambia el contrato de GET anónimo/DRY RUN.
