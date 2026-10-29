@@ -19,8 +19,10 @@ assert.deepEqual(out.source.selected_match,{
   fecha:'2026-03-21',hora:'20:15',categoria:'Mayores',division:'LHC Hipotecario Seguros',local:'Argentinos Juniors',visitante:'Ferro Carril Oeste',goles_local:20,goles_visitante:27,
 });
 
+const PROGRAMMING_PDF='https://femebal.com/wp-content/uploads/2026/03/Sabado-21-3.pdf';
 for (const [patch,re] of [
   [{network_used:true},/network_used=false/],[{auth_used:true},/autenticación/],[{write_enabled:true},/escritura/],[{expected_match_checked:false},/partido esperado/],
+  [{pdf_url:PROGRAMMING_PDF,match:{...base.match,planillas:[{pdf:PROGRAMMING_PDF}]}},/PDF de programación no puede usarse como planilla de partido/],
   [{provenance:{...base.provenance,verified_exact_body:false}},/verified_exact_body/],
   [{provenance:{...base.provenance,artifact_sha256:'bad'}},/artifact_sha256/],
   [{pdf_url:'https://another.cloudfront.net/pdf_planillas/x.pdf'},/allowlist/],
