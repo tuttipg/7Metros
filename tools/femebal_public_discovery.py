@@ -119,7 +119,7 @@ def _validate_max_html_bytes(max_bytes:int)->int:
     return max_bytes
 
 def _validate_timeout_seconds(timeout:int|float)->int|float:
-    if isinstance(timeout,bool) or not isinstance(timeout,(int,float)) or timeout <= 0 or timeout > MAX_TIMEOUT_SECONDS: raise ValueError(f"timeout HTML debe estar entre >0 y {MAX_TIMEOUT_SECONDS} segundos")
+    if isinstance(timeout,bool) or not isinstance(timeout,(int,float)) or not (0 < timeout <= MAX_TIMEOUT_SECONDS): raise ValueError(f"timeout HTML debe estar entre >0 y {MAX_TIMEOUT_SECONDS} segundos")
     return timeout
 
 def _validate_html_response(response, *, max_bytes:int=MAX_HTML_BYTES)->None:
