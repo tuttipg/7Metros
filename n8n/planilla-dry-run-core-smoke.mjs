@@ -70,6 +70,9 @@ assert.equal(canonicalized.source.pdf_url,sourceUrl);
 assert.equal(canonicalized.validation.expected_match_checked,false);
 assert.equal(parsePlanillaDryRun({workItem,extractedText,expected:{}}).validation.expected_match_checked,false);
 assert.equal(parsePlanillaDryRun({workItem,extractedText,expected:{goles_visitante:27}}).validation.expected_match_checked,false);
+const incompleteIdentity={fecha:'2026-03-21',local:'Argentinos Juniors',visitante:'Ferro Carril Oeste',goles_local:20,goles_visitante:27};
+assert.equal(parsePlanillaDryRun({workItem,extractedText,expected:incompleteIdentity}).validation.expected_match_checked,false,
+  'Partial expected identity must not be reported as a complete match check');
 assert.throws(()=>parsePlanillaDryRun({workItem,extractedText,expected:true}),/Identidad esperada inválida/);
 assert.throws(()=>parsePlanillaDryRun({workItem,extractedText,expected:{local:true}}),/Equipo local esperado inválido/);
 assert.throws(()=>parsePlanillaDryRun({workItem,extractedText,expected:{hora:'18:30'}}),/Hora inesperada/);
