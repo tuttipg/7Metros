@@ -75,7 +75,7 @@ def _has_tracking_query(query:str)->bool:
 def _has_sensitive_query(query:str)->bool:
     for key,_ in parse_qsl(query,keep_blank_values=True):
         normalized=re.sub(r'[^a-z0-9]','',key.lower())
-        if normalized in SENSITIVE_QUERY_KEYS or any(token in normalized for token in SENSITIVE_QUERY_COMPOUND_TOKENS): return True
+        if normalized in SENSITIVE_QUERY_KEYS or (normalized.startswith('auth') and not normalized.startswith('author')) or any(token in normalized for token in SENSITIVE_QUERY_COMPOUND_TOKENS): return True
     return False
 
 MUTATING_QUERY_KEYS={"create","delete","import","insert","mutate","remove","reset","update","upload","write"}
