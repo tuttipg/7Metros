@@ -68,6 +68,11 @@ assert.equal(booleanEvidence.state, 'probe_not_authorized');
 assert.equal(booleanEvidence.probe, null);
 
 for (const badEvidence of [
+  // Match the shared official URL policy: compound authentication names must fail closed.
+  { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: `${publicEvidence.sourceUrl}&authValue=redacted`, resultUrl: observedPublicIndexedRoute },
+  { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: `${publicEvidence.sourceUrl}&authenticationMethod=redacted`, resultUrl: observedPublicIndexedRoute },
+  { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: `${publicEvidence.sourceUrl}&authorizationToken=redacted`, resultUrl: observedPublicIndexedRoute },
+  { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: `${publicEvidence.sourceUrl}&api%4BeyValue=redacted`, resultUrl: observedPublicIndexedRoute },
   { kind: 'public_index', observedUrl: 'https://www.femebal.com/tournament-tracker/QUJDRA==', sourceUrl: publicEvidence.sourceUrl, resultUrl: observedPublicIndexedRoute },
   { kind: 'manual_guess', observedUrl: observedPublicIndexedRoute, sourceUrl: publicEvidence.sourceUrl },
   { kind: 'public_index', observedUrl: observedPublicIndexedRoute, sourceUrl: 'http://www.google.com/search?q=femebal+tournament-tracker' },
@@ -152,6 +157,19 @@ assert.equal(realLhcReviewed.automaticProbeAllowed, false);
 assert.equal(realLhcReviewed.evidence.kind, 'explicit_public_link');
 assert.equal(realLhcReviewed.evidence.observedUrl, realLhcCanonicalRoute);
 assert.equal(realLhcReviewed.evidence.sourceUrl, realLhcEvidence.sourceUrl);
+
+for (const name of ['author', 'authorId']) {
+  const authorEvidence = {
+    kind: 'explicit_public_link',
+    observedUrl: observedPublicIndexedRoute,
+    linkedUrl: observedPublicIndexedRoute,
+    sourceUrl: `https://www.femebal.com/fixture?${name}=club`,
+  };
+  const acceptedAuthorFilter = buildReviewedIndexedTournamentTrackerGet(observedPublicIndexedRoute, { publicEvidence: authorEvidence });
+  assert.equal(acceptedAuthorFilter.state, 'reviewed_anonymous_get_only');
+  assert.equal(acceptedAuthorFilter.probe.auth, false);
+  assert.equal(acceptedAuthorFilter.probe.writes, false);
+}
 
 const invalidReviewed = buildReviewedIndexedTournamentTrackerGet('https://evil.example/tournament-tracker/RUdVX3VkfFc=', { publicEvidence });
 assert.equal(invalidReviewed.state, 'probe_not_authorized');
