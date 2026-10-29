@@ -120,9 +120,7 @@ function isSensitiveQueryKey(value) {
 
   const compact = compactQueryKey(normalized);
   if (!compact) return false;
-  return [...SENSITIVE_COMPOUND_QUERY_TOKENS].some((token) => (
-    compact === token || compact.startsWith(token) || compact.endsWith(token)
-  ));
+  return [...SENSITIVE_COMPOUND_QUERY_TOKENS].some((token) => compact.includes(token));
 }
 
 function isMutatingQueryKey(value) {
