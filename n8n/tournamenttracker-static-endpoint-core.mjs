@@ -186,6 +186,11 @@ function classifyExplicitHttpsLiteral(rawValue) {
   // WHATWG URL drops empty raw delimiters from .hash/.search; inspect the original spelling.
   if (raw.includes('#')) return { accepted: false, reason: 'fragment_not_allowed' };
   if (raw.includes('?') && !url.search) return { accepted: false, reason: 'empty_query_not_allowed' };
+  const rawQuery = raw.includes('?') ? raw.slice(raw.indexOf('?') + 1) : '';
+  // WHATWG URLSearchParams treats semicolons as value characters, while some
+  // server stacks also accept them as parameter separators. Reject both raw and
+  // percent-encoded forms so mutation keys cannot be hidden behind parser differences.
+  if (/[;]|%3b/i.test(rawQuery)) return { accepted: false, reason: 'ambiguous_query_separator' };
   if (!url.hostname || url.pathname === '/') return { accepted: false, reason: 'non_endpoint_root_url' };
   if (url.port && url.port !== '443') return { accepted: false, reason: 'nonstandard_https_port' };
   if (/%[0-9a-f]{2}/i.test(url.pathname)) return { accepted: false, reason: 'percent_encoded_path_not_allowed' };
