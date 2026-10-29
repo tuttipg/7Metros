@@ -127,6 +127,15 @@ export function canonicalizeOfficialFemebalUrl(value, { pdf = false } = {}) {
   return `https://${url.hostname}${url.pathname}`;
 }
 
+export function canonicalizeOfficialFemebalPlanillaUrl(value) {
+  const canonical = canonicalizeOfficialFemebalUrl(value, { pdf: true });
+  const url = new URL(canonical);
+  if (url.hostname !== FEMEBAL_PLANILLA_HOST || !url.pathname.startsWith('/pdf_planillas/')) {
+    throw new Error('PDF de programación no puede usarse como planilla de partido');
+  }
+  return canonical;
+}
+
 export const OFFICIAL_FEMEBAL_URL_POLICY = Object.freeze({
   web_hosts: Object.freeze([...FEMEBAL_WEB_HOSTS]),
   planilla_host: FEMEBAL_PLANILLA_HOST,
