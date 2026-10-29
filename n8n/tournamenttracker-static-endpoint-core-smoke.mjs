@@ -226,6 +226,10 @@ const policyBody = `
   const compoundApiKey = "https://www.femebal.com/api/public/fixtures?apiKey=placeholder";
   const compoundClientSecret = "https://www.femebal.com/api/public/fixtures?clientSecretValue=placeholder";
   const compoundPrivateKey = "https://www.femebal.com/api/public/fixtures?privateKey=placeholder";
+  const embeddedAccessToken = "https://www.femebal.com/api/public/fixtures?prefixAccessTokenSuffix=placeholder";
+  const embeddedClientSecret = "https://www.femebal.com/api/public/fixtures?prefixClientSecretSuffix=placeholder";
+  const embeddedPrivateKey = "https://www.femebal.com/api/public/fixtures?prefixPrivateKeySuffix=placeholder";
+  const embeddedSessionToken = "https://www.femebal.com/api/public/fixtures?prefixSessionTokenSuffix=placeholder";
 `;
 const policyExtraction = extractTournamentTrackerExplicitHttpsCandidates({
   body: policyBody,
@@ -260,6 +264,10 @@ for (const url of [
   'https://www.femebal.com/api/public/fixtures?apiKey=placeholder',
   'https://www.femebal.com/api/public/fixtures?clientSecretValue=placeholder',
   'https://www.femebal.com/api/public/fixtures?privateKey=placeholder',
+  'https://www.femebal.com/api/public/fixtures?prefixAccessTokenSuffix=placeholder',
+  'https://www.femebal.com/api/public/fixtures?prefixClientSecretSuffix=placeholder',
+  'https://www.femebal.com/api/public/fixtures?prefixPrivateKeySuffix=placeholder',
+  'https://www.femebal.com/api/public/fixtures?prefixSessionTokenSuffix=placeholder',
 ]) {
   // Sensitive-query URLs are rejected by extraction before policy classification,
   // so they must never appear in the candidate map.
