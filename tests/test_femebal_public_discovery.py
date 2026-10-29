@@ -65,6 +65,14 @@ class T(unittest.TestCase):
         self.assertEqual(_canonical_official_page_url('https://FEMEBAL.com:443/programaciones/?fase=apertura'),'https://femebal.com/programaciones/?fase=apertura')
         self.assertEqual(_canonical_official_page_url('https://femebal.com'),'https://femebal.com/')
         with self.assertRaises(ValueError): _canonical_official_page_url('https://femebal.com/programaciones/#fecha-1')
+        for url in (
+            'https://femebal.com/programaciones/?',
+            'https://femebal.com/programaciones/#',
+            'https://femebal.com/programaciones/?fase=apertura#',
+        ):
+            with self.subTest(url=url):
+                with self.assertRaises(ValueError):
+                    _canonical_official_page_url(url)
         duplicate_index='''<html><body><a href="https://femebal.com:443/programacion-fecha-1-torneo-metropolitano-apertura-2026/">Programación Fecha 1 – Torneo Metropolitano Apertura 2026</a><a href="https://femebal.com/programacion-fecha-1-torneo-metropolitano-apertura-2026/">Programación Fecha 1 – Torneo Metropolitano Apertura 2026</a><a href="https://femebal.com/programacion-fecha-2-torneo-metropolitano-apertura-2026/#fixture">Programación Fecha 2 – Torneo Metropolitano Apertura 2026</a></body></html>'''
         rows=discover_pages(duplicate_index); self.assertEqual(len(rows),1)
     def test_page_tracking_queries_are_rejected_fail_closed(self):
