@@ -120,6 +120,9 @@ function isSensitiveQueryKey(value) {
 
   const compact = compactQueryKey(normalized);
   if (!compact) return false;
+  // Avoid treating legitimate author/authorId filters as authentication material.
+  // Other auth-prefixed names remain fail-closed; exact auth is blocked above.
+  if (compact.startsWith('auth') && !compact.startsWith('author')) return true;
   return [...SENSITIVE_COMPOUND_QUERY_TOKENS].some((token) => compact.includes(token));
 }
 
