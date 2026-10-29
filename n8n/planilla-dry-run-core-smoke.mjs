@@ -79,6 +79,9 @@ assert.throws(()=>parsePlanillaDryRun({workItem,extractedText,expected:{hora:'18
 assert.throws(()=>parsePlanillaDryRun({workItem,extractedText,expected:{categoria:'Primera'}}),/Categoría inesperada/);
 assert.throws(()=>parsePlanillaDryRun({workItem,extractedText,expected:{division:'LHC Hipotecario Seguros Damas'}}),/División inesperada/);
 
+const programmingPdf='https://femebal.com/wp-content/uploads/2026/03/Sabado-21-3.pdf';
+assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,url:programmingPdf,source:{...workItem.source,pdf_url:programmingPdf,document_type:'planilla_partido_pdf'}},extractedText}),/PDF de programación no puede usarse como planilla de partido/,
+  'A schedule PDF must never pass as a match-sheet work item');
 assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,method:'POST'},extractedText}),/GET/);
 assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,source:{...workItem.source,provenance:undefined}},extractedText}),/provenance/i);
 assert.throws(()=>parsePlanillaDryRun({workItem:{...workItem,source:{...workItem.source,provenance:'public_index'}},extractedText}),/provenance/i);
