@@ -131,6 +131,12 @@ export function prepareDataset(dataset) {
   const clubById = new Map(state.clubs.map(row => [row.id, row]));
 
   state.matches = (dataset.partidos || []).map(row => {
+    const matchId = Number(row?.id);
+    // Match primary keys must be present, positive safe integers before indexing.
+    // Number(null) and Number('') both become 0, so reject missing raw values too.
+    if (row?.id === null || row?.id === undefined || String(row.id).trim() === ''
+        || !Number.isSafeInteger(matchId) || matchId <= 0) return null;
+
     const homeTeamId = Number(field(row, ['local_equipo_id', 'local_id'], NaN));
     const awayTeamId = Number(field(row, ['visitante_equipo_id', 'visitante_id'], NaN));
     const homeTeam = teamById.get(homeTeamId) || null;
@@ -144,7 +150,7 @@ export function prepareDataset(dataset) {
     const finished = statusRaw === 'finalizado' || statusRaw === 'final' || (hasScores && statusRaw !== 'programado');
 
     return {
-      id: Number(row.id),
+      id: matchId,
       date: field(row, ['fecha'], ''),
       time: String(field(row, ['hora'], '') || '').slice(0, 5),
       round: field(row, ['jornada', 'fecha_torneo'], null),
