@@ -38,6 +38,7 @@ const sensitiveNames = [
   'accessKeyId',
   'accessToken',
   'authToken',
+  'authValue',
   'authorizationToken',
   'bearerToken',
   'clientKey',
@@ -67,6 +68,15 @@ for (const name of sensitiveNames) {
     () => canonicalizeOfficialFemebalUrl(url),
     /query sensible/,
     `La clave sensible compuesta debe rechazarse: ${name}`,
+  );
+}
+
+for (const name of ['author', 'authorId']) {
+  const url = `https://www.femebal.com/fixture?${name}=club`;
+  assert.equal(
+    canonicalizeOfficialFemebalUrl(url),
+    url,
+    `El filtro de lectura legítimo no debe confundirse con material de autenticación: ${name}`,
   );
 }
 
