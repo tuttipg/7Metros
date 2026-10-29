@@ -27,6 +27,14 @@ function strictIsoDate(value) {
   if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) throw new Error('Fecha calendario inválida');
   return text;
 }
+function strictClock(value, label) {
+  const text = requiredText(value, label);
+  const match = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(text);
+  if (!match) throw new Error(`${label} inválida: se requiere HH:MM o HH:MM:SS`);
+  const hours = Number(match[1]); const minutes = Number(match[2]); const seconds = match[3] === undefined ? 0 : Number(match[3]);
+  if (hours > 23 || minutes > 59 || seconds > 59) throw new Error(`${label} inválida`);
+  return `${match[1]}:${match[2]}`;
+}
 function normalizeIdentity(value) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
@@ -46,12 +54,27 @@ function revalidateExpectedMatch(validation, match) {
   const evidence = validation.expected_match_evidence;
   if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) throw new Error('Falta evidencia estructurada de identidad esperada');
   const fecha = strictIsoDate(evidence.fecha);
+  const hora = strictClock(evidence.hora, 'hora esperada');
+  const categoria = requiredText(evidence.categoria, 'categoría esperada');
+  const division = requiredText(evidence.division, 'división esperada');
   const local = requiredText(evidence.local, 'equipo local esperado');
   const visitante = requiredText(evidence.visitante, 'equipo visitante esperado');
   const golesLocal = nonNegativeInteger(evidence.goles_local);
   const golesVisitante = nonNegativeInteger(evidence.goles_visitante);
   if (golesLocal === null || golesVisitante === null) throw new Error('Marcador esperado inválido');
-  if (fecha !== match.fecha || normalizeIdentity(local) !== normalizeIdentity(match.local) || normalizeIdentity(visitante) !== normalizeIdentity(match.visitante) || golesLocal !== match.golesLocal || golesVisitante !== match.golesVisitante) throw new Error('La evidencia de identidad esperada no coincide con la planilla parseada');
+  const matchHora = strictClock(match.hora, 'hora de la planilla');
+  const matchCategoria = requiredText(match.categoria, 'categoría de la planilla');
+  const matchDivision = requiredText(match.division, 'división de la planilla');
+  if (fecha !== match.fecha
+    || hora !== matchHora
+    || normalizeIdentity(categoria) !== normalizeIdentity(matchCategoria)
+    || normalizeIdentity(division) !== normalizeIdentity(matchDivision)
+    || normalizeIdentity(local) !== normalizeIdentity(match.local)
+    || normalizeIdentity(visitante) !== normalizeIdentity(match.visitante)
+    || golesLocal !== match.golesLocal
+    || golesVisitante !== match.golesVisitante) {
+    throw new Error('La evidencia de identidad esperada no coincide con la planilla parseada');
+  }
 }
 function revalidateTeamMapping(mapping, match) {
   if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) throw new Error('Mapping de equipos ausente');
@@ -81,6 +104,9 @@ export function validatePreSupabaseCandidate({ dryRunResult, mapping }) {
   const parsed = dryRunResult.parsed;
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Planilla parseada ausente');
   const fecha = strictIsoDate(parsed.fecha);
+  const hora = strictClock(parsed.hora, 'hora de la planilla');
+  const categoria = requiredText(parsed.categoria, 'categoría de la planilla');
+  const division = requiredText(parsed.division, 'división de la planilla');
   const local = requiredText(parsed.local?.nombre, 'equipo local');
   const visitante = requiredText(parsed.visitante?.nombre, 'equipo visitante');
   const golesLocal = nonNegativeInteger(parsed.local?.goles); const golesVisitante = nonNegativeInteger(parsed.visitante?.goles);
@@ -88,7 +114,7 @@ export function validatePreSupabaseCandidate({ dryRunResult, mapping }) {
   const golesLocalJugadores = sumPlayerGoals(parsed.jugadores_local, 'locales'); const golesVisitanteJugadores = sumPlayerGoals(parsed.jugadores_visitante, 'visitantes');
   if (golesLocalJugadores !== golesLocal) throw new Error(`Goles local no cierran en boundary: marcador=${golesLocal}, jugadores=${golesLocalJugadores}`);
   if (golesVisitanteJugadores !== golesVisitante) throw new Error(`Goles visitante no cierran en boundary: marcador=${golesVisitante}, jugadores=${golesVisitanteJugadores}`);
-  revalidateExpectedMatch(dryRunResult.validation, { fecha, local, visitante, golesLocal, golesVisitante });
+  revalidateExpectedMatch(dryRunResult.validation, { fecha, hora, categoria, division, local, visitante, golesLocal, golesVisitante });
   const { localId, visitanteId } = revalidateTeamMapping(mapping, { local, visitante });
   return {
     safe: true, dry_run: true, write_enabled: false, production_write_allowed: false, eligible_for_preproduction_payload: true,
