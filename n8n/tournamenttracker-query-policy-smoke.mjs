@@ -106,4 +106,15 @@ assert.equal(benign.probeAllowed, false);
 assert.equal(benign.authAllowed, false);
 assert.equal(benign.writesAllowed, false);
 
+for (const url of [
+  'https://www.femebal.com/api/matches?season=2026;deleteMatch=1',
+  'https://www.femebal.com/api/matches?season=2026%3BdeleteMatch=1',
+  'https://www.femebal.com/api/matches?action=read;updateScore=27',
+]) {
+  const candidate = classify(url);
+  assert.equal(candidate.state, 'rejected_on_policy_revalidation');
+  assert.equal(candidate.reason, 'ambiguous_query_separator');
+  assert.equal(candidate.anonymousGetReviewable, false);
+}
+
 console.log('TournamentTracker sensitive/mutating query policy SAFE smoke OK');
