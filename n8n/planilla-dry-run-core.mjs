@@ -1,10 +1,10 @@
 import { parseOfficialFemebalSheet } from './planilla-core.mjs';
-import { canonicalizeOfficialFemebalUrl } from './official-url-policy.mjs';
+import { canonicalizeOfficialFemebalPlanillaUrl, canonicalizeOfficialFemebalUrl } from './official-url-policy.mjs';
 
 const SHA256_RE = /^[a-f0-9]{64}$/;
 
 function validatePublicExplicitSource(source, sourceUrl) {
-  const sourcePdfUrl = canonicalizeOfficialFemebalUrl(source.pdf_url, { pdf: true });
+  const sourcePdfUrl = canonicalizeOfficialFemebalPlanillaUrl(source.pdf_url);
   if (sourcePdfUrl !== sourceUrl) throw new Error('La fuente del work item no coincide con su URL');
   if (source.document_type !== 'planilla_partido_pdf') throw new Error('La fuente debe ser document_type=planilla_partido_pdf');
   canonicalizeOfficialFemebalUrl(source.page_url);
@@ -12,7 +12,7 @@ function validatePublicExplicitSource(source, sourceUrl) {
 }
 
 function validateTournamentTrackerSource(item, source, sourceUrl) {
-  const sourcePdfUrl = canonicalizeOfficialFemebalUrl(source.pdf_url, { pdf: true });
+  const sourcePdfUrl = canonicalizeOfficialFemebalPlanillaUrl(source.pdf_url);
   if (sourcePdfUrl !== sourceUrl) throw new Error('La fuente TournamentTracker no coincide con su URL');
   if (item.kind !== 'tournamenttracker_selected_official_pdf') throw new Error('kind incompatible con provenance TournamentTracker');
   if (item.dry_run !== true) throw new Error('TournamentTracker PDF requiere dry_run=true');
@@ -31,7 +31,7 @@ export function validatePdfWorkItem(item) {
   if (item.auth_used !== false) throw new Error('El work item no puede usar autenticación');
   if (item.write_enabled !== false) throw new Error('El work item no puede habilitar escritura');
 
-  const sourceUrl = canonicalizeOfficialFemebalUrl(item.url, { pdf: true });
+  const sourceUrl = canonicalizeOfficialFemebalPlanillaUrl(item.url);
   if (!item.source || typeof item.source !== 'object' || Array.isArray(item.source)) throw new Error('Fuente del work item inválida');
   if (item.source.provenance === 'public_explicit_link') validatePublicExplicitSource(item.source, sourceUrl);
   else if (item.source.provenance === 'tournamenttracker_verified_torneo_selection') validateTournamentTrackerSource(item, item.source, sourceUrl);
