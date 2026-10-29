@@ -12,7 +12,7 @@ No se ha demostrado vulnerabilidad en FEMEBAL ni se ha realizado ninguna petici�
 
 - Se agregó `auth` a la lista de tokens sensibles compuestos.
 - La coincidencia excluye nombres que comienzan con `author`, para evitar falsos positivos en `author` y `authorId`. Nombres como `authorToken` siguen bloqueados por el token `token`.
-- Se agregaron regresiones negativas para `authValue`, `authenticationMethod`, `authorizationToken` y una clave sensible percent-encoded (`api%4BeyValue`).
+- Se agregaron regresiones negativas para `authValue`, `authenticationMethod`, `authorizationToken`, `authorizationValue`, `cookieValue`, `sessionValue`, `passwordReset`, `signature`, `authorToken` y una clave sensible percent-encoded (`api%4BeyValue`). La lista de tokens compuestos se alineó con la política común (incluye `auth`, `authorization`, `bearer`, `cookie`, `credential`, `csrf`, `jwt`, `password`, `secret`, `session`, `signature`, `token` y `xsrf`).
 - Se agregaron regresiones positivas para `author` y `authorId` en una fuente oficial explícita.
 - Los resultados siguen siendo sólo GET anónimo revisable: `auth=false`, `writes=false`, `automaticProbeAllowed=false`. No se ejecuta ningún probe automáticamente.
 
