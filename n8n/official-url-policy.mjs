@@ -88,6 +88,9 @@ function hasSensitiveQuery(url) {
 export function canonicalizeOfficialFemebalUrl(value, { pdf = false } = {}) {
   const raw = String(value ?? '');
   assertUnambiguousRawHttpsInput(raw);
+  // WHATWG URL normalizes a trailing raw '#' or '?' to an empty hash/search.
+  // Reject those spellings before canonicalization so delimiters cannot disappear.
+  if (raw.includes('#')) throw new Error('URL FEMEBAL con fragmento rechazada');
 
   let url;
   try {
@@ -96,6 +99,7 @@ export function canonicalizeOfficialFemebalUrl(value, { pdf = false } = {}) {
     throw new Error('URL FEMEBAL inválida');
   }
 
+  if (raw.includes('?') && !url.search) throw new Error('URL FEMEBAL con delimitador de query vacío rechazado');
   if (url.protocol !== 'https:') throw new Error('URL FEMEBAL debe usar HTTPS');
   const hostAllowed = FEMEBAL_WEB_HOSTS.has(url.hostname) || (pdf && url.hostname === FEMEBAL_PLANILLA_HOST);
   if (!hostAllowed) throw new Error(`Host FEMEBAL fuera de allowlist: ${url.hostname}`);
