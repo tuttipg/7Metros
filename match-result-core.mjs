@@ -1,7 +1,9 @@
 function validScore(value) {
-  if (value === null || value === undefined || typeof value === 'boolean') return false;
-  if (typeof value === 'string' && !value.trim()) return false;
-  const score = Number(value);
+  // Avoid JS coercion of arrays, hexadecimal, exponent notation and booleans.
+  // Public scores are non-negative integers, or their decimal text equivalents.
+  if (typeof value === 'number') return Number.isSafeInteger(value) && value >= 0;
+  if (typeof value !== 'string' || !/^\d+$/.test(value.trim())) return false;
+  const score = Number(value.trim());
   return Number.isSafeInteger(score) && score >= 0;
 }
 
