@@ -159,11 +159,20 @@ function renderClubes() {
   grid.innerHTML = clubs.map(club => `<a class="card club-card" href="club.html?id=${club.id}"><div class="club-card-head">${clubBadge(club)}<div><span class="mini-label">CLUB</span><h3>${esc(club.name)}</h3><p>${club.played} partidos · ${club.gf} GF · ${club.ga} GC</p></div></div><div class="club-card-stats"><span><b>${club.points}</b>Puntos</span><span><b>${club.players}</b>Jugadores</span><span><b>${club.gd >= 0 ? '+' : ''}${club.gd}</b>Diferencia</span></div><div class="club-card-form"><span>Forma</span><div>${club.form.length ? club.form.map(resultPill).join('') : '<small>Sin resultados</small>'}</div><strong>Ver club →</strong></div></a>`).join('');
 }
 
+// Los enlaces internos generan IDs decimales canónicos. Number(...) solo
+// aceptaría también "01", "1e2" o IDs duplicados, resolviendo otra ficha.
+function routeEntityId() {
+  const ids = new URLSearchParams(location.search).getAll('id');
+  if (ids.length !== 1 || !/^[1-9]\\d*$/.test(ids[0])) return null;
+  const id = Number(ids[0]);
+  return Number.isSafeInteger(id) ? id : null;
+}
+
 function renderClubDetail() {
   const root = document.getElementById('club-detail');
   if (!root) return;
-  const id = Number(new URLSearchParams(location.search).get('id'));
-  const club = getClub(id);
+  const id = routeEntityId();
+  const club = id === null ? null : getClub(id);
   if (!club) { root.innerHTML = emptyState('Club no disponible', 'No encontramos este club en la competencia seleccionada.', '<a class="btn" href="clubes.html">Volver a clubes</a>'); return; }
 
   const header = document.querySelector('.page-header h1');
@@ -220,8 +229,8 @@ function renderJugadores() {
 function renderPlayerDetail() {
   const root = document.getElementById('player-detail');
   if (!root) return;
-  const id = Number(new URLSearchParams(location.search).get('id'));
-  const player = getPlayer(id);
+  const id = routeEntityId();
+  const player = id === null ? null : getPlayer(id);
   if (!player) { root.innerHTML = emptyState('Jugador no disponible', 'No encontramos este jugador en la competencia seleccionada.'); return; }
   const age = ageFromBirthDate(player.birthDate);
   const rows = getPlayerMatchRows(player.id);
@@ -302,8 +311,8 @@ function participationTable(rows, title, club) {
 function renderMatchDetail() {
   const root = document.getElementById('match-detail');
   if (!root) return;
-  const id = Number(new URLSearchParams(location.search).get('id'));
-  const match = getMatch(id);
+  const id = routeEntityId();
+  const match = id === null ? null : getMatch(id);
   if (!match) { root.innerHTML = emptyState('Partido no disponible', 'No encontramos este partido en la competencia seleccionada.'); return; }
   const home = getBaseClub(match.homeClubId) || { id: match.homeClubId, name: match.home, abbr: initials(match.home) };
   const away = getBaseClub(match.awayClubId) || { id: match.awayClubId, name: match.away, abbr: initials(match.away) };
