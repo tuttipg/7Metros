@@ -13,3 +13,16 @@ Reproducción desde raíz del repositorio (no ejecuta inferencia):
     PYTHONPATH=ai python ai/score_reviewed_semantics.py --gt ai/evidence/semantic/ferro_lujan_semantic_pilot_145_164_2026-10-06.json --candidate-evidence ai/evidence/ball/event_candidates_gt1_2026-10-01.json --ball-comparison ai/evidence/ball/handball_v2_yolo11n_e5_comparison_2026-10-03.json --output /tmp/7metros_reviewed_semantic_scoring.json
 
 La siguiente medición de posesión requiere regenerar y retener sus 20 predicciones exactas más correspondencia de IDs verificada.
+
+
+## Nueva ejecución reproducible de POS? (29/10/2026)
+
+Se reconstruyó un clip FFV1 de 180 cuadros de la fuente original desde su frame 900, con 180/180 decodificaciones pixel-idénticas. Se ejecutó el código HEAD 1d3c7093 con YOLO11n SHA 0ebbc80d..., Ultralytics 8.4.163, tracker two_stage y los módulos reales de continuidad de pelota y POS?. Se conservaron hashes y los 20 estados frame a frame en ai/evidence/semantic/possession_replay_145_164_2026-10-29.json.
+
+El GT confirma control en 145–147 y 164. Las predicciones indican control en 148–149, 151–155 y 161. Resultado CONTROLADO vs NO CONTROLADO de ESTE piloto: TP=0, FP=8, FN=4, precision=0%, recall=0%, F1=0%. No se mide identidad del poseedor: track_id != player_gt_id. Antes de esta nueva ejecución la métrica era null por ausencia de stream retenido; el nuevo replay resuelve esa falta exclusivamente en 145–164.
+
+El stream nuevo reproduce un CONTROL CHANGE? opositor en frame 151, pero el GT humano confirma cambio entre compañeros en 164. Se mantiene el resultado TP=0, FP=1, FN=1, F1=0% en esta ventana. No aplicar conclusiones a partidos completos.
+
+La heurística de POS? se conserva como experimental; esta muestra demuestra que no puede alimentar estadísticas oficiales. La corrección de equipos desconocidos protege clasificación, pero no explica ni corrige por sí misma el error 151.
+
+Reproducir con el flag --possession-replay apuntando al JSON de evidencia; se valida hash original, offset y 20 frames completos. No se tocaron Supabase ni producción.

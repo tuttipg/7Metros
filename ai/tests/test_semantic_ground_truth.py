@@ -73,6 +73,18 @@ class SemanticGroundTruthTests(unittest.TestCase):
         )
         self.assertEqual((result["tp"], result["fp"], result["fn"]), (1, 0, 0))
 
+    def test_zero_true_positives_returns_zero_f1(self):
+        gt = validate_semantic_gt(document())
+        pred = [
+            {"frame_index": 10, "possession_state": "unknown"},
+            {"frame_index": 11, "possession_state": "controlled", "possessor_ref": "wrong"},
+            {"frame_index": 12, "possession_state": "unknown"},
+            {"frame_index": 13, "possession_state": "unknown"},
+        ]
+        result = score_possession(gt, pred)
+        self.assertEqual((result["tp"], result["fp"], result["fn"]), (0, 1, 2))
+        self.assertEqual((result["precision"], result["recall"], result["f1"]), (0, 0, 0))
+
     def test_event_kind_mismatch_is_not_a_match(self):
         gt = validate_semantic_gt(document())
         result = score_events(
@@ -81,6 +93,7 @@ class SemanticGroundTruthTests(unittest.TestCase):
             tolerance_frames=2,
         )
         self.assertEqual((result["tp"], result["fp"], result["fn"]), (0, 1, 1))
+        self.assertEqual(result["f1"], 0)
 
 
     def test_loads_confirmed_nested_pilot_fixture(self):

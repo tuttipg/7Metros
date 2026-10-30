@@ -1,0 +1,209 @@
+{
+  "schema": "sevenmetros.possession-pilot-replay/v1",
+  "status": "SOURCE_MATCHED_REAL_INFERENCE_PILOT_NOT_FULL_MATCH_ACCURACY",
+  "source": {
+    "original_video_sha256": "84a94f6e5526d94afc67dc8ee99cc9b390265482d6f0250f2d8a12080e437ed2",
+    "original_source_start_frame": 900,
+    "fixture_clip_sha256": "8a13c8f988722087d07e407c0595cfd12822c38991ce05fbdf79aa8f10d50e75",
+    "fixture_frames": 180,
+    "pixel_identical_frames": 180,
+    "image_size": [
+      936,
+      524
+    ],
+    "fps": 30,
+    "source_code_head": "1d3c709314504b3d07b17a521ec0df577c31c429",
+    "yolo11n_model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+    "ultralytics_version": "8.4.163",
+    "person_detection_cache_sha256": "48197e048002d274ab298426fdb5c0fdc84ae15562f339a615448da9120d50b1",
+    "person_track_stream_sha256": "394f598da8ddcba7ee72162ad3f6e385209e966c3e49ef75aff2fb02aa5c42c5",
+    "ball_observation_stream_sha256": "4cb4757f96f950a6959b0fefa407e25b87dec1c57f89bbcd6de3314621f4ee80",
+    "raw_possession_stream_sha256": "30a0dfb07a2713ecd8d663465a0c0c7d4d1897d92255121c64cbd11db8f6ff8e"
+  },
+  "sequence": {
+    "start_frame": 145,
+    "end_frame_exclusive": 165
+  },
+  "parameters": {
+    "person": {
+      "tracker": "two_stage",
+      "confidence": 0.1,
+      "imgsz": 640,
+      "max_missed": 30,
+      "temporal_teams": true,
+      "fixture_kits": true,
+      "exclude_confirmed_referees": true
+    },
+    "ball": {
+      "class_id": 32,
+      "low_confidence": 0.02,
+      "high_confidence": 0.1,
+      "imgsz": 960,
+      "max_missed": 3,
+      "max_speed_px_per_frame": 70,
+      "max_size_ratio": 3,
+      "velocity_alpha": 0.4
+    },
+    "possession": {
+      "max_normalized_distance": 0.35,
+      "min_margin_to_second": 0.08,
+      "carry_forward": false
+    }
+  },
+  "predictions": [
+    {
+      "frame_index": 145,
+      "state": "ball_unobserved",
+      "track_id": null,
+      "team": null,
+      "ball_observed": false
+    },
+    {
+      "frame_index": 146,
+      "state": "ball_unobserved",
+      "track_id": null,
+      "team": null,
+      "ball_observed": false
+    },
+    {
+      "frame_index": 147,
+      "state": "ball_unobserved",
+      "track_id": null,
+      "team": null,
+      "ball_observed": false
+    },
+    {
+      "frame_index": 148,
+      "state": "candidate",
+      "track_id": 1,
+      "team": "Ferro",
+      "ball_observed": true
+    },
+    {
+      "frame_index": 149,
+      "state": "candidate",
+      "track_id": 1,
+      "team": "Ferro",
+      "ball_observed": true
+    },
+    {
+      "frame_index": 150,
+      "state": "observed_ambiguous",
+      "track_id": null,
+      "team": null,
+      "ball_observed": true
+    },
+    {
+      "frame_index": 151,
+      "state": "candidate",
+      "track_id": 5,
+      "team": "Lujan",
+      "ball_observed": true
+    },
+    {
+      "frame_index": 152,
+      "state": "candidate",
+      "track_id": 5,
+      "team": "Lujan",
+      "ball_observed": true
+    },
+    {
+      "frame_index": 153,
+      "state": "candidate",
+      "track_id": 5,
+      "team": "Lujan",
+      "ball_observed": true
+    },
+    {
+      "frame_index": 154,
+      "state": "candidate",
+      "track_id": 5,
+      "team": "Lujan",
+      "ball_observed": true
+    },
+    {
+      "frame_index": 155,
+      "state": "candidate",
+      "track_id": 5,
+      "team": "Lujan",
+      "ball_observed": true
+    },
+    {
+      "frame_index": 156,
+      "state": "observed_unassigned",
+      "track_id": null,
+      "team": null,
+      "ball_observed": true
+    },
+    {
+      "frame_index": 157,
+      "state": "observed_unassigned",
+      "track_id": null,
+      "team": null,
+      "ball_observed": true
+    },
+    {
+      "frame_index": 158,
+      "state": "observed_unassigned",
+      "track_id": null,
+      "team": null,
+      "ball_observed": true
+    },
+    {
+      "frame_index": 159,
+      "state": "observed_unassigned",
+      "track_id": null,
+      "team": null,
+      "ball_observed": true
+    },
+    {
+      "frame_index": 160,
+      "state": "observed_unassigned",
+      "track_id": null,
+      "team": null,
+      "ball_observed": true
+    },
+    {
+      "frame_index": 161,
+      "state": "candidate",
+      "track_id": 8,
+      "team": "Ferro",
+      "ball_observed": true
+    },
+    {
+      "frame_index": 162,
+      "state": "ball_unobserved",
+      "track_id": null,
+      "team": null,
+      "ball_observed": false
+    },
+    {
+      "frame_index": 163,
+      "state": "ball_unobserved",
+      "track_id": null,
+      "team": null,
+      "ball_observed": false
+    },
+    {
+      "frame_index": 164,
+      "state": "ball_unobserved",
+      "track_id": null,
+      "team": null,
+      "ball_observed": false
+    }
+  ],
+  "event_candidates": [
+    {
+      "frame_index": 151,
+      "kind": "opponent_control_change_candidate",
+      "source_track_id": 1,
+      "target_track_id": 5
+    }
+  ],
+  "ground_truth_review": {
+    "file": "ai/evidence/semantic/ferro_lujan_semantic_pilot_145_164_2026-10-06.json",
+    "confirmed_human": true
+  },
+  "metrics_scope": "possession controlled-vs-not only; owner identity unavailable without verified GT mapping",
+  "accuracy_outside_window": null
+}

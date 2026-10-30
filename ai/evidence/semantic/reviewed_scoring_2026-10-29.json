@@ -18,8 +18,19 @@
     "tolerance_frames": 2,
     "matches": []
   },
-  "possession": null,
-  "possession_note": "No retained source-matched, per-frame possession prediction stream.",
+  "possession": {
+    "frames": 20,
+    "gt_controlled_frames": 4,
+    "pred_controlled_frames": 8,
+    "tp": 0,
+    "fp": 8,
+    "fn": 4,
+    "precision": 0,
+    "recall": 0,
+    "f1": 0,
+    "note": "controlled-vs-not only; owner identity NOT scored"
+  },
+  "possession_note": null,
   "full_match_generalization": false,
   "ball_sample": {
     "status": "RECOMPUTED_FROM_RETAINED_COUNTS_NOT_FRESH_INFERENCE",
@@ -76,5 +87,13 @@
     "semantic_gt": "ai/evidence/semantic/ferro_lujan_semantic_pilot_145_164_2026-10-06.json",
     "event_candidates": "ai/evidence/ball/event_candidates_gt1_2026-10-01.json",
     "ball_comparison": "ai/evidence/ball/handball_v2_yolo11n_e5_comparison_2026-10-03.json"
+  },
+  "possession_replay": {
+    "path": "ai/evidence/semantic/possession_replay_145_164_2026-10-29.json",
+    "source_code_head": "1d3c709314504b3d07b17a521ec0df577c31c429",
+    "source_video_sha256": "84a94f6e5526d94afc67dc8ee99cc9b390265482d6f0250f2d8a12080e437ed2",
+    "clip_sha256": "8a13c8f988722087d07e407c0595cfd12822c38991ce05fbdf79aa8f10d50e75",
+    "raw_stream_sha256": "30a0dfb07a2713ecd8d663465a0c0c7d4d1897d92255121c64cbd11db8f6ff8e",
+    "pixel_identical_frames": 180
   }
 }

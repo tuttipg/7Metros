@@ -1,5 +1,5 @@
 import unittest
-from score_reviewed_semantics import score_pilot, score_ball_counts
+from score_reviewed_semantics import score_pilot, score_ball_counts, replay_as_predictions
 
 def examples():
     gt = {"schema_version":"sevenmetros.semantic-gt/v1","status":"HUMAN_REVIEW_COMPLETE",
@@ -38,6 +38,29 @@ class ReviewedEvidenceTests(unittest.TestCase):
         pred[0].update(possession_state="controlled",possessor_ref="player_gt_1")
         r=score_pilot(gt,p,pred)
         self.assertEqual((r["possession"]["tp"],r["possession"]["fn"]),(1,1))
+    def test_real_possession_replay_is_scored_without_owner_identity_claim(self):
+        from pathlib import Path
+        import json
+        root=Path(__file__).resolve().parents[2]
+        gt=json.loads((root/'ai/evidence/semantic/ferro_lujan_semantic_pilot_145_164_2026-10-06.json').read_text())
+        replay=json.loads((root/'ai/evidence/semantic/possession_replay_145_164_2026-10-29.json').read_text())
+        events=json.loads((root/'ai/evidence/ball/event_candidates_gt1_2026-10-01.json').read_text())
+        predictions=replay_as_predictions(gt,replay)
+        scored=score_pilot(gt,events,predictions)
+        self.assertEqual((scored['possession']['tp'],scored['possession']['fp'],scored['possession']['fn']),(0,8,4))
+        self.assertEqual(scored['possession']['f1'],0)
+        self.assertNotIn('controlled_identity_accuracy',scored['possession'])
+
+    def test_replay_rejects_bad_source_video(self):
+        from pathlib import Path
+        import json
+        root=Path(__file__).resolve().parents[2]
+        gt=json.loads((root/'ai/evidence/semantic/ferro_lujan_semantic_pilot_145_164_2026-10-06.json').read_text())
+        replay=json.loads((root/'ai/evidence/semantic/possession_replay_145_164_2026-10-29.json').read_text())
+        replay['source']['original_video_sha256']='0'*64
+        with self.assertRaisesRegex(ValueError,'source video hash mismatch'):
+            replay_as_predictions(gt,replay)
+
     def test_ball_f1_recomputed_from_counts(self):
         b={"schema":"sevenmetros.ball-model-heldout-comparison/v1",
            "evaluation_scope":{"visible_gt_frames":53,"out_of_frame_negative_frames":60,"iou_threshold":0.5}}

@@ -136,7 +136,7 @@ def score_possession(gt: SemanticGt, predictions: Iterable[dict]) -> dict:
     identity_correct = sum(a and b and gt_id == pred_id for a, b, gt_id, pred_id in rows)
     precision = tp / (tp + fp) if tp + fp else None
     recall = tp / (tp + fn) if tp + fn else None
-    f1 = 2 * precision * recall / (precision + recall) if precision is not None and recall is not None and precision + recall else None
+    f1 = 2 * tp / (2 * tp + fp + fn) if (2 * tp + fp + fn) else None
     return {
         "frames": len(rows),
         "gt_controlled_frames": sum(a for a, _, _, _ in rows),
@@ -178,6 +178,7 @@ def score_events(gt: SemanticGt, predicted_events: Iterable[dict], *, tolerance_
     fn = len(gt.events) - tp
     precision = tp / (tp + fp) if tp + fp else None
     recall = tp / (tp + fn) if tp + fn else None
+    f1 = 2 * tp / (2 * tp + fp + fn) if (2 * tp + fp + fn) else None
     return {
         "gt_events": len(gt.events),
         "predicted_events": len(candidates),
@@ -186,6 +187,7 @@ def score_events(gt: SemanticGt, predicted_events: Iterable[dict], *, tolerance_
         "fn": fn,
         "precision": precision,
         "recall": recall,
+        "f1": f1,
         "matches": matches,
         "tolerance_frames": tolerance_frames,
     }
