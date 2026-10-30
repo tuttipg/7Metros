@@ -218,7 +218,7 @@ let globalSummaryPromise = null;
 function isMissingGlobalSummaryView(error) {
   return error instanceof DataError
     && (error.code === '42P01' || error.code === 'PGRST205')
-    && /\\bv_global_summary\\b/i.test(error.message);
+    && /\bv_global_summary\b/i.test(error.message);
 }
 
 async function loadGlobalSummaryView() {
@@ -295,7 +295,7 @@ export function filterParticipationsToMatches(participations, matches) {
 function isMissingSeasonColumn(error) {
   return error instanceof DataError
     && error.code === '42703'
-    && /\\btemporada_id\\b/i.test(error.message);
+    && /\btemporada_id\b/i.test(error.message);
 }
 
 async function loadSeasonMatches(season, teamIds) {
