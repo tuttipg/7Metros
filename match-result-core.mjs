@@ -16,6 +16,7 @@ export function hasVerifiedMatchResult(row) {
 export function matchPublicStatus(row) {
   if (hasVerifiedMatchResult(row)) return 'Finalizado';
   const status = String(row?.estado ?? '').trim().toLowerCase();
-  // A claimed final without a complete score must never become a fictitious 0–0.
-  return status === 'programado' || status === '' ? 'Programado' : 'Sin resultado';
+  // Only an explicitly scheduled match may appear in the upcoming list.
+  // A missing legacy status without a verified score is not evidence of scheduling.
+  return status === 'programado' ? 'Programado' : 'Sin resultado';
 }
