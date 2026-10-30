@@ -205,7 +205,72 @@ try {
     process.off('unhandledRejection', onEarlyUnhandled);
   }
 
-  console.log('api-loading-smoke: OK — fallbacks legacy y rechazo temprano del resumen manejados.');
+  // Conteos exactos: Range 0-0 nunca permite inferir el total desde la página.
+  // Todos los casos son mocks y no se realizan consultas externas.
+  const countApi = await import('./api.js?exact-count-smoke');
+  let countHeader = '0-0/147';
+  let countCalls = 0;
+  globalThis.fetch = async (_url, options) => {
+    countCalls++;
+    assert.equal(options.method, 'GET');
+    assert.equal(options.headers.Prefer, 'count=exact');
+    return new Response('[]', {
+      status: 200,
+      headers: countHeader === null ? {} : { 'Content-Range': countHeader }
+    });
+  };
+  assert.equal(await countApi.supabaseCount('clubes'), 147);
+  countHeader = '*/0';
+  assert.equal(await countApi.supabaseCount('clubes'), 0);
+  countHeader = null;
+  await assert.rejects(() => countApi.supabaseCount('clubes'), countApi.DataError);
+  countHeader = '0-0/*';
+  await assert.rejects(() => countApi.supabaseCount('clubes'), countApi.DataError);
+  countHeader = '0-0/9007199254740992';
+  await assert.rejects(() => countApi.supabaseCount('clubes'), countApi.DataError);
+  assert.equal(countCalls, 5, 'no se debe intentar un segundo GET para inferir el total');
+
+  // Regresión: fetch puede entregar headers, pero el body JSON no terminar.
+  // Simular el reloj evita esperar 15 segundos y comprueba el abort del body.
+  const realSetTimeout = globalThis.setTimeout;
+  const realClearTimeout = globalThis.clearTimeout;
+  let expireRequest = null;
+  let timeoutCleared = false;
+  try {
+    globalThis.setTimeout = (callback, ms, ...args) => {
+      if (ms === 15000) {
+        expireRequest = () => callback(...args);
+        return 900001;
+      }
+      return realSetTimeout(callback, ms, ...args);
+    };
+    globalThis.clearTimeout = timer => {
+      if (timer === 900001) { timeoutCleared = true; return; }
+      return realClearTimeout(timer);
+    };
+    const abortError = () => Object.assign(new Error('aborted'), { name: 'AbortError' });
+    globalThis.fetch = async (_url, { signal }) => ({
+      ok: true,
+      json: () => new Promise((_resolve, reject) => {
+        if (signal.aborted) { reject(abortError()); return; }
+        signal.addEventListener('abort', () => reject(abortError()), { once: true });
+      })
+    });
+
+    const pending = countApi.supabaseGetAll('partidos', '?select=id');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(typeof expireRequest, 'function', 'se debe programar el timeout');
+    expireRequest();
+    await assert.rejects(pending, error =>
+      error instanceof countApi.DataError && /tiempo de espera/.test(error.message),
+    'el timeout debe incluir la lectura del JSON');
+    assert.equal(timeoutCleared, true, 'el temporizador debe limpiarse tras abortar');
+  } finally {
+    globalThis.setTimeout = realSetTimeout;
+    globalThis.clearTimeout = realClearTimeout;
+  }
+
+  console.log('api-loading-smoke: OK — fallbacks, conteos exactos y timeout de body verificados.');
 } finally {
   globalThis.fetch = originalFetch;
   delete globalThis.SEVEN_METROS_CONFIG;
