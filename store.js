@@ -132,6 +132,10 @@ export function prepareDataset(dataset) {
   const clubById = new Map(state.clubs.map(row => [row.id, row]));
 
   state.matches = (dataset.partidos || []).map(row => {
+    if (!row || typeof row !== 'object') return null;
+    const matchId = Number(row.id);
+    // Never expose unaddressable match cards (NaN, 0, fractions or unsafe IDs).
+    if (!Number.isSafeInteger(matchId) || matchId <= 0) return null;
     const homeTeamId = Number(field(row, ['local_equipo_id', 'local_id'], NaN));
     const awayTeamId = Number(field(row, ['visitante_equipo_id', 'visitante_id'], NaN));
     const homeTeam = teamById.get(homeTeamId) || null;
@@ -143,7 +147,7 @@ export function prepareDataset(dataset) {
     const finished = hasVerifiedMatchResult(row);
 
     return {
-      id: Number(row.id),
+      id: matchId,
       date: field(row, ['fecha'], ''),
       time: String(field(row, ['hora'], '') || '').slice(0, 5),
       round: field(row, ['jornada', 'fecha_torneo'], null),
