@@ -81,7 +81,7 @@ export function renderDashboardSummary(summary, { loadingDetail = false } = {}) 
   const healthMeta = document.getElementById('data-health-meta');
   const healthFinished = document.getElementById('data-health-finished');
   const healthScheduled = document.getElementById('data-health-scheduled');
-  const scheduled = Math.max(0, matches - finished);
+  const withoutResult = Math.max(0, matches - finished);
 
   if (healthLabel) healthLabel.textContent = matches ? `${metric(matches)} partidos cargados` : 'Base conectada';
   if (healthMeta) {
@@ -90,7 +90,7 @@ export function renderDashboardSummary(summary, { loadingDetail = false } = {}) 
       : `${metric(players)} jugadores · ${metric(clubs)} clubes · ${dataFreshnessLabel()}`;
   }
   if (healthFinished) healthFinished.textContent = metric(finished);
-  if (healthScheduled) healthScheduled.textContent = metric(scheduled);
+  if (healthScheduled) healthScheduled.textContent = metric(withoutResult);
 }
 
 function renderDashboard() {
