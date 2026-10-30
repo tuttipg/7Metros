@@ -97,12 +97,26 @@ for (const { page, rootId, id, expectedName, missingTitle } of [
 
   // También después de renderizar una ficha válida, un ID incorrecto no debe
   // dejar el contenido previo ni sustituirlo por el primer registro.
-  for (const query of ['?id=999', '?id=abc', '']) {
+  // Number() aceptaría "01", "1e0", "1.0" y parámetros duplicados como
+  // si fueran el ID válido: todos deben terminar en estado no encontrado.
+  const invalidQueries = [
+    '?id=999', '?id=abc', '?id=0', '?id=-1',
+    `?id=${String(id).padStart(3, '0')}`,
+    `?id=${id}e0`, `?id=${id}.0`,
+    `?id=${id}&id=${id}`,
+    '?id=9007199254740992', ''
+  ];
+  for (const query of invalidQueries) {
     location.search = query;
     renderCurrentPage();
     assert.ok(root.innerHTML.includes(missingTitle), `${page}: ${query || '(sin ID)'} debe mostrar estado vacío`);
     assert.ok(!root.innerHTML.includes(expectedName), `${page}: ${query || '(sin ID)'} no debe mostrar otra ficha`);
   }
+
+  // Los parámetros ajenos al ID no invalidan un enlace canónico.
+  location.search = `?id=${id}&origen=inicio`;
+  renderCurrentPage();
+  assert.ok(root.innerHTML.includes(expectedName), `${page}: enlace válido con otros parámetros`);
 }
 
-console.log('scoped-route-smoke: ok — fichas válidas y enlaces inexistentes sin fallback al primer registro');
+console.log('scoped-route-smoke: ok — fichas válidas y IDs no canónicos/duplicados sin fallback');
