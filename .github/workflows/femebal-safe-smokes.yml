@@ -34,6 +34,7 @@ jobs:
           - n8n/tournamenttracker-indexed-route-core-smoke.mjs
           - n8n/tournamenttracker-evidence-manifest-smoke.mjs
           - n8n/player-scope-core-smoke.mjs
+          - n8n/femebal-integration-core-smoke.mjs
     steps:
       - name: Checkout
         uses: actions/checkout@v4
