@@ -173,6 +173,14 @@ function summaryFromMatches(matches, clubs, players) {
 
 let globalSummaryPromise = null;
 
+function isMissingGlobalSummaryView(error) {
+  // Sólo un recurso realmente ausente habilita el fallback legacy.
+  // Caídas, timeouts o permisos deben propagarse para no disparar lecturas globales.
+  return error instanceof DataError
+    && (error.code === '42P01' || error.code === 'PGRST205')
+    && /\bv_global_summary\b/i.test(error.message);
+}
+
 async function loadGlobalSummaryView() {
   try {
     const rows = await supabaseGetAll(
@@ -191,15 +199,20 @@ async function loadGlobalSummaryView() {
         ? null
         : Number(row.promedio_goles)
     };
-  } catch {
-    // Compatibilidad con instalaciones anteriores a v_global_summary.
+  } catch (error) {
+    if (!isMissingGlobalSummaryView(error)) throw error;
+    // Compatibilidad exclusiva con instalaciones anteriores sin la vista.
     return null;
   }
 }
 
 export function loadGlobalSummaryFast() {
   if (!globalSummaryPromise) {
-    globalSummaryPromise = loadGlobalSummaryView();
+    globalSummaryPromise = loadGlobalSummaryView().catch(error => {
+      // Un fallo transitorio no debe quedar cacheado para toda la sesión.
+      globalSummaryPromise = null;
+      throw error;
+    });
   }
   return globalSummaryPromise;
 }
