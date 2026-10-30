@@ -1,4 +1,9 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const apiSource = fs.readFileSync(new URL('./api.js', import.meta.url), 'utf8');
+assert.match(apiSource, /SESSION_CACHE_TTL/, 'public dataset should use a short session cache');
+assert.match(apiSource, /const \[planteles, partidos, rawParticipaciones\] = await Promise\.all/, 'independent public reads should run in parallel');
 
 const originalFetch = globalThis.fetch;
 
