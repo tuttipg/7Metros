@@ -62,7 +62,16 @@ async function request(url, options = {}) {
     const response = await fetch(url, { ...options, signal: controller.signal });
     if (!response.ok) {
       const detail = await response.text().catch(() => '');
-      throw new DataError(`Error ${response.status} al consultar datos. ${detail}`.trim());
+      const failure = new DataError(`Error ${response.status} al consultar datos. ${detail}`.trim());
+      // Preservar el código PostgREST para distinguir incompatibilidad de esquema
+      // de caídas, pausas y errores transitorios sin repetir consultas costosas.
+      try {
+        const payload = JSON.parse(detail);
+        if (typeof payload?.code === 'string') failure.code = payload.code;
+      } catch {
+        // Un error no JSON nunca autoriza el fallback legacy.
+      }
+      throw failure;
     }
     return response;
   } catch (error) {
@@ -230,13 +239,23 @@ export function filterParticipationsToMatches(participations, matches) {
   });
 }
 
+function isMissingSeasonColumn(error) {
+  // El fallback global sólo corresponde a esquemas legacy sin esta columna.
+  // No debe dispararse por un proyecto pausado, timeout, 5xx, permisos ni
+  // errores de otras columnas: hacerlo duplica tráfico y oculta la causa real.
+  return error instanceof DataError
+    && error.code === '42703'
+    && /\btemporada_id\b/i.test(error.message);
+}
+
 async function loadSeasonMatches(season, teamIds) {
   let rows;
   try {
     rows = await supabaseGetAll('partidos', `?select=*&temporada_id=eq.${season}`);
-  } catch {
-    // Fallback para esquemas antiguos. Igual se vuelve a validar contra el catálogo
-    // de equipos de la temporada para evitar cruces parciales o cross-scope.
+  } catch (error) {
+    if (!isMissingSeasonColumn(error)) throw error;
+    // Compatibilidad exclusiva con esquemas antiguos sin temporada_id.
+    // Siempre validar ambos equipos contra el catálogo de la temporada.
     rows = await supabaseGetAll('partidos', '?select=*');
   }
   return filterMatchesToTeamIds(rows, teamIds);
