@@ -26,6 +26,9 @@ class Parser(HTMLParser):
             if data.get(attr):
                 self.links.append(data[attr])
 
+        if tag == 'script' and data.get('src', '').split('?', 1)[0] == 'config.js':
+            errors.append(f'{self.source_name}: config.js is an ES module imported by script.js; remove direct script tag')
+
         if tag == 'a' and data.get('target', '').lower() == '_blank':
             rel_tokens = {token.lower() for token in str(data.get('rel', '')).split()}
             if 'noopener' not in rel_tokens:
