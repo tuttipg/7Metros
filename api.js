@@ -173,6 +173,14 @@ function summaryFromMatches(matches, clubs, players) {
 
 let globalSummaryPromise = null;
 
+function isMissingGlobalSummaryView(error) {
+  // Sólo un recurso realmente ausente habilita el fallback legacy.
+  // Caídas, timeouts o permisos deben propagarse para no disparar lecturas globales.
+  return error instanceof DataError
+    && (error.code === '42P01' || error.code === 'PGRST205')
+    && /\bv_global_summary\b/i.test(error.message);
+}
+
 async function loadGlobalSummaryView() {
   try {
     const rows = await supabaseGetAll(
@@ -191,15 +199,20 @@ async function loadGlobalSummaryView() {
         ? null
         : Number(row.promedio_goles)
     };
-  } catch {
-    // Compatibilidad con instalaciones anteriores a v_global_summary.
+  } catch (error) {
+    if (!isMissingGlobalSummaryView(error)) throw error;
+    // Compatibilidad exclusiva con instalaciones anteriores sin la vista.
     return null;
   }
 }
 
 export function loadGlobalSummaryFast() {
   if (!globalSummaryPromise) {
-    globalSummaryPromise = loadGlobalSummaryView();
+    globalSummaryPromise = loadGlobalSummaryView().catch(error => {
+      // Un fallo transitorio no debe quedar cacheado para toda la sesión.
+      globalSummaryPromise = null;
+      throw error;
+    });
   }
   return globalSummaryPromise;
 }
@@ -267,7 +280,12 @@ export async function loadPublicDataset(seasonId) {
 
   // Arranca el resumen global en paralelo para que Inicio pueda mostrar escala
   // de la base mientras todavía se cargan los datos detallados de la temporada.
-  const summaryViewPromise = loadGlobalSummaryFast();
+  // Adjuntar el handler de rechazo inmediatamente: la vista puede fallar antes
+  // de que termine la consulta de equipos y de que se espere Promise.all.
+  const summaryViewOutcome = loadGlobalSummaryFast().then(
+    value => ({ value }),
+    error => ({ error })
+  );
 
   const rawEquipos = await supabaseGetAll(
     'equipos',
@@ -282,10 +300,12 @@ export async function loadPublicDataset(seasonId) {
   );
   const requestedClubIds = scopedEquipos.map(row => Number(row.club_id));
 
-  const [clubes, summaryView] = await Promise.all([
+  const [clubes, summaryOutcome] = await Promise.all([
     supabaseGetByIds('clubes', 'id', requestedClubIds, 'id,nombre,abreviatura,ciudad,logo_url'),
-    summaryViewPromise
+    summaryViewOutcome
   ]);
+  if (summaryOutcome.error) throw summaryOutcome.error;
+  const summaryView = summaryOutcome.value;
 
   const validClubIds = new Set(clubes.map(row => Number(row.id)).filter(Number.isFinite));
   const equipos = scopedEquipos.filter(row => validClubIds.has(Number(row.club_id)));

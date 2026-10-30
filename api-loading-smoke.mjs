@@ -111,7 +111,95 @@ try {
   assert.deepEqual(legacy.partidos.map(row => row.id), [401],
     'el fallback legacy debe mantener el scope de ambos equipos');
 
-  console.log('api-loading-smoke: OK — concurrencia y fallback legacy sin duplicar lecturas ante caídas.');
+  // Regresión independiente para el resumen global: una caída de la vista no debe
+  // convertirse silenciosamente en counts + lectura completa de partidos.
+  let summaryMode = 'paused';
+  let summaryGlobalMatchReads = 0;
+  globalThis.fetch = async input => {
+    const url = new URL(input);
+    const table = url.pathname.split('/').at(-1);
+
+    if (table === 'v_global_summary') {
+      if (summaryMode === 'paused') {
+        return mockJson({ code: 'PGRST000', message: 'Servicio temporalmente no disponible' }, 503);
+      }
+      return mockJson({
+        code: 'PGRST205',
+        message: "Could not find the table 'public.v_global_summary' in the schema cache"
+      }, 404);
+    }
+
+    if (table === 'equipos') {
+      return mockJson([
+        { id: 10, club_id: 1, temporada_id: 3 },
+        { id: 11, club_id: 1, temporada_id: 3 }
+      ]);
+    }
+    if (table === 'clubes') {
+      return new Response(JSON.stringify([{ id: 1, nombre: 'Club de prueba' }]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Content-Range': '0-0/1' }
+      });
+    }
+    if (table === 'jugadores') {
+      return new Response('[]', {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Content-Range': '0-0/0' }
+      });
+    }
+    if (table === 'partidos') {
+      if (url.searchParams.has('temporada_id')) return mockJson([]);
+      summaryGlobalMatchReads++;
+      return mockJson([
+        { id: 900, estado: 'finalizado', goles_local: 20, goles_visitante: 25 }
+      ]);
+    }
+    return mockJson([]);
+  };
+
+  const summaryApi = await import('./api.js?summary-fallback-smoke');
+  await assert.rejects(
+    () => summaryApi.loadPublicDataset(3),
+    summaryApi.DataError,
+    'una caída del resumen global debe propagarse sin disparar lectura completa de partidos'
+  );
+  assert.equal(summaryGlobalMatchReads, 0, 'un 503 del resumen global no habilita fallback global');
+
+  summaryMode = 'legacy-missing-view';
+  const legacySummary = await summaryApi.loadPublicDataset(3);
+  assert.equal(summaryGlobalMatchReads, 1, 'sólo una vista realmente ausente habilita fallback global');
+  assert.equal(legacySummary.globalSummary.matches, 1);
+  assert.equal(legacySummary.globalSummary.goals, 45);
+
+  // El resumen puede fallar antes de que responda equipos. Si el rechazo no
+  // tiene handler desde el inicio, Node emite unhandledRejection y el navegador
+  // puede reportar un error global aunque el caller maneje loadPublicDataset.
+  const earlyUnhandled = [];
+  const onEarlyUnhandled = error => earlyUnhandled.push(error);
+  process.on('unhandledRejection', onEarlyUnhandled);
+  try {
+    globalThis.fetch = async input => {
+      const table = new URL(input).pathname.split('/').at(-1);
+      if (table === 'v_global_summary') {
+        return mockJson({ code: 'PGRST000', message: 'Servicio temporalmente no disponible' }, 503);
+      }
+      if (table === 'equipos') {
+        await new Promise(resolve => setTimeout(resolve, 30));
+        return mockJson([{ id: 10, club_id: 1, temporada_id: 3 }]);
+      }
+      if (table === 'clubes') return mockJson([{ id: 1, nombre: 'Club de prueba' }]);
+      return mockJson([]);
+    };
+    const earlyApi = await import('./api.js?summary-early-rejection-smoke');
+    await assert.rejects(() => earlyApi.loadPublicDataset(3), earlyApi.DataError,
+      'el error del resumen debe llegar al caller incluso si equipos responde después');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(earlyUnhandled, [], 'no debe haber rechazos de Promise sin manejar');
+  } finally {
+    process.off('unhandledRejection', onEarlyUnhandled);
+  }
+
+  console.log('api-loading-smoke: OK — fallbacks legacy y rechazo temprano del resumen manejados.');
 } finally {
   globalThis.fetch = originalFetch;
   delete globalThis.SEVEN_METROS_CONFIG;
