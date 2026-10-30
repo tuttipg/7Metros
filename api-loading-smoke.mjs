@@ -3,8 +3,8 @@ import fs from 'node:fs';
 
 const apiSource = fs.readFileSync(new URL('./api.js', import.meta.url), 'utf8');
 assert.match(apiSource, /SESSION_CACHE_TTL/, 'keep short-lived session cache from main');
-assert.match(apiSource, /writeDatasetCache\\(season, dataset\\)/, 'keep dataset cache write from main');
-assert.match(apiSource, /const \\[planteles, partidos, rawParticipaciones\\] = await Promise\\.all/, 'keep parallel seasonal reads from main');
+assert.match(apiSource, /writeDatasetCache\(season, dataset\)/, 'keep dataset cache write from main');
+assert.match(apiSource, /const \[planteles, partidos, rawParticipaciones\] = await Promise\.all/, 'keep parallel seasonal reads from main');
 
 const originalFetch = globalThis.fetch;
 
