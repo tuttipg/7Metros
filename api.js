@@ -105,7 +105,15 @@ async function request(url, options = {}) {
     const response = await fetch(url, { ...options, signal: controller.signal });
     if (!response.ok) {
       const detail = await response.text().catch(() => '');
-      throw new DataError(`Error ${response.status} al consultar datos. ${detail}`.trim());
+      const failure = new DataError(`Error ${response.status} al consultar datos. ${detail}`.trim());
+      // Preserve PostgREST code to distinguish missing legacy schema from 5xx/paused service.
+      try {
+        const payload = JSON.parse(detail);
+        if (typeof payload?.code === 'string') failure.code = payload.code;
+      } catch {
+        // A non-JSON error must never authorize a full-table fallback.
+      }
+      throw failure;
     }
     return response;
   } catch (error) {
@@ -207,6 +215,12 @@ function summaryFromMatches(matches, clubs, players) {
 
 let globalSummaryPromise = null;
 
+function isMissingGlobalSummaryView(error) {
+  return error instanceof DataError
+    && (error.code === '42P01' || error.code === 'PGRST205')
+    && /\\bv_global_summary\\b/i.test(error.message);
+}
+
 async function loadGlobalSummaryView() {
   try {
     const rows = await supabaseGetAll(
@@ -225,15 +239,20 @@ async function loadGlobalSummaryView() {
         ? null
         : Number(row.promedio_goles)
     };
-  } catch {
-    // Compatibilidad con instalaciones anteriores a v_global_summary.
+  } catch (error) {
+    if (!isMissingGlobalSummaryView(error)) throw error;
+    // Only an absent legacy view authorizes the expensive global fallback.
     return null;
   }
 }
 
 export function loadGlobalSummaryFast() {
   if (!globalSummaryPromise) {
-    globalSummaryPromise = loadGlobalSummaryView();
+    globalSummaryPromise = loadGlobalSummaryView().catch(error => {
+      // Do not retain a transient failure for the rest of the session.
+      globalSummaryPromise = null;
+      throw error;
+    });
   }
   return globalSummaryPromise;
 }
@@ -273,13 +292,19 @@ export function filterParticipationsToMatches(participations, matches) {
   });
 }
 
+function isMissingSeasonColumn(error) {
+  return error instanceof DataError
+    && error.code === '42703'
+    && /\\btemporada_id\\b/i.test(error.message);
+}
+
 async function loadSeasonMatches(season, teamIds) {
   let rows;
   try {
     rows = await supabaseGetAll('partidos', `?select=*&temporada_id=eq.${season}`);
-  } catch {
-    // Fallback para esquemas antiguos. Igual se vuelve a validar contra el catálogo
-    // de equipos de la temporada para evitar cruces parciales o cross-scope.
+  } catch (error) {
+    if (!isMissingSeasonColumn(error)) throw error;
+    // Legacy schema only: keep both teams scoped to the requested season.
     rows = await supabaseGetAll('partidos', '?select=*');
   }
   return filterMatchesToTeamIds(rows, teamIds);
@@ -294,7 +319,11 @@ export async function loadPublicDataset(seasonId) {
 
   // Arranca el resumen global en paralelo para que Inicio pueda mostrar escala
   // de la base mientras todavía se cargan los datos detallados de la temporada.
-  const summaryViewPromise = loadGlobalSummaryFast();
+  // Attach rejection handling immediately; the summary may fail before teams load.
+  const summaryViewOutcome = loadGlobalSummaryFast().then(
+    value => ({ value }),
+    error => ({ error })
+  );
 
   const rawEquipos = await supabaseGetAll(
     'equipos',
@@ -309,10 +338,12 @@ export async function loadPublicDataset(seasonId) {
   );
   const requestedClubIds = scopedEquipos.map(row => Number(row.club_id));
 
-  const [clubes, summaryView] = await Promise.all([
+  const [clubes, summaryOutcome] = await Promise.all([
     supabaseGetByIds('clubes', 'id', requestedClubIds, 'id,nombre,abreviatura,ciudad,logo_url'),
-    summaryViewPromise
+    summaryViewOutcome
   ]);
+  if (summaryOutcome.error) throw summaryOutcome.error;
+  const summaryView = summaryOutcome.value;
 
   const validClubIds = new Set(clubes.map(row => Number(row.id)).filter(Number.isFinite));
   const equipos = scopedEquipos.filter(row => validClubIds.has(Number(row.club_id)));
