@@ -2,6 +2,49 @@ import { CONFIG } from './config.js';
 
 const PAGE_SIZE = 1000;
 const REQUEST_TIMEOUT = 15000;
+const SESSION_CACHE_VERSION = 'public-v1';
+const SESSION_CACHE_TTL = 2 * 60 * 1000;
+const SESSION_CACHE_MAX_CHARS = 3_500_000;
+
+function sessionStore() {
+  try { return globalThis.sessionStorage || null; } catch { return null; }
+}
+
+function datasetCacheKey(season) {
+  return `7m:dataset:${SESSION_CACHE_VERSION}:${season}`;
+}
+
+function readDatasetCache(season) {
+  const store = sessionStore();
+  if (!store) return null;
+  const key = datasetCacheKey(season);
+  try {
+    const raw = store.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.at || !parsed?.dataset || Date.now() - Number(parsed.at) > SESSION_CACHE_TTL) {
+      store.removeItem(key);
+      return null;
+    }
+    return parsed.dataset;
+  } catch {
+    try { store.removeItem(key); } catch {}
+    return null;
+  }
+}
+
+function writeDatasetCache(season, dataset) {
+  const store = sessionStore();
+  if (!store) return;
+  const key = datasetCacheKey(season);
+  try {
+    const raw = JSON.stringify({ at: Date.now(), dataset });
+    if (raw.length > SESSION_CACHE_MAX_CHARS) return;
+    store.setItem(key, raw);
+  } catch {
+    try { store.removeItem(key); } catch {}
+  }
+}
 
 export class DataError extends Error {
   constructor(message, cause = null) {
@@ -246,6 +289,9 @@ export async function loadPublicDataset(seasonId) {
   const season = Number(seasonId);
   if (!Number.isInteger(season) || season <= 0) throw new DataError('La temporada configurada no es válida.');
 
+  const cached = readDatasetCache(season);
+  if (cached) return cached;
+
   // Arranca el resumen global en paralelo para que Inicio pueda mostrar escala
   // de la base mientras todavía se cargan los datos detallados de la temporada.
   const summaryViewPromise = loadGlobalSummaryFast();
@@ -272,19 +318,23 @@ export async function loadPublicDataset(seasonId) {
   const equipos = scopedEquipos.filter(row => validClubIds.has(Number(row.club_id)));
   const teamIds = equipos.map(row => Number(row.id));
 
-  const planteles = await supabaseGetByIds(
-    'planteles',
-    'equipo_id',
-    teamIds,
-    'id,jugador_id,equipo_id,dorsal,posicion'
-  );
-  const playerIds = planteles.map(row => Number(row.jugador_id)).filter(Number.isFinite);
-
-  const [jugadores, partidos, rawParticipaciones] = await Promise.all([
-    supabaseGetByIds('jugadores', 'id', playerIds, 'id,nombre,apellido,fecha_nacimiento,brazo_habil,altura_cm,peso_kg'),
+  const [planteles, partidos, rawParticipaciones] = await Promise.all([
+    supabaseGetByIds(
+      'planteles',
+      'equipo_id',
+      teamIds,
+      'id,jugador_id,equipo_id,dorsal,posicion'
+    ),
     loadSeasonMatches(season, teamIds),
     supabaseGetByIds('participaciones', 'equipo_id', teamIds, '*')
   ]);
+  const playerIds = planteles.map(row => Number(row.jugador_id)).filter(Number.isFinite);
+  const jugadores = await supabaseGetByIds(
+    'jugadores',
+    'id',
+    playerIds,
+    'id,nombre,apellido,fecha_nacimiento,brazo_habil,altura_cm,peso_kg'
+  );
   const participaciones = filterParticipationsToMatches(rawParticipaciones, partidos);
 
   let globalSummary = summaryView;
@@ -297,5 +347,7 @@ export async function loadPublicDataset(seasonId) {
     globalSummary = summaryFromMatches(globalMatches, totalClubes, totalJugadores);
   }
 
-  return { clubes, equipos, jugadores, planteles, partidos, participaciones, globalSummary };
+  const dataset = { clubes, equipos, jugadores, planteles, partidos, participaciones, globalSummary };
+  writeDatasetCache(season, dataset);
+  return dataset;
 }

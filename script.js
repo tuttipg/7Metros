@@ -5,7 +5,7 @@
  * 1) No depender de una carpeta /js: todos los módulos viven en la raíz.
  * 2) Renderizar marca, navegación e iconos ANTES de cargar datos.
  * 3) Si falla un módulo o Supabase, la web sigue siendo navegable y explica el problema.
- * 4) Cargar las capas visuales globales sin duplicar enlaces CSS en cada HTML.
+ * 4) Mantener una navegación de respaldo mientras los CSS globales se cargan desde el HTML.
  * 5) Permitir enlaces profundos a una competencia con rama/categoría/división en la URL.
  */
 
@@ -33,18 +33,6 @@ window.SEVEN_METROS_CONFIG = Object.freeze({
   })
 });
 
-function loadStylesheet(id, href) {
-  if (document.getElementById(id)) return;
-  const link = document.createElement('link');
-  link.id = id;
-  link.rel = 'stylesheet';
-  link.href = href;
-  document.head.appendChild(link);
-}
-
-loadStylesheet('seven-metros-v3-theme', 'v3.css');
-loadStylesheet('seven-metros-identity-theme', 'identity.css');
-loadStylesheet('seven-metros-features-theme', 'features.css');
 
 const BOOT_ICONS = {
   home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/>',
@@ -109,7 +97,7 @@ function renderBootstrapShell() {
 
   const mobile = document.getElementById('mobile-bar');
   if (mobile) {
-    mobile.innerHTML = `<a class="mobile-brand" href="index.html">7<b>METROS</b></a><div class="mobile-actions"><a class="icon-btn" href="jugadores.html" aria-label="Buscar">${bootIcon('search')}</a><button id="menu-open" class="icon-btn" aria-label="Abrir menú">${bootIcon('menu')}</button></div>`;
+    mobile.innerHTML = `<a class="mobile-brand" href="index.html">7<b>METROS</b></a><div class="mobile-actions"><a class="icon-btn" href="jugadores.html" aria-label="Buscar">${bootIcon('search')}</a><button id="menu-open" class="icon-btn" aria-label="Abrir menú" aria-controls="sidebar" aria-expanded="false">${bootIcon('menu')}</button></div>`;
   }
 
   document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = bootIcon(el.dataset.icon); });
@@ -124,14 +112,15 @@ function renderBootstrapShell() {
   });
 
   const overlay = document.getElementById('overlay');
-  document.getElementById('menu-open')?.addEventListener('click', () => {
-    sidebar?.classList.add('open');
-    overlay?.classList.add('show');
-  });
-  overlay?.addEventListener('click', () => {
-    sidebar?.classList.remove('open');
-    overlay?.classList.remove('show');
-  });
+  const menuOpen = document.getElementById('menu-open');
+  const setBootstrapMenu = open => {
+    sidebar?.classList.toggle('open', open);
+    overlay?.classList.toggle('show', open);
+    menuOpen?.setAttribute('aria-expanded', String(open));
+    document.body.classList.toggle('nav-open', open);
+  };
+  menuOpen?.addEventListener('click', () => setBootstrapMenu(true));
+  overlay?.addEventListener('click', () => setBootstrapMenu(false));
 }
 
 function showBootstrapError(error) {
@@ -160,12 +149,14 @@ autoStart();
 
 async function autoStart() {
   try {
-    const store = await import('./store.js');
-    const ui = await import('./ui.js');
-    const pages = await import('./pages.js?v=20260919-home4');
-    const features = await import('./features.js?v=20260919-home4');
-    const freshness = await import('./match-freshness.js');
-    const api = await import('./api.js?v=20260919-home4');
+    const [store, ui, pages, features, freshness, api] = await Promise.all([
+      import('./store.js'),
+      import('./ui.js'),
+      import('./pages.js'),
+      import('./features.js'),
+      import('./match-freshness.js'),
+      import('./api.js')
+    ]);
 
     ui.renderShell();
     ui.initSettingsPage();

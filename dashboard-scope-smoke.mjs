@@ -13,13 +13,13 @@ assert.match(
 );
 assert.match(
   script,
-  /pages\.js\?v=20260919-home4/,
-  'Bootstrap: pages.js debe cargarse con la misma versión visible'
+  /import\(['"]\.\/pages\.js['"]\)/,
+  'Bootstrap: pages.js debe cargarse mediante su URL canónica'
 );
 assert.match(
   script,
-  /features\.js\?v=20260919-home4/,
-  'Bootstrap: features.js debe cargarse con la misma versión visible'
+  /import\(['"]\.\/features\.js['"]\)/,
+  'Bootstrap: features.js debe cargarse mediante su URL canónica'
 );
 
 assert.match(
@@ -34,8 +34,13 @@ assert.match(
 );
 assert.match(
   script,
-  /api\.js\?v=20260919-home4/,
-  'Bootstrap: api.js debe versionarse junto al resumen rápido para evitar caché incompatible'
+  /import\(['"]\.\/api\.js['"]\)/,
+  'Bootstrap: api.js debe conservar una única identidad de módulo'
+);
+assert.doesNotMatch(
+  script,
+  /import\(['"]\.\/api\.js\?v=/,
+  'Bootstrap: api.js no debe cargarse una segunda vez mediante cache-buster'
 );
 assert.match(
   script,

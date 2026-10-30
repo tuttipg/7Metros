@@ -39,20 +39,19 @@ function assertNavigation(source, label) {
     previous = index;
     assert.ok(existsSync(new URL(`./${href}`, import.meta.url)), `${label}: ${href} no existe`);
   }
+  const competitions = block.match(/competiciones\.html/g) || [];
+  assert.equal(competitions.length, 1, `${label}: Competiciones debe existir exactamente una vez`);
 }
 
 assertNavigation(script, 'script.js');
 assertNavigation(ui, 'ui.js');
 
-assert.match(
+assert.doesNotMatch(
   features,
-  /querySelectorAll\('a\[href="competiciones\.html"\]'\)/,
-  'features.js: debe inspeccionar todos los links canónicos de Competiciones'
+  /injectCompetitionNav|data\.navCompetitions|\.sidebar \.nav/,
+  'features.js: la capa de features no debe crear ni reparar items del menú'
 );
-assert.match(
-  features,
-  /existing\.slice\(1\)\.forEach\(link => link\.remove\(\)\)/,
-  'features.js: debe eliminar duplicados de Competiciones de forma defensiva'
-);
+assert.match(script, /Promise\.all\(\[/, 'script.js: los módulos principales deben cargarse en paralelo');
+assert.doesNotMatch(script, /loadStylesheet\(/, 'script.js: los estilos no deben inyectarse después del render');
 
-console.log('navigation-smoke: OK — bootstrap y navegación final conservan las mismas secciones principales sin duplicar Competiciones.');
+console.log('navigation-smoke: OK — navegación única, orden estable y Competiciones sin duplicados.');

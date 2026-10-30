@@ -124,27 +124,6 @@ function matchMini(match) {
   </a>`;
 }
 
-function injectCompetitionNav() {
-  const nav = document.querySelector('.sidebar .nav');
-  if (!nav) return;
-
-  const existing = [...nav.querySelectorAll('a[href="competiciones.html"]')];
-  if (existing.length) {
-    existing.slice(1).forEach(link => link.remove());
-    existing[0].dataset.navCompetitions = '1';
-    return;
-  }
-
-  const home = nav.querySelector('a[href="index.html"]');
-  const link = document.createElement('a');
-  link.className = `nav-link ${pageFile() === 'competiciones.html' ? 'active' : ''}`;
-  link.href = 'competiciones.html';
-  link.dataset.navCompetitions = '1';
-  link.innerHTML = `<span class="nav-icon">${icon('ball')}</span><span>Competiciones</span>`;
-  if (home) home.insertAdjacentElement('afterend', link);
-  else nav.prepend(link);
-}
-
 function enhanceHome() {
   if (pageFile() !== 'index.html' && pageFile() !== '') return;
   const actions = document.querySelector('.hero-actions');
@@ -373,7 +352,6 @@ function enhanceStandings() {
 
 export function enhanceCurrentPage() {
   if (!state.loaded) return;
-  injectCompetitionNav();
   enhanceHome();
   renderCompetitionDirectory();
   renderClubProfile();
