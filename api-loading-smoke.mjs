@@ -55,7 +55,49 @@ try {
     'la concurrencia superior al techo SAFE debe rechazarse'
   );
 
-  console.log('api-loading-smoke: OK — chunks concurrentes acotados y fail-closed.');
+  // Regresión: fetch() puede devolver headers mientras el body JSON queda colgado.
+  // Simulamos el reloj y un body abortable: la prueba no espera 15 segundos.
+  const realSetTimeout = globalThis.setTimeout;
+  const realClearTimeout = globalThis.clearTimeout;
+  let expireRequest = null;
+  let timeoutCleared = false;
+  try {
+    globalThis.setTimeout = (callback, ms, ...args) => {
+      if (ms === 15000) {
+        expireRequest = () => callback(...args);
+        return 900001;
+      }
+      return realSetTimeout(callback, ms, ...args);
+    };
+    globalThis.clearTimeout = timer => {
+      if (timer === 900001) { timeoutCleared = true; return; }
+      return realClearTimeout(timer);
+    };
+    const abortError = () => Object.assign(new Error('aborted'), { name: 'AbortError' });
+    globalThis.fetch = async (_url, { signal }) => ({
+      ok: true,
+      json: () => new Promise((_resolve, reject) => {
+        if (signal.aborted) { reject(abortError()); return; }
+        signal.addEventListener('abort', () => reject(abortError()), { once: true });
+      })
+    });
+
+    const { supabaseGetAll } = await import('./api.js');
+    const pending = supabaseGetAll('partidos', '?select=id');
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.equal(typeof expireRequest, 'function', 'debe programarse el timeout del request');
+    expireRequest();
+    await assert.rejects(pending, error =>
+      error instanceof DataError && /tiempo de espera/.test(error.message),
+    'el timeout debe abarcar la lectura del body, no sólo los headers');
+    assert.equal(timeoutCleared, true, 'el timer debe limpiarse también al abortar el body');
+  } finally {
+    globalThis.setTimeout = realSetTimeout;
+    globalThis.clearTimeout = realClearTimeout;
+  }
+
+  console.log('api-loading-smoke: OK — concurrencia acotada y timeout de body fail-closed.');
 } finally {
   globalThis.fetch = originalFetch;
   delete globalThis.SEVEN_METROS_CONFIG;
