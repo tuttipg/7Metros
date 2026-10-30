@@ -13,4 +13,43 @@ assert.match(ui, /document\.body\.classList\.toggle\('nav-open'/, 'open mobile n
 assert.match(ui, /window\.matchMedia\('\(max-width: 980px\)'\)/, 'menu accessibility state must respond to the mobile breakpoint');
 assert.match(ui, /requestAnimationFrame\(\(\) => \{[\s\S]*aria-current="page"/, 'opening the drawer should move focus into the navigation');
 
-console.log('Mobile menu accessibility smoke test passed.');
+// El indicador del sidebar debe reflejar el estado real, no afirmar conexión
+// antes de terminar la carga o después de un fallo.
+const bootstrap = fs.readFileSync(new URL('./script.js', import.meta.url), 'utf8');
+const styles = fs.readFileSync(new URL('./style.css', import.meta.url), 'utf8');
+assert.match(bootstrap, /data-connection-state="loading"/, 'bootstrap starts with a pending state');
+assert.match(bootstrap, /indicator\.dataset\.connectionState = 'error'/, 'bootstrap failure must mark data unavailable');
+assert.match(styles, /data-connection-state="loading"/, 'pending indicator must not look connected');
+assert.match(styles, /data-connection-state="error"/, 'failed indicator must not look connected');
+
+globalThis.window = globalThis;
+globalThis.localStorage = { getItem: () => null };
+globalThis.SEVEN_METROS_CONFIG = {
+  seasonId: 3,
+  defaults: { categoria: 'Mayores', division: 'LHC Hipotecario Seguros', rama: 'M' }
+};
+const { setConnectionStatus, renderLoadingStatus, renderSuccessStatus, renderErrorStatus } = await import('./ui.js');
+const label = { textContent: '' };
+const indicator = {
+  dataset: { connectionState: 'loading' },
+  querySelector: selector => selector === '.connection-label' ? label : null
+};
+const statusRoot = { innerHTML: '' };
+globalThis.document = {
+  querySelector: selector => selector === '.sidebar-foot' ? indicator : null,
+  querySelectorAll: () => [],
+  getElementById: id => id === 'data-status' ? statusRoot : null
+};
+renderLoadingStatus();
+assert.equal(indicator.dataset.connectionState, 'loading');
+assert.equal(label.textContent, 'Conectando datos…');
+renderSuccessStatus();
+assert.equal(indicator.dataset.connectionState, 'ready');
+assert.equal(label.textContent, 'Datos disponibles');
+renderErrorStatus(new Error('servicio no disponible'));
+assert.equal(indicator.dataset.connectionState, 'error');
+assert.equal(label.textContent, 'Datos no disponibles');
+setConnectionStatus('invalid');
+assert.equal(indicator.dataset.connectionState, 'error', 'unknown status must not overwrite a known state');
+
+console.log('Mobile menu accessibility and connection-state smoke tests passed.');
