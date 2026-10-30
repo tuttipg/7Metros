@@ -1,6 +1,6 @@
 globalThis.window = {};
 
-const { ageFromBirthDate, localISODate } = await import('./utils.js');
+const { ageFromBirthDate, localISODate, formatDateISO, formatShortDate } = await import('./utils.js');
 
 function assertEqual(actual, expected, label) {
   if (actual !== expected) {
@@ -22,5 +22,16 @@ assertEqual(ageFromBirthDate('2026-02-30', birthday), null, 'Debe rechazar días
 assertEqual(ageFromBirthDate('11/09/2006', birthday), null, 'Debe exigir formato ISO YYYY-MM-DD');
 assertEqual(ageFromBirthDate('2030-01-01', birthday), null, 'Debe rechazar edades futuras');
 assertEqual(ageFromBirthDate('1900-01-01', birthday), null, 'Debe rechazar edades de 100 años o más');
+
+// Una fecha de fixture es un día argentino, independientemente del huso del navegador.
+assertEqual(formatShortDate('2026-10-30').day, '30', 'No cambiar el día del partido por zona horaria');
+if (!/^30\s/.test(formatDateISO('2026-10-30'))) {
+  throw new Error('La fecha completa del partido no debe cambiar al día anterior');
+}
+assertEqual(formatShortDate('2024-02-29').day, '29', 'Conservar días bisiestos reales');
+for (const invalid of ['2026-02-29', '2026-02-30', '2026-13-01', '2026-00-01', '2026-01-00', '2026-2-3', '<img src=x onerror=alert(1)>']) {
+  assertEqual(formatDateISO(invalid), 'Fecha a confirmar', 'No inventar fechas inválidas');
+  assertEqual(JSON.stringify(formatShortDate(invalid)), JSON.stringify({ day: '--', month: '---' }), 'No mostrar fechas inválidas en tarjetas');
+}
 
 console.log('Date utilities smoke test passed');
