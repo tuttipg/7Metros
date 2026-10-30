@@ -58,6 +58,15 @@ for path in html_files:
     if '/js/' in text or 'src="js/' in text or "src='js/" in text:
         errors.append(f'{path.name}: stale /js module reference')
 
+    theme_refs = ['style.css', 'v3.css', 'identity.css', 'features.css']
+    theme_positions = [text.find(f'href="{theme}"') for theme in theme_refs]
+    if any(pos == -1 for pos in theme_positions):
+        errors.append(f'{path.name}: missing direct theme stylesheet link')
+    elif theme_positions != sorted(theme_positions):
+        errors.append(f'{path.name}: theme stylesheets are loaded in the wrong order')
+    if 'rel="preconnect" href="https://bvnfgfwxnkusicipwlas.supabase.co"' not in text:
+        errors.append(f'{path.name}: missing Supabase preconnect hint')
+
 required_assets = [
     'script.js', 'config.js', 'api.js', 'store.js', 'ui.js', 'pages.js', 'features.js', 'utils.js',
     'style.css', 'v3.css', 'identity.css', 'features.css', 'competiciones.html'
@@ -67,13 +76,12 @@ for name in required_assets:
         errors.append(f'missing {name}')
 
 script = (ROOT / 'script.js').read_text(encoding='utf-8') if (ROOT / 'script.js').exists() else ''
-for needle, label in [
-    ("loadStylesheet('seven-metros-v3-theme', 'v3.css')", 'V3 theme'),
-    ("loadStylesheet('seven-metros-identity-theme', 'identity.css')", 'identity theme'),
-    ("loadStylesheet('seven-metros-features-theme', 'features.css')", 'features theme'),
-]:
-    if needle not in script:
-        errors.append(f'script.js: {label} is not loaded')
+if 'loadStylesheet(' in script:
+    errors.append('script.js: theme CSS must be parser-discovered from HTML, not injected at runtime')
+if 'Promise.all([' not in script:
+    errors.append('script.js: bootstrap modules should load in parallel')
+if "import('./api.js?v=" in script:
+    errors.append('script.js: api.js must not be imported under a second cache-busted module identity')
 
 # Los módulos locales pueden llevar un cache-buster controlado (?v=...) en GitHub Pages.
 # El patrón sigue siendo fail-closed: sólo acepta ./features.js y una versión alfanumérica segura.
@@ -131,6 +139,8 @@ if features_path.exists():
     for needle in ('renderCompetitionDirectory', 'renderClubProfile', 'renderMatchProfile', 'enhanceTeamLinks'):
         if needle not in features:
             errors.append(f'features.js: missing {needle}')
+    if 'injectCompetitionNav' in features or '.sidebar .nav' in features:
+        errors.append('features.js: navigation must have a single owner; sidebar injection is forbidden')
 
 competition_page = ROOT / 'competiciones.html'
 if competition_page.exists():
