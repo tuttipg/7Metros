@@ -15,7 +15,11 @@ const cases = [
   [{ estado: 'cancelado', goles_local: 0, goles_visitante: 0 }, false, 'Sin resultado'],
   [{ estado: 'suspendido', goles_local: 10, goles_visitante: 9 }, false, 'Sin resultado'],
   [{ estado: 'programado', goles_local: null, goles_visitante: null }, false, 'Programado'],
-  [null, false, 'Programado']
+  // Unknown legacy status without a complete result must not be shown as upcoming.
+  [{ estado: null, goles_local: null, goles_visitante: null }, false, 'Sin resultado'],
+  [{ estado: '  ', goles_local: null, goles_visitante: null }, false, 'Sin resultado'],
+  [{}, false, 'Sin resultado'],
+  [null, false, 'Sin resultado']
 ];
 for (const [row, expectedResult, expectedStatus] of cases) {
   assert.equal(hasVerifiedMatchResult(row), expectedResult, JSON.stringify(row));
