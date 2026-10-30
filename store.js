@@ -2,6 +2,7 @@ import { loadPublicDataset } from './api.js';
 import { DEFAULT_FILTERS, SEASON_ID, STORAGE_KEYS } from './config.js';
 import { field, numericField, initials, ratio, toNumber, unique, bySpanishName, normalizeText } from './utils.js';
 import { sortStandingsOlympic } from './standings-core.mjs';
+import { hasVerifiedMatchResult, matchPublicStatus } from './match-result-core.mjs';
 
 function settingEnabled(key, defaultValue = false) {
   const stored = localStorage.getItem(key);
@@ -139,9 +140,7 @@ export function prepareDataset(dataset) {
 
     const homeClub = clubById.get(Number(homeTeam.club_id)) || null;
     const awayClub = clubById.get(Number(awayTeam.club_id)) || null;
-    const statusRaw = String(field(row, ['estado'], '') || '').toLowerCase();
-    const hasScores = field(row, ['goles_local'], null) !== null && field(row, ['goles_visitante'], null) !== null;
-    const finished = statusRaw === 'finalizado' || statusRaw === 'final' || (hasScores && statusRaw !== 'programado');
+    const finished = hasVerifiedMatchResult(row);
 
     return {
       id: Number(row.id),
@@ -159,7 +158,7 @@ export function prepareDataset(dataset) {
       away: teamDisplayName(awayTeam, awayClub),
       homeScore: finished ? toNumber(field(row, ['goles_local'], 0)) : null,
       awayScore: finished ? toNumber(field(row, ['goles_visitante'], 0)) : null,
-      status: finished ? 'Finalizado' : 'Programado',
+      status: matchPublicStatus(row),
       notes: field(row, ['observaciones', 'notas'], '') || '',
       planillaUrl: field(row, ['fuente_planilla', 'planilla_url', 'url_planilla', 'link_planilla'], null),
       videoUrl: field(row, ['fuente_video', 'video_url', 'url_video', 'link_video'], null),
