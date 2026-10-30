@@ -1,0 +1,21 @@
+name: Export isolated AI source for local validation
+on:
+  push:
+    branches:
+      - tmp/vision-source-export-20261029
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          set -euo pipefail
+          zip -r ai_source_bundle.zip ai -x '*__pycache__*'
+          sha256sum ai_source_bundle.zip > sha256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vision-source-20261029
+          path: |
+            ai_source_bundle.zip
+            sha256.txt
+          retention-days: 1
