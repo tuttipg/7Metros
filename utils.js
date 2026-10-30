@@ -41,7 +41,7 @@ export function normalizeText(value = '') {
 // Las fechas del fixture son días de calendario, no instantes en la zona del navegador.
 // Anclar al mediodía UTC evita que usuarios en otras zonas vean el día anterior.
 function parseCalendarDate(value) {
-  const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(String(value ?? ''));
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? ''));
   if (!match) return null;
   const date = new Date(`${match[0]}T12:00:00Z`);
   if (
