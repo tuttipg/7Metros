@@ -1,4 +1,5 @@
 import { CONFIG } from './config.js';
+import { hasVerifiedMatchResult } from './match-result-core.mjs';
 
 const PAGE_SIZE = 1000;
 const REQUEST_TIMEOUT = 15000;
@@ -186,12 +187,7 @@ export async function supabaseGetByIds(
 }
 
 function summaryFromMatches(matches, clubs, players) {
-  const finalizados = matches.filter(row => {
-    const estado = String(row.estado || '').toLowerCase();
-    const tieneResultado = row.goles_local !== null && row.goles_local !== undefined
-      && row.goles_visitante !== null && row.goles_visitante !== undefined;
-    return estado === 'finalizado' || estado === 'final' || (tieneResultado && estado !== 'programado');
-  });
+  const finalizados = matches.filter(hasVerifiedMatchResult);
   const goals = finalizados.reduce((sum, row) =>
     sum + Number(row.goles_local || 0) + Number(row.goles_visitante || 0), 0
   );
