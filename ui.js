@@ -257,18 +257,38 @@ function initGlobalSearch() {
       normalized: normalizeText(club.name)
     }));
 
-    const players = state.players.map(player => {
-      const roster = state.index.rosterByPlayer.get(player.id)?.[0] || null;
-      const team = roster ? state.index.teamById.get(Number(roster.equipo_id)) : null;
-      const club = team ? state.index.clubById.get(Number(team.club_id)) : null;
-      const clubName = club?.name || 'Sin club';
-      return {
-        type: 'player',
-        id: player.id,
-        name: player.name,
-        clubName,
-        normalized: normalizeText(`${player.name} ${clubName}`)
-      };
+    const players = state.players.flatMap(player => {
+      const memberships = state.index.rosterByPlayer.get(player.id) || [];
+      const teamIds = [...new Set(memberships.map(row => Number(row.equipo_id)).filter(Number.isFinite))];
+
+      if (!teamIds.length) {
+        return [{
+          type: 'player',
+          id: player.id,
+          teamId: null,
+          name: player.name,
+          clubName: 'Sin club',
+          contextLabel: 'Jugador',
+          normalized: normalizeText(player.name)
+        }];
+      }
+
+      return teamIds.map(teamId => {
+        const team = state.index.teamById.get(teamId) || null;
+        const club = team ? state.index.clubById.get(Number(team.club_id)) : null;
+        const clubName = club?.name || team?.nombre_femebal || 'Sin club';
+        const branch = team?.rama === 'F' ? 'Femenino' : team?.rama === 'M' ? 'Masculino' : (team?.rama || '');
+        const contextLabel = [clubName, team?.categoria, team?.division, branch].filter(Boolean).join(' · ');
+        return {
+          type: 'player',
+          id: player.id,
+          teamId,
+          name: player.name,
+          clubName,
+          contextLabel,
+          normalized: normalizeText(`${player.name} ${contextLabel}`)
+        };
+      });
     });
 
     return [...clubs, ...players];
@@ -293,7 +313,7 @@ function initGlobalSearch() {
       .slice(0, 12)
       .map(row => row.type === 'club'
         ? `<a class="search-result" href="club.html?id=${row.id}">${clubBadge(row.club, true)}<span><b>${esc(row.name)}</b><small>Club</small></span></a>`
-        : `<a class="search-result" href="jugador.html?id=${row.id}"><span class="avatar">${esc(initials(row.name))}</span><span><b>${esc(row.name)}</b><small>${esc(row.clubName)} · Jugador</small></span></a>`
+        : `<a class="search-result" href="jugador.html?id=${row.id}${row.teamId ? `&team=${row.teamId}` : ''}"><span class="avatar">${esc(initials(row.name))}</span><span><b>${esc(row.name)}</b><small>${esc(row.contextLabel || row.clubName)}</small></span></a>`
       );
     results.innerHTML = rows.join('') || '<div class="search-hint">No encontramos coincidencias.</div>';
   };
