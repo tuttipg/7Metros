@@ -98,7 +98,7 @@ function headers(range = null, extra = {}) {
   return { ...result, ...extra };
 }
 
-async function request(url, options = {}) {
+async function request(url, options = {}, consume = response => response) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
   try {
@@ -115,9 +115,12 @@ async function request(url, options = {}) {
       }
       throw failure;
     }
-    return response;
+    // Keep the deadline active while reading the body, not only the headers.
+    return await consume(response);
   } catch (error) {
-    if (error?.name === 'AbortError') throw new DataError('La consulta de datos excedió el tiempo de espera.', error);
+    if (controller.signal.aborted || error?.name === 'AbortError') {
+      throw new DataError('La consulta de datos excedió el tiempo de espera.', error);
+    }
     if (error instanceof DataError) throw error;
     throw new DataError('No se pudo conectar con la fuente de datos.', error);
   } finally {
@@ -131,11 +134,10 @@ export async function supabaseGetAll(table, query = '', { pageSize = PAGE_SIZE }
 
   while (true) {
     const to = from + pageSize - 1;
-    const response = await request(endpoint(table, query), {
+    const page = await request(endpoint(table, query), {
       method: 'GET',
       headers: headers(`${from}-${to}`)
-    });
-    const page = await response.json();
+    }, response => response.json());
     if (!Array.isArray(page)) throw new DataError(`Respuesta inesperada al consultar ${table}.`);
     rows.push(...page);
     if (page.length < pageSize) break;
@@ -147,17 +149,20 @@ export async function supabaseGetAll(table, query = '', { pageSize = PAGE_SIZE }
 }
 
 export async function supabaseCount(table) {
-  const response = await request(endpoint(table, '?select=id'), {
+  return request(endpoint(table, '?select=id'), {
     method: 'GET',
     headers: headers('0-0', { Prefer: 'count=exact' })
+  }, response => {
+    const contentRange = response.headers.get('content-range') || '';
+    const match = contentRange.match(/\/(\d+)$/);
+    // A one-row range is not a total. Never publish an estimated count.
+    if (!match) throw new DataError(`Conteo exacto no disponible para ${table}.`);
+    const count = Number(match[1]);
+    if (!Number.isSafeInteger(count)) {
+      throw new DataError(`Conteo exacto inválido para ${table}.`);
+    }
+    return count;
   });
-
-  const contentRange = response.headers.get('content-range') || '';
-  const match = contentRange.match(/\/(\d+)$/);
-  if (match) return Number(match[1]);
-
-  const page = await response.json();
-  return Array.isArray(page) ? page.length : 0;
 }
 
 export async function supabaseGetByIds(
