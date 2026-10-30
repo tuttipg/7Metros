@@ -91,11 +91,17 @@ def detect_control_change_candidates(
         gap = target.start_frame - source.end_frame - 1
         if gap < 0 or gap > max_transition_gap_frames:
             continue
-        same_team = (
-            source.team is not None
-            and target.team is not None
-            and source.team == target.team
-        )
+        # Do not label a rivalry (or same-team pass) when either team is unknown.
+        # This is an abstention guard, not a learned classifier or confirmed event.
+        unknown = {None, "", "unknown", "unassigned", "uncertain", "?"}
+        if (
+            not isinstance(source.team, str)
+            or not isinstance(target.team, str)
+            or source.team.strip().lower() in unknown
+            or target.team.strip().lower() in unknown
+        ):
+            continue
+        same_team = source.team == target.team
         kind = (
             "same_team_control_change_candidate"
             if same_team

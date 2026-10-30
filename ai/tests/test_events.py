@@ -62,5 +62,33 @@ class EventCandidateTests(unittest.TestCase):
         with self.assertRaises(ValueError): detect_control_change_candidates([], max_transition_gap_frames=-1)
         with self.assertRaises(ValueError): stable_candidate_runs([row(0, 'candidate', None, 'Ferro')])
 
+    def test_unknown_team_must_not_be_mislabeled_opponent(self):
+        for unknown_team in (None, "", "unknown", "UNKNOWN", "?"):
+            with self.subTest(unknown_team=unknown_team):
+                rows = [
+                    row(0, 'candidate', 1, 'Ferro'),
+                    row(1, 'candidate', 1, 'Ferro'),
+                    row(2, 'candidate', 2, unknown_team),
+                    row(3, 'candidate', 2, unknown_team),
+                ]
+                self.assertEqual(detect_control_change_candidates(rows), [])
+
+    def test_two_unknown_teams_are_not_implicitly_same_team(self):
+        rows = [
+            row(0, 'candidate', 1, 'unknown'),
+            row(1, 'candidate', 1, 'unknown'),
+            row(2, 'candidate', 2, 'unknown'),
+            row(3, 'candidate', 2, 'unknown'),
+        ]
+        self.assertEqual(detect_control_change_candidates(rows), [])
+
+    def test_known_teams_still_detect_changes(self):
+        rows = [
+            row(0, 'candidate', 1, 'Ferro'), row(1, 'candidate', 1, 'Ferro'),
+            row(2, 'candidate', 2, 'Lujan'), row(3, 'candidate', 2, 'Lujan'),
+        ]
+        self.assertEqual(detect_control_change_candidates(rows)[0].kind,
+                         'opponent_control_change_candidate')
+
 
 if __name__ == '__main__': unittest.main()
