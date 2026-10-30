@@ -54,3 +54,25 @@ class ReviewedEvidenceTests(unittest.TestCase):
 
 if __name__=="__main__":
     unittest.main()
+
+
+class CommittedEvidenceRegressionTests(unittest.TestCase):
+    def test_real_confirmed_pilot_and_ball_counts(self):
+        import json
+        from pathlib import Path
+        root = Path(__file__).resolve().parents[2]
+        gt = json.loads((root / "ai/evidence/semantic/ferro_lujan_semantic_pilot_145_164_2026-10-06.json").read_text())
+        events = json.loads((root / "ai/evidence/ball/event_candidates_gt1_2026-10-01.json").read_text())
+        ball = json.loads((root / "ai/evidence/ball/handball_v2_yolo11n_e5_comparison_2026-10-03.json").read_text())
+        scored = score_pilot(gt, events)
+        c = scored["control_change"]
+        self.assertEqual((c["tp"], c["fp"], c["fn"]), (0, 1, 1))
+        self.assertEqual((c["precision"], c["recall"], c["f1"]), (0, 0, 0))
+        self.assertIsNone(scored["possession"])
+        b = score_ball_counts(ball)
+        s = b["models"]["generic_yolo11n_coco_sports_ball"]["variants"]["court_guard_plus_two_stage_association"]
+        self.assertEqual((s["tp"], s["fp"], s["fn"]), (33, 1, 20))
+        self.assertAlmostEqual(s["f1"], 66/87)
+        kept = json.loads((root / "ai/evidence/semantic/reviewed_scoring_2026-10-29.json").read_text())
+        self.assertEqual(kept["control_change"]["f1"], c["f1"])
+        self.assertEqual(kept["ball_sample"]["models"]["generic_yolo11n_coco_sports_ball"]["variants"]["court_guard_plus_two_stage_association"], s)
