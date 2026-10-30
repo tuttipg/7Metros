@@ -26,4 +26,10 @@ assert.deepEqual(
   { code: 'scheduled', label: 'Programado' }
 );
 
+assert.deepEqual(
+  matchUiStatus({ status: 'Sin resultado', date: '2026-09-11', homeScore: null, awayScore: null }, '2026-09-12'),
+  { code: 'unverified', label: 'Sin resultado' },
+  'Un finalizado sin marcador no debe verse como programación ni como resultado pendiente'
+);
+
 console.log('match-freshness-smoke: ok');
