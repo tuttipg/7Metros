@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { resolvePlayerRouteContext } from './player-route-core.mjs';
 
 assert.deepEqual(
@@ -52,3 +53,11 @@ assert.equal(
 assert.equal(resolvePlayerRouteContext({ playerId: 'x' }).status, 'missing');
 
 console.log('✓ player-route-smoke: filtros guardados, contexto visible/explicito, multi-plantel e IDs inválidos fail-closed OK');
+
+
+const uiSource = readFileSync(new URL('./ui.js', import.meta.url), 'utf8');
+assert.match(
+  uiSource,
+  /jugador\.html\?id=\\\$\{row\.id\}[\s\S]*&team=\\\$\{row\.teamId\}/,
+  'global search must preserve team context for player routes'
+);
