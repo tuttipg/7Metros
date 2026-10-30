@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { resolveScopedRouteContext } from './scoped-route-core.mjs';
+import { readRouteParam } from './route-id-core.mjs';
 
 const oneContext = [
   { teamId: 10, contextKey: 'Mayores|LHC|M' },
@@ -38,4 +39,16 @@ assert.equal(
 assert.equal(resolveScopedRouteContext({ entityId: 0, memberships: oneContext }).status, 'invalid');
 assert.equal(resolveScopedRouteContext({ entityId: 7, memberships: [] }).status, 'missing');
 
+for (const bad of ['', '0', '010', '10e0', '10.0', '-1', 'oops', '9007199254740992']) {
+  assert.equal(resolveScopedRouteContext({
+    entityId: 7, requestedTeamId: bad, currentPresent: true, memberships: oneContext
+  }).status, 'invalid-team', `team=${bad} must not fall back to current context`);
+}
+for (const bad of ['', '0', '07', '7e0', '7.0', '9007199254740992']) {
+  assert.equal(resolveScopedRouteContext({ entityId: bad, memberships: oneContext }).status, 'invalid');
+}
+assert.equal(readRouteParam(new URLSearchParams('id=7'), 'team'), null);
+assert.equal(readRouteParam(new URLSearchParams('team=10'), 'team'), '10');
+assert.equal(readRouteParam(new URLSearchParams('team=10&team=11'), 'team'), '');
+assert.equal(readRouteParam(new URLSearchParams('id=7&id=7'), 'id'), '');
 console.log('scoped-route-smoke: ok');

@@ -53,6 +53,7 @@ jobs:
           node --check standings-core-smoke.mjs
           node --check standings-adjustments.mjs
           node --check standings-adjustments-smoke.mjs
+          node --check route-id-core.mjs
           node --check player-route-core.mjs
           node --check player-route-fix.js
           node --check player-route-smoke.mjs
