@@ -163,7 +163,7 @@ function renderClubes() {
 // aceptaría también "01", "1e2" o IDs duplicados, resolviendo otra ficha.
 function routeEntityId() {
   const ids = new URLSearchParams(location.search).getAll('id');
-  if (ids.length !== 1 || !/^[1-9]\\d*$/.test(ids[0])) return null;
+  if (ids.length !== 1 || !/^[1-9][0-9]*$/.test(ids[0])) return null;
   const id = Number(ids[0]);
   return Number.isSafeInteger(id) ? id : null;
 }
