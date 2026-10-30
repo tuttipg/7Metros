@@ -90,7 +90,7 @@ assert.match(
 assert.match(
   pages,
   /data-health-scheduled/,
-  'Dashboard: la portada debe exponer cuántos partidos siguen programados'
+  'Dashboard: la portada debe exponer cuántos partidos aún no tienen resultado'
 );
 assert.match(
   dashboard,
@@ -116,5 +116,9 @@ assert.ok(topDivision, 'store.js: no se encontró isTopHonorTeam');
 assert.match(topDivision[1], /categoria\) !== ['"]mayores['"]/, 'Liga de Honor debe restringirse a Mayores');
 assert.match(topDivision[1], /includes\(['"]plata['"]\)/, 'Liga de Honor debe excluir explícitamente Plata');
 assert.match(topDivision[1], /lh\[cd\]/, 'Liga de Honor debe reconocer LHC/LHD');
+
+assert.match(index, /id="data-health-scheduled">—<\/b><small>sin resultado<\/small>/, 'Dashboard: los no finalizados no siempre están programados (pueden estar suspendidos o cancelados)');
+assert.match(pages, /const withoutResult = Math\.max\(0, matches - finished\)/, 'Dashboard: mostrar partidos sin resultado, no inferir estado programado');
+assert.doesNotMatch(index, /id="data-health-scheduled">—<\/b><small>programados<\/small>/, 'Dashboard: no etiquetar todo partido sin resultado como programado');
 
 console.log('Dashboard scope smoke test: OK');
