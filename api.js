@@ -146,10 +146,14 @@ export async function supabaseCount(table) {
 
   const contentRange = response.headers.get('content-range') || '';
   const match = contentRange.match(/\/(\d+)$/);
-  if (match) return Number(match[1]);
-
-  const page = await response.json();
-  return Array.isArray(page) ? page.length : 0;
+  // La petición sólo devuelve la primera fila. Sin el total exacto de
+  // PostgREST no se puede inferir el conteo desde el tamaño de esa página.
+  if (!match) throw new DataError(`Conteo exacto no disponible para ${table}.`);
+  const count = Number(match[1]);
+  if (!Number.isSafeInteger(count)) {
+    throw new DataError(`Conteo exacto inválido para ${table}.`);
+  }
+  return count;
 }
 
 export async function supabaseGetByIds(
