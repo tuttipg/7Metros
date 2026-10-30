@@ -36,7 +36,7 @@ globalThis.fetch = async () => {
 };
 
 try {
-  const { supabaseGetByIds, DataError } = await import('./api.js');
+  const { supabaseGetByIds, supabaseCount, DataError } = await import('./api.js');
 
   const ids = Array.from({ length: 250 }, (_, i) => i + 1);
   const rows = await supabaseGetByIds('planteles', 'equipo_id', ids, 'id', {
@@ -55,7 +55,35 @@ try {
     'la concurrencia superior al techo SAFE debe rechazarse'
   );
 
-  console.log('api-loading-smoke: OK — chunks concurrentes acotados y fail-closed.');
+  // Un count exacto no puede inferirse de una página Range: 0-0.
+  // Las respuestas son simuladas; no hay acceso a la base de datos real.
+  let countHeader = '0-0/147';
+  let countCalls = 0;
+  globalThis.fetch = async (_url, options) => {
+    countCalls++;
+    assert.equal(options.method, 'GET');
+    assert.equal(options.headers.Prefer, 'count=exact');
+    return new Response('[]', {
+      status: 200,
+      headers: countHeader === null ? {} : { 'Content-Range': countHeader }
+    });
+  };
+
+  assert.equal(await supabaseCount('clubes'), 147, 'el total debe venir de Content-Range');
+  countHeader = '*/0';
+  assert.equal(await supabaseCount('clubes'), 0, 'una tabla vacía tiene total exacto cero');
+  countHeader = null;
+  await assert.rejects(() => supabaseCount('clubes'), DataError,
+    'sin Content-Range no se debe presentar la página parcial como total');
+  countHeader = '0-0/*';
+  await assert.rejects(() => supabaseCount('clubes'), DataError,
+    'un total desconocido no se debe presentar como cero');
+  countHeader = '0-0/9007199254740992';
+  await assert.rejects(() => supabaseCount('clubes'), DataError,
+    'un conteo fuera del rango de enteros seguros debe rechazarse');
+  assert.equal(countCalls, 5);
+
+  console.log('api-loading-smoke: OK — concurrencia acotada y conteos exactos fail-closed.');
 } finally {
   globalThis.fetch = originalFetch;
   delete globalThis.SEVEN_METROS_CONFIG;
