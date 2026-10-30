@@ -102,17 +102,38 @@ export function renderShell() {
 
   const overlay = document.getElementById('overlay');
   const menuOpen = document.getElementById('menu-open');
-  const setMenuState = open => {
-    sidebar?.classList.toggle('open', open);
-    overlay?.classList.toggle('show', open);
-    menuOpen?.setAttribute('aria-expanded', String(open));
-    menuOpen?.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+  const mobileMedia = window.matchMedia('(max-width: 980px)');
+
+  const syncMenuAccessibility = open => {
+    const isMobile = mobileMedia.matches;
+    const hidden = isMobile && !open;
+    if (sidebar) {
+      sidebar.inert = hidden;
+      sidebar.setAttribute('aria-hidden', String(hidden));
+    }
+    document.body.classList.toggle('nav-open', isMobile && open);
   };
-  const openMenu = () => setMenuState(true);
+
+  const setMenuState = open => {
+    const shouldOpen = mobileMedia.matches && open;
+    sidebar?.classList.toggle('open', shouldOpen);
+    overlay?.classList.toggle('show', shouldOpen);
+    menuOpen?.setAttribute('aria-expanded', String(shouldOpen));
+    menuOpen?.setAttribute('aria-label', shouldOpen ? 'Cerrar menú' : 'Abrir menú');
+    syncMenuAccessibility(shouldOpen);
+  };
+
+  const openMenu = () => {
+    setMenuState(true);
+    requestAnimationFrame(() => {
+      sidebar?.querySelector('a[aria-current="page"], a.nav-link')?.focus();
+    });
+  };
   const closeMenu = ({ returnFocus = false } = {}) => {
     setMenuState(false);
     if (returnFocus) menuOpen?.focus();
   };
+
   menuOpen?.addEventListener('click', openMenu);
   overlay?.addEventListener('click', () => closeMenu({ returnFocus: true }));
   sidebar?.querySelectorAll('a').forEach(a => a.addEventListener('click', () => closeMenu()));
@@ -122,6 +143,14 @@ export function renderShell() {
       closeMenu({ returnFocus: true });
     }
   });
+  mobileMedia.addEventListener?.('change', () => {
+    setMenuState(false);
+    if (!mobileMedia.matches && sidebar) {
+      sidebar.inert = false;
+      sidebar.setAttribute('aria-hidden', 'false');
+    }
+  });
+  syncMenuAccessibility(false);
 
   applySettings();
   initGlobalSearch();
@@ -209,25 +238,82 @@ export function renderCompetitionBar() {
 function initGlobalSearch() {
   const root = document.getElementById('global-search-root');
   if (!root) return;
-  root.innerHTML = `<div class="search-modal" id="global-search-modal" aria-hidden="true"><div class="search-dialog" role="dialog" aria-modal="true" aria-label="Buscar en 7Metros"><div class="search-dialog-head"><span>${icon('search')}</span><input id="global-search-input" type="search" placeholder="Buscar jugador o club…" autocomplete="off"><button id="global-search-close" class="icon-btn" aria-label="Cerrar">${icon('close')}</button></div><div id="global-search-results" class="search-results"><div class="search-hint">Escribí un nombre para buscar en la competencia seleccionada.</div></div><div class="search-dialog-foot"><span>Enter para abrir</span><span>Esc para cerrar</span></div></div></div>`;
+
+  const hint = 'Escribí un nombre para buscar en toda la temporada.';
+  root.innerHTML = `<div class="search-modal" id="global-search-modal" aria-hidden="true"><div class="search-dialog" role="dialog" aria-modal="true" aria-label="Buscar en 7Metros"><div class="search-dialog-head"><span>${icon('search')}</span><input id="global-search-input" type="search" placeholder="Buscar jugador o club…" autocomplete="off"><button id="global-search-close" class="icon-btn" aria-label="Cerrar">${icon('close')}</button></div><div id="global-search-results" class="search-results"><div class="search-hint">${hint}</div></div><div class="search-dialog-foot"><span>Enter para abrir</span><span>Esc para cerrar</span></div></div></div>`;
 
   const modal = document.getElementById('global-search-modal');
   const input = document.getElementById('global-search-input');
   const results = document.getElementById('global-search-results');
+  let searchIndex = null;
+  let searchTimer = null;
+
+  const buildSearchIndex = () => {
+    const clubs = state.clubs.map(club => ({
+      type: 'club',
+      id: club.id,
+      name: club.name,
+      club,
+      normalized: normalizeText(club.name)
+    }));
+
+    const players = state.players.map(player => {
+      const roster = state.index.rosterByPlayer.get(player.id)?.[0] || null;
+      const team = roster ? state.index.teamById.get(Number(roster.equipo_id)) : null;
+      const club = team ? state.index.clubById.get(Number(team.club_id)) : null;
+      const clubName = club?.name || 'Sin club';
+      return {
+        type: 'player',
+        id: player.id,
+        name: player.name,
+        clubName,
+        normalized: normalizeText(`${player.name} ${clubName}`)
+      };
+    });
+
+    return [...clubs, ...players];
+  };
+
+  const rank = (row, term) => {
+    if (row.normalized === term) return 0;
+    if (row.normalized.startsWith(term)) return 1;
+    return row.normalized.includes(term) ? 2 : 99;
+  };
+
+  const renderResults = term => {
+    if (!results) return;
+    if (!term) {
+      results.innerHTML = `<div class="search-hint">${hint}</div>`;
+      return;
+    }
+    searchIndex ||= buildSearchIndex();
+    const rows = searchIndex
+      .filter(row => row.normalized.includes(term))
+      .sort((a, b) => rank(a, term) - rank(b, term) || a.name.localeCompare(b.name, 'es'))
+      .slice(0, 12)
+      .map(row => row.type === 'club'
+        ? `<a class="search-result" href="club.html?id=${row.id}">${clubBadge(row.club, true)}<span><b>${esc(row.name)}</b><small>Club</small></span></a>`
+        : `<a class="search-result" href="jugador.html?id=${row.id}"><span class="avatar">${esc(initials(row.name))}</span><span><b>${esc(row.name)}</b><small>${esc(row.clubName)} · Jugador</small></span></a>`
+      );
+    results.innerHTML = rows.join('') || '<div class="search-hint">No encontramos coincidencias.</div>';
+  };
 
   const open = () => {
     if (!state.loaded) { showToast('Esperá a que terminen de cargar los datos.'); return; }
+    searchIndex ||= buildSearchIndex();
     modal?.classList.add('show');
     modal?.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
     setTimeout(() => input?.focus(), 30);
   };
+
   const close = () => {
     modal?.classList.remove('show');
     modal?.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-open');
+    clearTimeout(searchTimer);
     if (input) input.value = '';
-    if (results) results.innerHTML = '<div class="search-hint">Escribí un nombre para buscar en la competencia seleccionada.</div>';
+    if (results) results.innerHTML = `<div class="search-hint">${hint}</div>`;
   };
 
   document.getElementById('global-search-open')?.addEventListener('click', open);
@@ -241,15 +327,16 @@ function initGlobalSearch() {
   });
 
   input?.addEventListener('input', () => {
-    const term = normalizeText(input.value);
-    if (!term) { results.innerHTML = '<div class="search-hint">Escribí un nombre para buscar en la competencia seleccionada.</div>'; return; }
-    const clubs = getClubs().filter(c => normalizeText(c.name).includes(term)).slice(0, 5);
-    const players = getPlayers().filter(p => normalizeText(`${p.name} ${p.club}`).includes(term)).slice(0, 7);
-    const rows = [
-      ...clubs.map(c => `<a class="search-result" href="club.html?id=${c.id}">${clubBadge(c, true)}<span><b>${esc(c.name)}</b><small>Club · ${c.points} pts</small></span></a>`),
-      ...players.map(p => `<a class="search-result" href="jugador.html?id=${p.id}"><span class="avatar">${esc(initials(p.name))}</span><span><b>${esc(p.name)}</b><small>${esc(p.club)} · ${p.goals} goles</small></span></a>`)
-    ];
-    results.innerHTML = rows.join('') || '<div class="search-hint">No encontramos coincidencias.</div>';
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => renderResults(normalizeText(input.value)), 80);
+  });
+  input?.addEventListener('keydown', event => {
+    if (event.key !== 'Enter') return;
+    const first = results?.querySelector('a.search-result');
+    if (first) {
+      event.preventDefault();
+      first.click();
+    }
   });
 }
 
