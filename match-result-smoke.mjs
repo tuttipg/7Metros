@@ -40,4 +40,11 @@ const store = fs.readFileSync(new URL('./store.js', import.meta.url), 'utf8');
 assert.match(api, /matches\.filter\(hasVerifiedMatchResult\)/, 'El resumen fallback debe usar el criterio compartido');
 assert.match(store, /const finished = hasVerifiedMatchResult\(row\)/, 'El store debe usar el criterio compartido');
 assert.match(store, /status: matchPublicStatus\(row\)/, 'El store debe distinguir un resultado no verificable');
+const matchesPage = fs.readFileSync(new URL('./partidos.html', import.meta.url), 'utf8');
+const pages = fs.readFileSync(new URL('./pages.js', import.meta.url), 'utf8');
+assert.match(matchesPage, /<option value="Sin resultado">Sin resultado<\/option>/,
+  'Los partidos sin resultado verificable deben poder filtrarse explícitamente');
+assert.match(pages, /m\.status === statusValue/,
+  'El filtro de partidos debe comparar los estados visibles, incluido Sin resultado');
+
 console.log('Match result evidence smoke test: OK');
