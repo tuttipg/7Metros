@@ -280,7 +280,12 @@ export async function loadPublicDataset(seasonId) {
 
   // Arranca el resumen global en paralelo para que Inicio pueda mostrar escala
   // de la base mientras todavía se cargan los datos detallados de la temporada.
-  const summaryViewPromise = loadGlobalSummaryFast();
+  // Adjuntar el handler de rechazo inmediatamente: la vista puede fallar antes
+  // de que termine la consulta de equipos y de que se espere Promise.all.
+  const summaryViewOutcome = loadGlobalSummaryFast().then(
+    value => ({ value }),
+    error => ({ error })
+  );
 
   const rawEquipos = await supabaseGetAll(
     'equipos',
@@ -295,10 +300,12 @@ export async function loadPublicDataset(seasonId) {
   );
   const requestedClubIds = scopedEquipos.map(row => Number(row.club_id));
 
-  const [clubes, summaryView] = await Promise.all([
+  const [clubes, summaryOutcome] = await Promise.all([
     supabaseGetByIds('clubes', 'id', requestedClubIds, 'id,nombre,abreviatura,ciudad,logo_url'),
-    summaryViewPromise
+    summaryViewOutcome
   ]);
+  if (summaryOutcome.error) throw summaryOutcome.error;
+  const summaryView = summaryOutcome.value;
 
   const validClubIds = new Set(clubes.map(row => Number(row.id)).filter(Number.isFinite));
   const equipos = scopedEquipos.filter(row => validClubIds.has(Number(row.club_id)));
