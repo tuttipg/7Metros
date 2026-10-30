@@ -51,4 +51,31 @@ assert.match(matchesPage, /<option value="asc">Más antiguos primero<\/option>/,
 assert.match(pages, /m\.status === statusValue/,
   'El filtro de partidos debe comparar los estados visibles, incluido Sin resultado');
 
+// Regression: malformed match IDs must not produce broken /partido.html?id=... links.
+// This is an in-memory dataset; no API calls or database writes occur.
+globalThis.window = globalThis;
+globalThis.localStorage = { getItem: () => null };
+globalThis.SEVEN_METROS_CONFIG = { seasonId: 3 };
+const { prepareDataset, state } = await import('./store.js');
+const matchRow = { local_equipo_id: 10, visitante_equipo_id: 11, estado: 'finalizado', goles_local: 2, goles_visitante: 3 };
+prepareDataset({
+  clubes: [{ id: 1, nombre: 'Local' }, { id: 2, nombre: 'Visitante' }],
+  equipos: [{ id: 10, club_id: 1, temporada_id: 3 }, { id: 11, club_id: 2, temporada_id: 3 }],
+  partidos: [
+    null,
+    { ...matchRow, id: null },
+    { ...matchRow, id: '' },
+    { ...matchRow, id: 'not-an-id' },
+    { ...matchRow, id: -1 },
+    { ...matchRow, id: 1.5 },
+    { ...matchRow, id: '9007199254740992' },
+    { ...matchRow, id: 401 },
+    { ...matchRow, id: '402' }
+  ]
+});
+assert.deepEqual(state.matches.map(row => row.id), [401, 402],
+  'Only valid positive safe integer IDs may generate match links');
+assert.deepEqual([...state.index.matchById.keys()], [401, 402],
+  'The lookup index must also exclude invalid match IDs');
+
 console.log('Match result evidence smoke test: OK');
