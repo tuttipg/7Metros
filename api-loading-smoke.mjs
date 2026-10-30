@@ -50,7 +50,68 @@ try {
     'la concurrencia superior al techo SAFE debe rechazarse'
   );
 
-  console.log('api-loading-smoke: OK — chunks concurrentes acotados y fail-closed.');
+  // Todas las respuestas siguientes son mocks locales: nunca se consulta Supabase.
+  // Una caída/pausa de la API no debe desencadenar un segundo GET global de partidos.
+  const mockJson = (value, status = 200) => new Response(JSON.stringify(value), {
+    status, headers: { 'Content-Type': 'application/json' }
+  });
+  let mode = 'paused';
+  let scopedReads = 0;
+  let globalReads = 0;
+  globalThis.fetch = async input => {
+    const url = new URL(input);
+    const table = url.pathname.split('/').at(-1);
+    if (table === 'v_global_summary') {
+      return mockJson([{ clubes: 1, jugadores: 0, partidos: 1,
+        partidos_con_resultado: 0, goles: 0, promedio_goles: null }]);
+    }
+    if (table === 'equipos') {
+      return mockJson([
+        { id: 10, club_id: 1, temporada_id: 3 },
+        { id: 11, club_id: 1, temporada_id: 3 }
+      ]);
+    }
+    if (table === 'clubes') return mockJson([{ id: 1, nombre: 'Club de prueba' }]);
+    if (table === 'partidos') {
+      if (url.searchParams.has('temporada_id')) {
+        scopedReads++;
+        if (mode === 'paused') {
+          return mockJson({ code: 'PGRST000', message: 'Servicio temporalmente no disponible' }, 503);
+        }
+        if (mode === 'unrelated') {
+          return mockJson({ code: '42703', message: 'column partidos.otra_columna does not exist' }, 400);
+        }
+        return mockJson({ code: '42703', message: 'column partidos.temporada_id does not exist' }, 400);
+      }
+      globalReads++;
+      return mockJson([
+        { id: 401, local_equipo_id: 10, visitante_equipo_id: 11 },
+        { id: 402, local_equipo_id: 10, visitante_equipo_id: 99 }
+      ]);
+    }
+    return mockJson([]);
+  };
+
+  const { loadPublicDataset } = await import('./api.js');
+  await assert.rejects(() => loadPublicDataset(3), DataError,
+    'un servicio caído debe informar el error sin consulta global de partidos');
+  assert.equal(scopedReads, 1);
+  assert.equal(globalReads, 0, 'un 503 no habilita fallback global');
+
+  mode = 'unrelated';
+  await assert.rejects(() => loadPublicDataset(3), DataError,
+    'una columna faltante diferente no habilita fallback global');
+  assert.equal(scopedReads, 2);
+  assert.equal(globalReads, 0, 'un 42703 ajeno a temporada_id no habilita fallback');
+
+  mode = 'legacy';
+  const legacy = await loadPublicDataset(3);
+  assert.equal(scopedReads, 3);
+  assert.equal(globalReads, 1, 'sólo la ausencia comprobada de temporada_id habilita fallback');
+  assert.deepEqual(legacy.partidos.map(row => row.id), [401],
+    'el fallback legacy debe mantener el scope de ambos equipos');
+
+  console.log('api-loading-smoke: OK — concurrencia y fallback legacy sin duplicar lecturas ante caídas.');
 } finally {
   globalThis.fetch = originalFetch;
   delete globalThis.SEVEN_METROS_CONFIG;
