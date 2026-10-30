@@ -163,7 +163,7 @@ function renderClubDetail() {
   const root = document.getElementById('club-detail');
   if (!root) return;
   const id = Number(new URLSearchParams(location.search).get('id'));
-  const club = getClub(id) || getClubs()[0];
+  const club = getClub(id);
   if (!club) { root.innerHTML = emptyState('Club no disponible', 'No encontramos este club en la competencia seleccionada.', '<a class="btn" href="clubes.html">Volver a clubes</a>'); return; }
 
   const header = document.querySelector('.page-header h1');
@@ -221,7 +221,7 @@ function renderPlayerDetail() {
   const root = document.getElementById('player-detail');
   if (!root) return;
   const id = Number(new URLSearchParams(location.search).get('id'));
-  const player = getPlayer(id) || getPlayers()[0];
+  const player = getPlayer(id);
   if (!player) { root.innerHTML = emptyState('Jugador no disponible', 'No encontramos este jugador en la competencia seleccionada.'); return; }
   const age = ageFromBirthDate(player.birthDate);
   const rows = getPlayerMatchRows(player.id);
@@ -303,7 +303,7 @@ function renderMatchDetail() {
   const root = document.getElementById('match-detail');
   if (!root) return;
   const id = Number(new URLSearchParams(location.search).get('id'));
-  const match = getMatch(id) || getMatches()[0];
+  const match = getMatch(id);
   if (!match) { root.innerHTML = emptyState('Partido no disponible', 'No encontramos este partido en la competencia seleccionada.'); return; }
   const home = getBaseClub(match.homeClubId) || { id: match.homeClubId, name: match.home, abbr: initials(match.home) };
   const away = getBaseClub(match.awayClubId) || { id: match.awayClubId, name: match.away, abbr: initials(match.away) };
