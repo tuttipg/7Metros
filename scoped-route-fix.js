@@ -1,4 +1,5 @@
 import { SEASON_ID } from './config.js';
+import { readRouteParam } from './route-id-core.mjs';
 import { state, getClub, getMatch } from './store.js';
 import { renderCurrentPage } from './pages.js';
 import { renderCompetitionBar } from './ui.js';
@@ -64,10 +65,10 @@ function applyTeamContext(teamId, entityId) {
 }
 
 function resolveClubRoute(root, params) {
-  const clubId = Number(params.get('id'));
-  const requestedTeamId = Number(params.get('team'));
+  const clubId = readRouteParam(params, 'id');
+  const requestedTeamId = readRouteParam(params, 'team');
   const memberships = seasonTeamsForClub(clubId);
-  const clubExists = state.index.clubById.has(clubId);
+  const clubExists = state.index.clubById.has(Number(clubId));
 
   if (!clubExists) {
     renderRouteError(root, 'Club no disponible', 'No encontramos el club solicitado en la temporada actual.');
@@ -106,9 +107,9 @@ function resolveClubRoute(root, params) {
 }
 
 function resolveMatchRoute(root, params) {
-  const matchId = Number(params.get('id'));
-  const requestedTeamId = Number(params.get('team'));
-  const match = state.index.matchById.get(matchId);
+  const matchId = readRouteParam(params, 'id');
+  const requestedTeamId = readRouteParam(params, 'team');
+  const match = state.index.matchById.get(Number(matchId));
 
   if (!match) {
     renderRouteError(root, 'Partido no disponible', 'No encontramos el partido solicitado en la temporada actual.');
