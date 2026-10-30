@@ -44,6 +44,10 @@ const matchesPage = fs.readFileSync(new URL('./partidos.html', import.meta.url),
 const pages = fs.readFileSync(new URL('./pages.js', import.meta.url), 'utf8');
 assert.match(matchesPage, /<option value="Sin resultado">Sin resultado<\/option>/,
   'Los partidos sin resultado verificable deben poder filtrarse explícitamente');
+assert.match(matchesPage, /<option value="Programado">Programados<\/option>/,
+  'El filtro por estado incluye también programados anteriores; no debe llamarse Próximos');
+assert.match(matchesPage, /<option value="asc">Más antiguos primero<\/option>/,
+  'Orden ascendente por fecha no significa el próximo partido');
 assert.match(pages, /m\.status === statusValue/,
   'El filtro de partidos debe comparar los estados visibles, incluido Sin resultado');
 
