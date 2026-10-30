@@ -71,7 +71,7 @@ export function prepareDataset(dataset) {
     abbr: row.abreviatura || initials(row.nombre || '7Metros'),
     city: row.ciudad || '',
     logoUrl: row.logo_url || null
-  })).filter(row => Number.isFinite(row.id));
+  })).filter(row => Number.isSafeInteger(row.id) && row.id > 0);
 
   const validClubIds = new Set(state.clubs.map(row => row.id));
   state.teams = (dataset.equipos || []).map(row => ({
@@ -81,7 +81,7 @@ export function prepareDataset(dataset) {
     temporada_id: Number(row.temporada_id),
     equipo_codigo: teamCode(row)
   })).filter(row =>
-    Number.isFinite(row.id) &&
+    Number.isSafeInteger(row.id) && row.id > 0 &&
     Number.isFinite(row.club_id) &&
     Number.isFinite(row.temporada_id) &&
     row.temporada_id === SEASON_ID &&
@@ -97,7 +97,7 @@ export function prepareDataset(dataset) {
     dominantArm: row.brazo_habil || null,
     height: numericField(row, ['altura_cm']),
     weight: numericField(row, ['peso_kg'])
-  })).filter(row => Number.isFinite(row.id));
+  })).filter(row => Number.isSafeInteger(row.id) && row.id > 0);
 
   const validPlayerIds = new Set(state.players.map(row => row.id));
   const validTeamIds = new Set(state.teams.map(row => row.id));
