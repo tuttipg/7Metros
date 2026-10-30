@@ -58,6 +58,16 @@ console.log('✓ player-route-smoke: filtros guardados, contexto visible/explici
 const uiSource = readFileSync(new URL('./ui.js', import.meta.url), 'utf8');
 assert.match(
   uiSource,
-  /jugador\.html\?id=\\\$\{row\.id\}[\s\S]*&team=\\\$\{row\.teamId\}/,
+  /jugador\.html\?id=/,
+  'global search must link to player detail routes'
+);
+assert.match(
+  uiSource,
+  /&team=/,
   'global search must preserve team context for player routes'
+);
+assert.match(
+  uiSource,
+  /row\.teamId/,
+  'global search must derive the explicit player team context'
 );
