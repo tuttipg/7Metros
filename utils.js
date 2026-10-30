@@ -38,19 +38,32 @@ export function normalizeText(value = '') {
     .trim();
 }
 
+// Las fechas del fixture son días de calendario, no instantes en la zona del navegador.
+// Anclar al mediodía UTC evita que usuarios en otras zonas vean el día anterior.
+function parseCalendarDate(value) {
+  const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(String(value ?? ''));
+  if (!match) return null;
+  const date = new Date(`${match[0]}T12:00:00Z`);
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getUTCFullYear() !== Number(match[1]) ||
+    date.getUTCMonth() + 1 !== Number(match[2]) ||
+    date.getUTCDate() !== Number(match[3])
+  ) return null;
+  return date;
+}
+
 export function formatDateISO(iso, options = {}) {
-  if (!iso) return 'Fecha a confirmar';
-  const date = new Date(`${iso}T12:00:00`);
-  if (Number.isNaN(date.getTime())) return String(iso);
+  const date = parseCalendarDate(iso);
+  if (!date) return 'Fecha a confirmar';
   return new Intl.DateTimeFormat(LOCALE, {
     day: '2-digit', month: 'short', year: 'numeric', timeZone: TIMEZONE, ...options
   }).format(date).replace('.', '');
 }
 
 export function formatShortDate(iso) {
-  if (!iso) return { day: '--', month: '---' };
-  const date = new Date(`${iso}T12:00:00`);
-  if (Number.isNaN(date.getTime())) return { day: '--', month: '---' };
+  const date = parseCalendarDate(iso);
+  if (!date) return { day: '--', month: '---' };
   return {
     day: new Intl.DateTimeFormat(LOCALE, { day: '2-digit', timeZone: TIMEZONE }).format(date),
     month: new Intl.DateTimeFormat(LOCALE, { month: 'short', timeZone: TIMEZONE }).format(date).replace('.', '').toUpperCase()
