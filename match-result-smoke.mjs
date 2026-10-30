@@ -78,4 +78,43 @@ assert.deepEqual(state.matches.map(row => row.id), [401, 402],
 assert.deepEqual([...state.index.matchById.keys()], [401, 402],
   'The lookup index must also exclude invalid match IDs');
 
+
+// Regression: bad club/team/player IDs must not create broken profile links.
+// The same positive safe-integer contract already applies to match IDs above.
+prepareDataset({
+  clubes: [
+    { id: null, nombre: 'Invalid null' },
+    { id: 0, nombre: 'Invalid zero' },
+    { id: -1, nombre: 'Invalid negative' },
+    { id: 1.5, nombre: 'Invalid fractional' },
+    { id: '9007199254740992', nombre: 'Invalid unsafe' },
+    { id: 1, nombre: 'Valid home' },
+    { id: 2, nombre: 'Valid away' }
+  ],
+  equipos: [
+    { id: null, club_id: 1, temporada_id: 3 },
+    { id: 0, club_id: 1, temporada_id: 3 },
+    { id: -2, club_id: 1, temporada_id: 3 },
+    { id: 1.5, club_id: 1, temporada_id: 3 },
+    { id: '9007199254740992', club_id: 1, temporada_id: 3 },
+    { id: 10, club_id: 1, temporada_id: 3 },
+    { id: 11, club_id: 2, temporada_id: 3 }
+  ],
+  jugadores: [
+    { id: null, nombre: 'Invalid null' },
+    { id: 0, nombre: 'Invalid zero' },
+    { id: -1, nombre: 'Invalid negative' },
+    { id: 2.5, nombre: 'Invalid fractional' },
+    { id: '9007199254740992', nombre: 'Invalid unsafe' },
+    { id: 20, nombre: 'Valid player' }
+  ],
+  partidos: []
+});
+assert.deepEqual(state.clubs.map(row => row.id), [1, 2],
+  'Club links require positive safe integer IDs');
+assert.deepEqual(state.teams.map(row => row.id), [10, 11],
+  'Team IDs must be safe before building club and player context');
+assert.deepEqual(state.players.map(row => row.id), [20],
+  'Player links require positive safe integer IDs');
+
 console.log('Match result evidence smoke test: OK');
