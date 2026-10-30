@@ -92,7 +92,7 @@ function renderBootstrapShell() {
       <div class="brand"><a href="index.html" aria-label="7Metros - Inicio"><div class="brand-logo"><span class="seven">7</span><span class="m">M</span></div><span class="brand-name">7<b>METROS</b></span><span class="brand-sub">HANDBALL APP</span></a></div>
       <a class="nav-search" href="jugadores.html"><span class="nav-icon">${bootIcon('search')}</span><span>Buscar</span><kbd>Ctrl K</kbd></a>
       <nav class="nav"><span class="nav-group-label">COMPETICIÓN</span>${links(groups.primary)}<span class="nav-group-label">DATOS</span>${links(groups.data)}<div class="nav-link disabled"><span class="nav-icon">${bootIcon('ball')}</span><span>IA / VIDEO</span><em>LAB</em></div><div class="nav-sep"></div>${links(groups.secondary)}</nav>
-      <div class="sidebar-foot"><span class="live-dot"></span><span>7Metros conectado</span></div>`;
+      <div class="sidebar-foot" data-connection-state="loading"><span class="live-dot"></span><span class="connection-label">Conectando datos…</span></div>`;
   }
 
   const mobile = document.getElementById('mobile-bar');
@@ -128,6 +128,12 @@ function showBootstrapError(error) {
   const root = document.getElementById('data-status');
   const health = document.getElementById('data-health-label');
   const meta = document.getElementById('data-health-meta');
+  const indicator = document.querySelector('.sidebar-foot');
+  if (indicator) {
+    indicator.dataset.connectionState = 'error';
+    const label = indicator.querySelector('.connection-label');
+    if (label) label.textContent = 'Datos no disponibles';
+  }
   if (health) health.textContent = 'Navegación disponible';
   if (meta) meta.textContent = 'No se pudieron iniciar los datos; el menú sigue funcionando.';
   if (root) {
