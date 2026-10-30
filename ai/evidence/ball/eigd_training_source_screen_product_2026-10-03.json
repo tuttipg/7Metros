@@ -1,0 +1,18 @@
+{
+  "covered_roles": [
+    "original_media"
+  ],
+  "dataset_admission_status": "NOT_EVALUATED",
+  "dataset_title": "EIGD handball video candidate",
+  "errors": [
+    "sources[0].license.id CC-BY-NC-SA-4.0 forbids product/commercial use",
+    "source manifest lacks rights coverage for: annotations"
+  ],
+  "intended_use": "product",
+  "manifest_path": "ai/evidence/ball/eigd_training_sources_candidate_2026-10-03.json",
+  "manifest_sha256": "99830c65c2d3c421dfc5d8145b8dfe9c82c88659095f13a7cfda74c4c1759084",
+  "model_accuracy_status": "NOT_EVALUATED",
+  "schema": "sevenmetros.ball-training-source-screen/v1",
+  "source_count": 1,
+  "status": "REJECTED_TRAINING_SOURCE_RIGHTS"
+}

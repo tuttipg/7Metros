@@ -1,0 +1,72 @@
+{
+  "status": "VERIFIED_ON_ONE_HUMAN_REVIEWED_GT_INTERVAL",
+  "scope": {
+    "source": "persisted_yolo11n_confidence_0.10_cache_replay",
+    "fresh_inference": false,
+    "full_replay_frames": 3600,
+    "reviewed_gt_frames": 105,
+    "gt_sha256": "6cbee6046118d3f25cc3ae028b1aaa24b75e42859f0bc2541eaab9cfdcd1b615"
+  },
+  "change": {
+    "default_behavior_changed": false,
+    "description": "all three trackers now use the same TemporalRoleFilter over instantaneous role evidence",
+    "confirmation": {"window": 12, "minimum_votes": 3, "minimum_ratio": 0.75},
+    "association_behavior": "filtered roles remain internally tracked; only player output is suppressed"
+  },
+  "official_trackeval_percent_except_counts": {
+    "baseline_high_only": {
+      "prior_filter": {"HOTA": 85.110324, "MOTA": 81.751288, "IDF1": 89.717425, "TP": 1154, "FN": 205, "FP": 35, "IDSW": 8, "fragments": 19},
+      "uniform_filter": {"HOTA": 85.939137, "MOTA": 83.738043, "IDF1": 90.678302, "TP": 1154, "FN": 205, "FP": 8, "IDSW": 8, "fragments": 19},
+      "delta": {"HOTA": 0.828813, "MOTA": 1.986755, "IDF1": 0.960877, "FP": -27}
+    },
+    "two_stage": {
+      "prior_filter": {"HOTA": 86.608198, "MOTA": 86.387049, "IDF1": 92.419048, "TP": 1224, "FN": 135, "FP": 42, "IDSW": 8, "fragments": 12},
+      "uniform_filter": {"HOTA": 87.436830, "MOTA": 88.373804, "IDF1": 93.379523, "TP": 1224, "FN": 135, "FP": 15, "IDSW": 8, "fragments": 12},
+      "delta": {"HOTA": 0.828632, "MOTA": 1.986755, "IDF1": 0.960475, "FP": -27}
+    },
+    "bytetrack_standard": {
+      "prior_filter": {"HOTA": 74.718713, "MOTA": 88.005887, "IDF1": 86.692607, "TP": 1206, "FN": 153, "FP": 5, "IDSW": 5, "fragments": 16},
+      "uniform_filter": {"HOTA": 74.718713, "MOTA": 88.005887, "IDF1": 86.692607, "TP": 1206, "FN": 153, "FP": 5, "IDSW": 5, "fragments": 16},
+      "delta": {"HOTA": 0.0, "MOTA": 0.0, "IDF1": 0.0, "FP": 0}
+    }
+  },
+  "output_filter_guardrail": {
+    "status": "OUTPUT_FILTER_VERIFIED_ON_REVIEWED_GT",
+    "baseline_high_only": {"removed": 105, "removed_gt_matches": 0, "removed_gt_overlaps": 0, "track_ids": {"2": 105}},
+    "two_stage": {"removed": 105, "removed_gt_matches": 0, "removed_gt_overlaps": 0, "track_ids": {"2": 105}},
+    "bytetrack_standard": {"removed": 105, "removed_gt_matches": 0, "removed_gt_overlaps": 0, "track_ids": {"2": 105}}
+  },
+  "full_replay_excluded_role_observations": {
+    "accuracy_status": "NOT_EVALUATED_NO_COMPLETE_GT",
+    "baseline_high_only": {"prior_filter": 3282, "uniform_filter": 4663},
+    "two_stage": {"prior_filter": 3490, "uniform_filter": 4949},
+    "bytetrack_standard": {"prior_filter": 4343, "uniform_filter": 4343}
+  },
+  "independent_unreviewed_interval": {
+    "source_frames": [2915, 3004],
+    "accuracy_status": "NOT_EVALUATED_GT_REVIEW_PENDING",
+    "baseline_high_only": {"observations_before": 1088, "observations_after": 962, "removed_track_observations": {"202": 90, "224": 36}},
+    "two_stage": {"observations_before": 1139, "observations_after": 1013, "removed_track_observations": {"205": 90, "229": 36}},
+    "bytetrack_standard": {"observations_before": 1092, "observations_after": 976, "removed_track_observations": {"1108": 83, "1132": 33}},
+    "event_track_222_baseline_observations_after": 27
+  },
+  "artifacts": {
+    "comparison_sha256": "ba27cede77e962404fff46d6a4af61c573fe33a5b23c3e9fc2e88b3119c9c4cd",
+    "baseline_jsonl_sha256": "9a4a0c5fcde0f4495b2656e746fb2ce4e6b1151509a5ea8bfc09b7262f75ef2a",
+    "two_stage_jsonl_sha256": "eeef50d0c3cd07a5cb6899fbdf390276341f776aba783a97a6592b1dbbb0c584",
+    "bytetrack_jsonl_sha256": "047ffda4acef2d7eb20f09c4215c26215fa57d77bda672fa43c4a6ea6b34f8c6",
+    "safety_audit_sha256": "b189e9015b04e1fcb8ad1d7fa0cf2733bf0f4036bc41d5ae0aa34fafc3068d23",
+    "trackeval_result_sha256": "c6cef570cefd48a79c172bff64c60b51e95a220828d68831186a1bd2deeb90d3",
+    "trackeval_bundle_manifest_sha256": "e8c32925c2812fc0541c385c028f6b8b06d16031636a6c8a960c4ad907d30bb9"
+  },
+  "tests": {
+    "vision_environment": {"passed": 131, "skipped": 0},
+    "minimal_environment": {"passed": 118, "skipped_optional": 13}
+  },
+  "limits": [
+    "official accuracy metrics cover one 105-frame human-reviewed interval only",
+    "the stronger exclusion count over 3600 frames is not an accuracy improvement without complete GT",
+    "the independent 90-frame reentry interval remains human-review pending",
+    "the option remains disabled by default"
+  ]
+}

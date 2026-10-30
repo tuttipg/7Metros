@@ -1,0 +1,25 @@
+{
+  "status": "TOOLING_VALIDATED_REAL_METRICS_BLOCKED_BY_MISSING_REVIEWED_GT",
+  "vision_runtime_tests": {
+    "discovered": 84,
+    "passed": 84,
+    "skipped": 0
+  },
+  "minimal_ci_tests": {
+    "discovered": 84,
+    "passed": 76,
+    "skipped_optional": 8
+  },
+  "synthetic_conversion": {
+    "frames": 2,
+    "ground_truth_rows": 2,
+    "tracker_rows": 2,
+    "claim": "format_and_validation_only_not_accuracy"
+  },
+  "real_annotation_task": {
+    "frames": 105,
+    "bundle_created": false,
+    "rejection": "missing_gt/gt.txt_and_gt/review.json",
+    "seed_evaluated_as_ground_truth": false
+  }
+}

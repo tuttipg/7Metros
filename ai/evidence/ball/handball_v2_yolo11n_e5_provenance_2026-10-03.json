@@ -1,0 +1,27 @@
+{
+  "evaluation_exclusions": [
+    {
+      "excluded_from_training": true,
+      "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d"
+    }
+  ],
+  "license": {
+    "id": "AGPL-3.0",
+    "url": "https://github.com/ultralytics/ultralytics/blob/main/LICENSE"
+  },
+  "model": {
+    "ball_class_id": 0,
+    "ball_class_name": "handball",
+    "specialized_single_class": true,
+    "task": "detect"
+  },
+  "model_sha256": "0bf57b3a22505be98767b473f0c22cf16fc05534ce1d794a0c85474e181eb9b5",
+  "schema": "sevenmetros.ball-model-provenance/v1",
+  "source_url": "https://github.com/tuttipg/7Metros/pull/43",
+  "training_data": [
+    {
+      "license_id": "CC-BY-4.0",
+      "url": "https://github.com/jacobattard/Thesis/tree/ebd05c73e8bffa3a537aed13ecb8174c4de4eeeb/training/handball-detection-2"
+    }
+  ]
+}

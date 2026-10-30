@@ -1,0 +1,38 @@
+{
+  "scope": "fresh_selective_inference_then_two_stage_tracker_replay_with_non_spawnable_1280_replacements",
+  "full_artifact_sha256": "ba90214da94a1dec2f20afab670eccc81dd2cfffb3aab7fa5d6605cd7d29e306",
+  "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+  "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+  "confidence": 0.1,
+  "frames": 195,
+  "triggered_1280_frames": 53,
+  "runtime_measured_excluding_model_load_and_warmup": {
+    "total_seconds": 11.978579991002334,
+    "effective_fps": 16.279058130969908,
+    "baseline_pass_seconds": 6.704196021000826,
+    "contact_trigger_replay_seconds": 0.8510658330014849,
+    "candidate_selected_pass_seconds": 4.410850635998941
+  },
+  "deduplicated_sparse_points": {
+    "unique_box": 28,
+    "shared_box": 0,
+    "ambiguous": 2,
+    "missing": 0
+  },
+  "tracking_health": {
+    "baseline_640": [
+      {"range": [105, 210], "unique_tracks": 16, "mean_continuous_run_frames": 54.833, "track_observations": 1316, "reappearances_same_id": 8},
+      {"range": [1065, 1155], "unique_tracks": 16, "mean_continuous_run_frames": 47.952, "track_observations": 1007, "reappearances_same_id": 5}
+    ],
+    "selective_non_spawnable": [
+      {"range": [105, 210], "unique_tracks": 16, "mean_continuous_run_frames": 54.917, "track_observations": 1318, "reappearances_same_id": 8},
+      {"range": [1065, 1155], "unique_tracks": 15, "mean_continuous_run_frames": 48.19, "track_observations": 1012, "reappearances_same_id": 6}
+    ],
+    "sampled_id_changes": [0, 0]
+  },
+  "selective_replacements_may_spawn_tracks": false,
+  "standard_detection_metrics": null,
+  "standard_tracking_metrics": null,
+  "decision": "verified_behavior_experimental_policy_do_not_change_default",
+  "limitation": "Fewer IDs can mean less churn or a suppressed legitimate entry; no independently reviewed ground truth."
+}

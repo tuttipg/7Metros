@@ -1,0 +1,46 @@
+{
+  "status": "SECOND_GT_QC_V2_REQUIRES_TRACKEVAL_RERUN",
+  "sequence": "ferro_lujan_hard_reentry",
+  "frames": 90,
+  "annotations": 1125,
+  "identities": 13,
+  "source_review_sha256": "52eea93bc9e0356f1e4c9d54b2e99e0f6201e7383e056015ce971a2f1eb4e8c9",
+  "qc_v2_json_sha256": "d6c39e1d9e75b77b63315b98ab8db68bb278c6c765bc6ca802d19d185984a082",
+  "corrections": [
+    {
+      "task_frame": 13,
+      "type": "single_id_typo",
+      "from_id": 21,
+      "to_id": 215,
+      "evidence": "ID 21 appeared only once between adjacent frames carrying ID 215; visual continuity was previously confirmed"
+    },
+    {
+      "task_frame": 3,
+      "type": "reciprocal_identity_swap",
+      "ids": [217, 222],
+      "evidence": {
+        "visual_review": "frame 2: 217=dark player, 222=white player; frame 3 labels are reversed; frame 4 returns to the frame-2 identity assignment",
+        "three_frame_motion_cost_before_px": 168.616639,
+        "three_frame_motion_cost_after_swap_px": 60.181355,
+        "motion_cost_reduction_px": 108.435285,
+        "hsv_same_identity_failure": "both identities prefer the crossed appearance assignment on transitions 2->3 and 3->4, exactly bracketing the isolated label swap"
+      }
+    }
+  ],
+  "whole_sequence_qc": {
+    "method": "scan all identity pairs present in t-1,t,t+1 for reciprocal one-frame swaps using center-motion cost",
+    "candidates_over_20px_improvement": 1,
+    "only_candidate": {"task_frame": 3, "ids": [217, 222]},
+    "duplicate_ids_per_frame_after_qc": 0,
+    "invalid_boxes_after_qc": 0
+  },
+  "metric_status": {
+    "previous_second_gt_trackeval": "SUPERSEDED_FOR_FINAL_REPORTING_PENDING_RERUN",
+    "reason": "the previous TrackEval table used the pre-QC identity labels at task frame 3",
+    "expected_scope": "rerun baseline, two_stage and bytetrack_standard with the same persisted outputs and QC-v2 GT before using second-GT metrics for final tracker decisions"
+  },
+  "limits": [
+    "the correction changes identity association on one frame only; detection TP/FN/FP counts are expected to remain unchanged but official HOTA/IDF1/IDSW must be rerun rather than assumed",
+    "no algorithm should be tuned to reproduce the known pre-QC swap"
+  ]
+}

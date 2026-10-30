@@ -1,0 +1,99 @@
+{
+  "schema_version": "sevenmetros.reviewed-scoring/v1",
+  "status": "REVIEWED_PILOT_ONLY",
+  "sequence": {
+    "start_frame": 145,
+    "end_frame_exclusive": 165,
+    "video_sha256": "84a94f6e5526d94afc67dc8ee99cc9b390265482d6f0250f2d8a12080e437ed2"
+  },
+  "control_change": {
+    "tp": 0,
+    "fp": 1,
+    "fn": 1,
+    "precision": 0,
+    "recall": 0,
+    "f1": 0,
+    "gt_events": 1,
+    "predicted_events": 1,
+    "tolerance_frames": 2,
+    "matches": []
+  },
+  "possession": {
+    "frames": 20,
+    "gt_controlled_frames": 4,
+    "pred_controlled_frames": 8,
+    "tp": 0,
+    "fp": 8,
+    "fn": 4,
+    "precision": 0,
+    "recall": 0,
+    "f1": 0,
+    "note": "controlled-vs-not only; owner identity NOT scored"
+  },
+  "possession_note": null,
+  "full_match_generalization": false,
+  "ball_sample": {
+    "status": "RECOMPUTED_FROM_RETAINED_COUNTS_NOT_FRESH_INFERENCE",
+    "visible_gt_frames": 53,
+    "out_of_frame_negative_frames": 60,
+    "iou_threshold": 0.5,
+    "models": {
+      "generic_yolo11n_coco_sports_ball": {
+        "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+        "variants": {
+          "strong_control": {
+            "tp": 24,
+            "fp": 3,
+            "fn": 29,
+            "precision": 0.8888888888888888,
+            "recall": 0.4528301886792453,
+            "f1": 0.6
+          },
+          "court_guard_plus_two_stage_association": {
+            "tp": 33,
+            "fp": 1,
+            "fn": 20,
+            "precision": 0.9705882352941176,
+            "recall": 0.6226415094339622,
+            "f1": 0.7586206896551724
+          }
+        }
+      },
+      "specialized_handball_yolo11n_e5": {
+        "model_sha256": "0bf57b3a22505be98767b473f0c22cf16fc05534ce1d794a0c85474e181eb9b5",
+        "variants": {
+          "strong_control": {
+            "tp": 15,
+            "fp": 76,
+            "fn": 38,
+            "precision": 0.16483516483516483,
+            "recall": 0.2830188679245283,
+            "f1": 0.20833333333333334
+          },
+          "court_guard_plus_two_stage_association": {
+            "tp": 16,
+            "fp": 29,
+            "fn": 37,
+            "precision": 0.35555555555555557,
+            "recall": 0.3018867924528302,
+            "f1": 0.32653061224489793
+          }
+        }
+      }
+    },
+    "full_match_generalization": false
+  },
+  "evidence_paths": {
+    "semantic_gt": "ai/evidence/semantic/ferro_lujan_semantic_pilot_145_164_2026-10-06.json",
+    "event_candidates": "ai/evidence/ball/event_candidates_gt1_2026-10-01.json",
+    "ball_comparison": "ai/evidence/ball/handball_v2_yolo11n_e5_comparison_2026-10-03.json"
+  },
+  "possession_replay": {
+    "path": "ai/evidence/semantic/possession_replay_145_164_2026-10-29.json",
+    "source_code_head": "1d3c709314504b3d07b17a521ec0df577c31c429",
+    "source_video_sha256": "84a94f6e5526d94afc67dc8ee99cc9b390265482d6f0250f2d8a12080e437ed2",
+    "clip_sha256": "8a13c8f988722087d07e407c0595cfd12822c38991ce05fbdf79aa8f10d50e75",
+    "raw_stream_sha256": "30a0dfb07a2713ecd8d663465a0c0c7d4d1897d92255121c64cbd11db8f6ff8e",
+    "pixel_identical_frames": 180
+  }
+}

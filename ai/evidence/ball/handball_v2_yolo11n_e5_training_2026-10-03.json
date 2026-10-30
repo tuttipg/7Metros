@@ -1,0 +1,50 @@
+{
+  "accuracy_status": "EXTERNAL_DATASET_VALIDATION_ONLY_NOT_MATCH_ACCURACY",
+  "base_model": {
+    "name": "yolo11n.pt",
+    "sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1"
+  },
+  "dataset": {
+    "fingerprint_sha256": "55af421e6785d8fc680c328a98d72401925ad95f07d45d0839721532a9c838c6",
+    "images": 1029,
+    "labels": 1029,
+    "boxes": 3144,
+    "source_commit": "ebd05c73e8bffa3a537aed13ecb8174c4de4eeeb",
+    "source_screen_sha256": "cb61f05c0453f9649dfd50b4b33f29324ddf55d51f59bd6cbb0a15fa43ed0aae",
+    "validation_report_sha256": "adad65760a7771820567c86dd70532f9b1c33709e16dd83628754b8fe3f2393f"
+  },
+  "model": {
+    "filename": "handball_v2_yolo11n_e5_best.pt",
+    "sha256": "0bf57b3a22505be98767b473f0c22cf16fc05534ce1d794a0c85474e181eb9b5",
+    "bytes": 5442650,
+    "task": "detect",
+    "class_id": 0,
+    "class_name": "handball"
+  },
+  "runtime": {
+    "device": "cpu",
+    "python": "3.12.14",
+    "torch": "2.14.0+cpu",
+    "ultralytics": "8.4.163"
+  },
+  "schema": "sevenmetros.ball-training-run/v1",
+  "settings": {
+    "amp": false,
+    "batch": 8,
+    "deterministic": true,
+    "epochs": 5,
+    "imgsz": 640,
+    "optimizer": "auto",
+    "seed": 0,
+    "workers": 0
+  },
+  "training_elapsed_seconds": 436.59,
+  "validation_split": {
+    "images": 205,
+    "instances": 626,
+    "map50": 0.91744,
+    "map50_95": 0.55549,
+    "precision": 0.87729,
+    "recall": 0.86795
+  }
+}

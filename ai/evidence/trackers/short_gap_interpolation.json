@@ -1,0 +1,29 @@
+{
+  "status": "IMPLEMENTED_OPT_IN_NOT_PROMOTED",
+  "max_missing_frames": 5,
+  "seconds_at_30fps": 0.166667,
+  "method": "linear interpolation between observations of the same track_id; no endpoint extrapolation; no new IDs; observed boxes unchanged",
+  "synthetic_marker": {
+    "interpolated": true,
+    "interpolation_gap_frames": "integer"
+  },
+  "human_gt_evidence": {
+    "first_gt_current_baseline": {
+      "before": {"HOTA": 85.939137, "IDF1": 90.678302, "MOTA": 83.738043, "recall": 84.915379, "precision": 99.311532, "IDSW": 8, "fragments": 19},
+      "after": {"HOTA": 86.537337, "IDF1": 91.520125, "MOTA": 85.283297, "recall": 87.049301, "precision": 98.583333, "IDSW": 7, "fragments": 8}
+    },
+    "second_gt_current_baseline": {
+      "before": {"HOTA_approx": 79.826078, "IDF1": 82.894106, "MOTA": 76.711111, "recall": 81.511111, "precision": 95.322245, "IDSW": 9, "fragments": 28},
+      "after": {"HOTA_approx": 81.214384, "IDF1": 84.284378, "MOTA": 79.644444, "recall": 85.244444, "precision": 94.669299, "IDSW": 9, "fragments": 15}
+    }
+  },
+  "full_historical_baseline_smoke": {
+    "frames": 3600,
+    "filled_gaps": 593,
+    "interpolated_observations": 1264,
+    "accuracy_status": "NOT_EVALUATED_ON_FULL_MATCH"
+  },
+  "tests_added": 8,
+  "default_pipeline_changed": false,
+  "promotion_blocker": "repeat the same postprocess on current two_stage and bytetrack_standard outputs and run official TrackEval on both reviewed GT intervals"
+}

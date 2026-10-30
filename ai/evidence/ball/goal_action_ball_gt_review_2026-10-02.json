@@ -1,0 +1,37 @@
+{
+  "schema_version": "sevenmetros.ball-gt/v1",
+  "source": {
+    "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+    "width": 936,
+    "height": 524,
+    "fps": 30.0,
+    "encoding_note": "Local x264 fixture copy; not the canonical FFV1 tracking fixture."
+  },
+  "sequence": {
+    "name": "ferro_lujan_first_goal_action",
+    "start_frame": 326,
+    "end_frame_exclusive": 341
+  },
+  "review": {
+    "method": "Frame-by-frame review at native resolution plus 3x nearest-neighbour crop.",
+    "policy": "A box is allowed only when the ball boundary is visually separable without inferring it from player or goalkeeper motion.",
+    "result": "NO_LOCALISABLE_BALL_GROUND_TRUTH"
+  },
+  "annotations": [
+    {"frame_index": 326, "state": "ambiguous", "bbox_xyxy": null, "note": "Ball cannot be separated from the central player contact."},
+    {"frame_index": 327, "state": "ambiguous", "bbox_xyxy": null, "note": "Ball cannot be separated from the central player contact."},
+    {"frame_index": 328, "state": "ambiguous", "bbox_xyxy": null, "note": "Ball cannot be separated from the central player contact."},
+    {"frame_index": 329, "state": "ambiguous", "bbox_xyxy": null, "note": "Ball cannot be separated from the central player contact."},
+    {"frame_index": 330, "state": "ambiguous", "bbox_xyxy": null, "note": "Ball cannot be separated from the central player contact."},
+    {"frame_index": 331, "state": "ambiguous", "bbox_xyxy": null, "note": "Goalkeeper reaction is visible, but no ball boundary is localisable."},
+    {"frame_index": 332, "state": "ambiguous", "bbox_xyxy": null, "note": "Goalkeeper reaction is visible, but no ball boundary is localisable."},
+    {"frame_index": 333, "state": "ambiguous", "bbox_xyxy": null, "note": "Small dark pixels overlap players and court markings; none is defensible as the ball."},
+    {"frame_index": 334, "state": "ambiguous", "bbox_xyxy": null, "note": "Small dark pixels overlap players and court markings; none is defensible as the ball."},
+    {"frame_index": 335, "state": "ambiguous", "bbox_xyxy": null, "note": "Goalkeeper recovery is visible, but no ball boundary is localisable."},
+    {"frame_index": 336, "state": "ambiguous", "bbox_xyxy": null, "note": "Transition begins; no ball boundary is localisable."},
+    {"frame_index": 337, "state": "ambiguous", "bbox_xyxy": null, "note": "Transition begins; no ball boundary is localisable."},
+    {"frame_index": 338, "state": "ambiguous", "bbox_xyxy": null, "note": "Transition begins; no ball boundary is localisable."},
+    {"frame_index": 339, "state": "ambiguous", "bbox_xyxy": null, "note": "Transition begins; no ball boundary is localisable."},
+    {"frame_index": 340, "state": "ambiguous", "bbox_xyxy": null, "note": "Transition begins; no ball boundary is localisable."}
+  ]
+}

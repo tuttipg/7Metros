@@ -1,0 +1,57 @@
+{
+  "status": "VERIFIED_ON_SECOND_HUMAN_REVIEWED_GT_INTERVAL",
+  "scope": {
+    "source": "persisted_yolo11n_confidence_0.10_cache_tracker_replay",
+    "fresh_inference": false,
+    "sequence": "ferro_lujan_hard_reentry",
+    "source_fixture_frames": [2915, 3004],
+    "frames": 90,
+    "gt_detections": 1125,
+    "gt_ids": 13,
+    "validated_gt_sha256": "9bdca94b3b48d8410260e51e433fc64c4c07848828339d4d9e5911cb0b36b090",
+    "evaluation_gt_serialization_sha256": "8b5d103d374d1e23a1c64e8a3bebde0d2f96a7f374d01003864159bd3d38532d",
+    "source_review_json_sha256": "52eea93bc9e0356f1e4c9d54b2e99e0f6201e7383e056015ce971a2f1eb4e8c9",
+    "source_task_manifest_sha256": "384ce079ec837f72fd5aaaef2e7a61b071b0f2d69bf937f4edf08b0d0d18260f"
+  },
+  "official_trackeval_1_3_0_percent_except_counts": {
+    "unfiltered_replay": {
+      "baseline_high_only": {"HOTA": 75.913792, "IDF1": 78.174424, "MOTA": 65.511111, "recall": 81.511111, "precision": 84.283088, "TP": 917, "FN": 208, "FP": 171, "IDSW": 9, "fragments": 28},
+      "two_stage": {"HOTA": 77.311177, "IDF1": 79.5053, "MOTA": 68.177778, "recall": 85.244444, "precision": 84.196664, "TP": 959, "FN": 166, "FP": 180, "IDSW": 12, "fragments": 20},
+      "bytetrack_standard": {"HOTA": 66.544917, "IDF1": 76.589986, "MOTA": 66.133333, "recall": 82.044444, "precision": 84.52381, "TP": 923, "FN": 202, "FP": 169, "IDSW": 10, "fragments": 24}
+    },
+    "uniform_role_filtered_replay": {
+      "baseline_high_only": {"HOTA": 79.826078, "IDF1": 82.894106, "MOTA": 76.711111, "recall": 81.511111, "precision": 95.322245, "TP": 917, "FN": 208, "FP": 45, "IDSW": 9, "fragments": 28},
+      "two_stage": {"HOTA": 81.245796, "IDF1": 84.190833, "MOTA": 79.377778, "recall": 85.244444, "precision": 94.669299, "TP": 959, "FN": 166, "FP": 54, "IDSW": 12, "fragments": 20},
+      "bytetrack_standard": {"HOTA": 69.641012, "IDF1": 80.818658, "MOTA": 76.444444, "recall": 82.044444, "precision": 94.569672, "TP": 923, "FN": 202, "FP": 53, "IDSW": 10, "fragments": 24}
+    }
+  },
+  "uniform_role_filter_guardrail": {
+    "status": "OUTPUT_FILTER_VERIFIED_ON_REVIEWED_GT",
+    "baseline_high_only": {"removed": 126, "removed_gt_matches": 0, "removed_gt_overlaps": 0, "removed_track_ids": {"202": 90, "224": 36}},
+    "two_stage": {"removed": 126, "removed_gt_matches": 0, "removed_gt_overlaps": 0, "removed_track_ids": {"205": 90, "229": 36}},
+    "bytetrack_standard": {"removed": 116, "removed_gt_matches": 0, "removed_gt_overlaps": 0, "removed_track_ids": {"1108": 83, "1132": 33}}
+  },
+  "hard_reentry_identity_diagnostic": {
+    "note": "diagnostic IoU matching, not a replacement for TrackEval",
+    "gt_id": 222,
+    "present_frames": 90,
+    "baseline_high_only": {"matched_frames": 59, "recall_percent": 65.555556, "matched_tracker_ids": 4},
+    "two_stage": {"matched_frames": 67, "recall_percent": 74.444444, "matched_tracker_ids": 6},
+    "bytetrack_standard": {"matched_frames": 54, "recall_percent": 60.0, "matched_tracker_ids": 4}
+  },
+  "implementation": {
+    "review_importer": "validates task digest, 90/90 review flags, frame mapping hash, geometry, duplicate identities, reviewer and timestamp; explicit QC identity corrections are matched once and attested",
+    "trackeval_sequence": "bundle builder/evaluator now support a filesystem-safe sequence name from the task manifest",
+    "default_behavior_changed": false
+  },
+  "tests": {
+    "vision_environment": {"passed": 136, "skipped": 0},
+    "minimal_environment": {"passed": 123, "skipped_optional": 13}
+  },
+  "limits": [
+    "metrics cover this 90-frame human-reviewed interval only",
+    "results replay persisted detector output and are not fresh neural inference",
+    "the identity diagnostic uses per-frame IoU matching and does not measure end-to-end IDF1",
+    "the uniform role filter remains opt-in pending broader labeled coverage"
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "scope": "new_neural_inference_both_configurations_exact_source_frames",
+  "video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+  "model_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+  "confidence": 0.1,
+  "frames": 195,
+  "ranges_end_exclusive": [[105, 210], [1065, 1155]],
+  "comparison_640_1280": {
+    "artifact_sha256": "89c60527eb4d895c199073ad9ffde9dc3c49549c955bc027213e809e160846dd",
+    "baseline": {
+      "image_size": 640,
+      "fps": 27.5638110948343,
+      "raw_detections": 3238,
+      "deduplicated_detections": 2911,
+      "raw_point_status": {"unique_box": 22, "ambiguous": 6, "shared_box": 2, "missing": 0},
+      "deduplicated_point_status": {"unique_box": 25, "ambiguous": 1, "shared_box": 4, "missing": 0},
+      "detections_sha256": "baada623955ce660277806dd0affa8e534e2198e1d0d0a8ceb7739063b773b27"
+    },
+    "candidate": {
+      "image_size": 1280,
+      "fps": 11.176392428841046,
+      "raw_detections": 4555,
+      "deduplicated_detections": 4139,
+      "raw_point_status": {"unique_box": 26, "ambiguous": 4, "shared_box": 0, "missing": 0},
+      "deduplicated_point_status": {"unique_box": 28, "ambiguous": 2, "shared_box": 0, "missing": 0},
+      "detections_sha256": "80c99cef32e80fdee626a83190363eda36bca2b2261884f4e0310e1b3dc159d3"
+    }
+  },
+  "comparison_640_960": {
+    "artifact_sha256": "c3485645153447fb4bb292f4e954e69e4b2e5a99c8743d8c9c9686a9c0387be7",
+    "baseline": {
+      "image_size": 640,
+      "fps": 25.244029064308847,
+      "raw_detections": 3238,
+      "deduplicated_detections": 2911,
+      "detections_sha256": "baada623955ce660277806dd0affa8e534e2198e1d0d0a8ceb7739063b773b27"
+    },
+    "candidate": {
+      "image_size": 960,
+      "fps": 17.179422567396447,
+      "raw_detections": 3608,
+      "deduplicated_detections": 3292,
+      "raw_point_status": {"unique_box": 24, "ambiguous": 4, "shared_box": 2, "missing": 0},
+      "deduplicated_point_status": {"unique_box": 26, "ambiguous": 2, "shared_box": 2, "missing": 0},
+      "detections_sha256": "d07f48fccaedea43bc5bea4d77ec901d1a3606c65f8a7f095046d1347e98e05b"
+    }
+  },
+  "standard_detection_metrics": null,
+  "standard_tracking_metrics": null,
+  "limitation": "sparse_assistant_selected_points_not_independently_reviewed_ground_truth"
+}

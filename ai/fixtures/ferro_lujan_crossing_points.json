@@ -1,0 +1,20 @@
+{
+ "video_sha256":"7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+ "width":936,"height":524,
+ "method":"Assistant visual correspondence on source frames. Torso points, not complete bounding-box ground truth; independently unverified.",
+ "scope":"One attacker/defender contact at clip seconds 4–6.5, sampled every 0.5 seconds. Ambiguous overlaps are not accepted matches. Not full-sequence MOT metrics.",
+ "points":[
+  {"frame":120,"person":"blue_defender","xy":[132,304]},
+  {"frame":120,"person":"white_attacker","xy":[38,324]},
+  {"frame":135,"person":"blue_defender","xy":[150,356]},
+  {"frame":135,"person":"white_attacker","xy":[104,382]},
+  {"frame":150,"person":"blue_defender","xy":[162,386]},
+  {"frame":150,"person":"white_attacker","xy":[190,410]},
+  {"frame":165,"person":"blue_defender","xy":[244,390]},
+  {"frame":165,"person":"white_attacker","xy":[280,400]},
+  {"frame":180,"person":"blue_defender","xy":[272,374]},
+  {"frame":180,"person":"white_attacker","xy":[384,354]},
+  {"frame":195,"person":"blue_defender","xy":[274,324]},
+  {"frame":195,"person":"white_attacker","xy":[458,290]}
+ ]
+}

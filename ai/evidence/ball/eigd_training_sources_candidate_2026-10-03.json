@@ -1,0 +1,22 @@
+{
+  "dataset_title": "EIGD handball video candidate",
+  "domain": "team_handball",
+  "schema": "sevenmetros.ball-training-sources/v1",
+  "sources": [
+    {
+      "attribution": "Extended Integrated Game Dataset (EIGD), Leibniz University Hannover",
+      "license": {
+        "id": "CC-BY-NC-SA-4.0",
+        "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+      },
+      "obligations": [
+        "attribution",
+        "noncommercial_only",
+        "share_alike"
+      ],
+      "role": "original_media",
+      "terms_accessed_on": "2026-10-03",
+      "url": "https://data.uni-hannover.de/dataset/extended-integrated-game-dataset"
+    }
+  ]
+}

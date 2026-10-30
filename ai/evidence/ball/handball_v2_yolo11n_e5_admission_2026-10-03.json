@@ -1,0 +1,16 @@
+{
+  "accuracy_status": "NOT_EVALUATED",
+  "errors": [],
+  "evaluation_video_sha256": "7bfad9a6887a97bd210fb317cc30beb76c5e27f5886c928f48adb08225a4032d",
+  "inspected_classes": {
+    "0": "handball"
+  },
+  "inspected_task": "detect",
+  "model_bytes": 5442650,
+  "model_name": "best.pt",
+  "model_sha256": "0bf57b3a22505be98767b473f0c22cf16fc05534ce1d794a0c85474e181eb9b5",
+  "provenance_path": "ai/evidence/ball/handball_v2_yolo11n_e5_provenance_2026-10-03.json",
+  "provenance_sha256": "29af03f8f6edb347cba1edd2f9203141a08115eef94d86a0c9afd79f73d61697",
+  "schema": "sevenmetros.ball-model-admission/v1",
+  "status": "ADMITTED_FOR_HELDOUT_EVALUATION_NOT_ACCURACY"
+}
