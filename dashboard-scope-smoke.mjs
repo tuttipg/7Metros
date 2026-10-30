@@ -69,6 +69,11 @@ assert.match(
 );
 assert.match(
   dashboard,
+  /m\.status === 'Programado' && m\.date >= localISODate\(\)/,
+  'Dashboard: solo los partidos programados deben aparecer como próximos'
+);
+assert.match(
+  dashboard,
   /getTopDivisionStandings\(['"]M['"]\)/,
   'Dashboard: debe mostrar posiciones LHC'
 );
