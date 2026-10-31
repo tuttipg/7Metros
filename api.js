@@ -176,7 +176,18 @@ export async function supabaseGetByIds(
   select = '*',
   { chunkSize = 100, concurrency = 4 } = {}
 ) {
-  const values = [...new Set((ids || []).map(Number).filter(Number.isFinite))];
+  // IDs externos pueden contener null, strings vacíos o enteros fuera de rango.
+  // Number(...) los convierte silenciosamente en 0 o redondea valores grandes.
+  const values = [...new Set((ids || []).map(value => {
+    if (typeof value === 'number') {
+      return Number.isSafeInteger(value) && value > 0 ? value : null;
+    }
+    if (typeof value === 'string' && /^[1-9]\\d*$/.test(value)) {
+      const parsed = Number(value);
+      return Number.isSafeInteger(parsed) ? parsed : null;
+    }
+    return null;
+  }).filter(value => value !== null))];
   if (!values.length) return [];
   if (!Number.isInteger(chunkSize) || chunkSize <= 0 || chunkSize > 500) {
     throw new DataError('El tamaño de bloque para IDs no es válido.');
