@@ -2,9 +2,10 @@ import { loadPublicDataset } from './api.js';
 import { DEFAULT_FILTERS, SEASON_ID, STORAGE_KEYS } from './config.js';
 import { field, numericField, initials, ratio, toNumber, unique, bySpanishName, normalizeText } from './utils.js';
 import { sortStandingsOlympic } from './standings-core.mjs';
+import { readLocalPreference, writeLocalPreference, removeLocalPreference } from './storage-preferences.mjs';
 
 function settingEnabled(key, defaultValue = false) {
-  const stored = localStorage.getItem(key);
+  const stored = readLocalPreference(key);
   if (stored === null) return defaultValue;
   return stored === '1';
 }
@@ -13,9 +14,9 @@ function initialFilters() {
   const remember = settingEnabled(STORAGE_KEYS.rememberFilters, true);
   if (!remember) return { ...DEFAULT_FILTERS };
   return {
-    categoria: localStorage.getItem(STORAGE_KEYS.categoria) || DEFAULT_FILTERS.categoria,
-    division: localStorage.getItem(STORAGE_KEYS.division) || DEFAULT_FILTERS.division,
-    rama: localStorage.getItem(STORAGE_KEYS.rama) || DEFAULT_FILTERS.rama
+    categoria: readLocalPreference(STORAGE_KEYS.categoria) || DEFAULT_FILTERS.categoria,
+    division: readLocalPreference(STORAGE_KEYS.division) || DEFAULT_FILTERS.division,
+    rama: readLocalPreference(STORAGE_KEYS.rama) || DEFAULT_FILTERS.rama
   };
 }
 
@@ -263,15 +264,15 @@ export function setFilters(next) {
 export function persistFilters() {
   const remember = settingEnabled(STORAGE_KEYS.rememberFilters, true);
   if (!remember) return;
-  localStorage.setItem(STORAGE_KEYS.categoria, state.filters.categoria || '');
-  localStorage.setItem(STORAGE_KEYS.division, state.filters.division || '');
-  localStorage.setItem(STORAGE_KEYS.rama, state.filters.rama || '');
+  writeLocalPreference(STORAGE_KEYS.categoria, state.filters.categoria || '');
+  writeLocalPreference(STORAGE_KEYS.division, state.filters.division || '');
+  writeLocalPreference(STORAGE_KEYS.rama, state.filters.rama || '');
 }
 
 export function clearStoredFilters() {
-  localStorage.removeItem(STORAGE_KEYS.categoria);
-  localStorage.removeItem(STORAGE_KEYS.division);
-  localStorage.removeItem(STORAGE_KEYS.rama);
+  removeLocalPreference(STORAGE_KEYS.categoria);
+  removeLocalPreference(STORAGE_KEYS.division);
+  removeLocalPreference(STORAGE_KEYS.rama);
   state.filters = { ...DEFAULT_FILTERS };
   if (state.loaded) normalizeFilters();
 }
