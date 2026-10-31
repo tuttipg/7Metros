@@ -390,7 +390,20 @@ export function initSettingsPage() {
 
   document.getElementById('reset-settings')?.addEventListener('click', () => {
     const cleared = Object.values(STORAGE_KEYS).map(key => removeLocalPreference(key)).every(Boolean);
-    showToast(cleared ? 'Preferencias restablecidas.' : 'No se pudieron borrar todas las preferencias guardadas.');
+    if (!cleared) {
+      // Recargar descartaría el respaldo temporal y volvería a leer valores viejos.
+      clearStoredFilters();
+      document.querySelectorAll('[data-setting]').forEach(input => {
+        const item = map[input.dataset.setting];
+        if (item) input.checked = item.default;
+      });
+      applySettings();
+      renderCompetitionBar();
+      document.dispatchEvent(new CustomEvent('7m:filters-changed'));
+      showToast('No se pudo borrar el almacenamiento. Ajustes restablecidos solo durante esta visita.');
+      return;
+    }
+    showToast('Preferencias restablecidas.');
     setTimeout(() => location.reload(), 350);
   });
 }
