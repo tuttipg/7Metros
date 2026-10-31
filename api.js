@@ -169,6 +169,11 @@ async function request(url, options = {}, consume = response => response) {
 }
 
 export async function supabaseGetAll(table, query = '', { pageSize = PAGE_SIZE } = {}) {
+  // A zero page size never advances `from`, causing unbounded repeated GETs.
+  // Fractional, negative or oversized ranges must also fail before any request.
+  if (!Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > PAGE_SIZE) {
+    throw new DataError(`Tamaño de página inválido (1-${PAGE_SIZE}).`);
+  }
   const rows = [];
   let from = 0;
 
