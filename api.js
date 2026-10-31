@@ -234,6 +234,7 @@ function summaryFromMatches(matches, clubs, players) {
 }
 
 let globalSummaryPromise = null;
+let globalSummaryCachedAt = 0;
 
 function isMissingGlobalSummaryView(error) {
   return error instanceof DataError
@@ -269,12 +270,25 @@ async function loadGlobalSummaryView() {
 }
 
 export function loadGlobalSummaryFast() {
-  if (!globalSummaryPromise) {
-    globalSummaryPromise = loadGlobalSummaryView().catch(error => {
-      // Do not retain a transient failure for the rest of the session.
-      globalSummaryPromise = null;
+  const now = Date.now();
+  const age = now - globalSummaryCachedAt;
+  // Reuse concurrent reads and recent results, but never retain a successful
+  // summary indefinitely after the two-minute dataset cache has expired.
+  // A clock rollback also invalidates the cached value.
+  if (!globalSummaryPromise || !Number.isSafeInteger(globalSummaryCachedAt) ||
+      age < 0 || age > SESSION_CACHE_TTL) {
+    const pending = loadGlobalSummaryView();
+    const tracked = pending.catch(error => {
+      // A failed request is retryable; an older failure must not clear a
+      // newer in-flight request after the TTL has elapsed.
+      if (globalSummaryPromise === tracked) {
+        globalSummaryPromise = null;
+        globalSummaryCachedAt = 0;
+      }
       throw error;
     });
+    globalSummaryPromise = tracked;
+    globalSummaryCachedAt = now;
   }
   return globalSummaryPromise;
 }
