@@ -1,6 +1,6 @@
 globalThis.window = {};
 
-const { ageFromBirthDate, localISODate, formatDateISO, formatShortDate } = await import('./utils.js');
+const { ageFromBirthDate, localISODate, formatDateISO, formatShortDate, formatDayMonthISO } = await import('./utils.js');
 
 function assertEqual(actual, expected, label) {
   if (actual !== expected) {
@@ -29,11 +29,12 @@ if (!/^30\s/.test(formatDateISO('2026-10-30'))) {
   throw new Error('La fecha completa del partido no debe cambiar al día anterior');
 }
 assertEqual(formatShortDate('2024-02-29').day, '29', 'Conservar días bisiestos reales');
-assertEqual(formatDateISO('2026-10-30', { month: '2-digit', year: undefined }), '30/10', 'Fecha corta numérica para gráfico del jugador');
-assertEqual(formatDateISO('2024-02-29', { month: '2-digit', year: undefined }), '29/02', 'Gráfico conserva el día bisiesto');
+assertEqual(formatDayMonthISO('2026-10-30'), '30/10', 'Fecha corta numérica para gráfico del jugador');
+assertEqual(formatDayMonthISO('2024-02-29'), '29/02', 'Gráfico conserva el día bisiesto');
+assertEqual(formatDayMonthISO('2026-10-01'), '01/10', 'Gráfico mantiene ceros iniciales');
 for (const invalid of ['2026-02-29', '2026-02-30', '2026-13-01', '2026-00-01', '2026-01-00', '2026-2-3', '<img src=x onerror=alert(1)>']) {
   assertEqual(formatDateISO(invalid), 'Fecha a confirmar', 'No inventar fechas inválidas');
-  assertEqual(formatDateISO(invalid, { month: '2-digit', year: undefined }), 'Fecha a confirmar', 'Gráfico no inventa fechas inválidas');
+  assertEqual(formatDayMonthISO(invalid), 'Fecha a confirmar', 'Gráfico no inventa fechas inválidas');
   assertEqual(JSON.stringify(formatShortDate(invalid)), JSON.stringify({ day: '--', month: '---' }), 'No mostrar fechas inválidas en tarjetas');
 }
 
