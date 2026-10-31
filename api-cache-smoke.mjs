@@ -66,7 +66,11 @@ for (const [label, dataset] of [
   ['colección ausente', { ...fresh, partidos: undefined }],
   ['colección no array', { ...fresh, equipos: 'invalid' }],
   ['fila null', { ...fresh, clubes: [null] }],
-  ['resumen no objeto', { ...fresh, globalSummary: [] }]
+  ['resumen no objeto', { ...fresh, globalSummary: [] }],
+  ['resumen sin métricas', { ...fresh, globalSummary: {} }],
+  ['resumen con conteo null', { ...fresh, globalSummary: { ...fresh.globalSummary, matches: null } }],
+  ['resumen incoherente', { ...fresh, globalSummary: { ...fresh.globalSummary, finished: 1 } }],
+  ['resumen con promedio corrupto', { ...fresh, globalSummary: { ...fresh.globalSummary, avgGoals: 'NaN' } }]
 ]) {
   entries.set(cacheKey, JSON.stringify({ at: Date.now(), dataset }));
   requests = 0;
@@ -139,3 +143,36 @@ try {
 }
 
 console.log('API global summary cache: concurrencia, TTL, reloj y retry OK');
+
+// La vista SQL puede devolver un valor corrupto sin que falle el HTTP 200.
+// No convertir null, strings inválidos o totales incoherentes a estadísticas públicas.
+const validSummaryRow = {
+  clubes: 3, jugadores: 4, partidos: 2, partidos_con_resultado: 1,
+  goles: 12, promedio_goles: 12
+};
+let summaryRow = validSummaryRow;
+let summaryIntegrityReads = 0;
+globalThis.fetch = async input => {
+  assert.equal(new URL(input).pathname.split('/').at(-1), 'v_global_summary');
+  summaryIntegrityReads++;
+  return new Response(JSON.stringify([summaryRow]), { status: 200 });
+};
+const validatedSummaryApi = await import('./api.js?summary-integrity-smoke');
+for (const [label, row] of [
+  ['conteo ausente', { ...validSummaryRow, clubes: null }],
+  ['conteo no numérico', { ...validSummaryRow, goles: 'invalid' }],
+  ['conteo fuera de rango', { ...validSummaryRow, partidos: '9007199254740992' }],
+  ['finalizados superiores al total', { ...validSummaryRow, partidos_con_resultado: 3 }],
+  ['promedio no finito', { ...validSummaryRow, promedio_goles: 'Infinity' }]
+]) {
+  summaryRow = row;
+  await assert.rejects(() => validatedSummaryApi.loadGlobalSummaryFast(), error =>
+    error instanceof validatedSummaryApi.DataError && /estadísticas inválidas/.test(error.message),
+  label + ': debe rechazar datos corruptos sin guardar el error en caché');
+}
+summaryRow = { ...validSummaryRow, clubes: '3', goles: '12', promedio_goles: '12.0' };
+assert.deepEqual(await validatedSummaryApi.loadGlobalSummaryFast(), {
+  clubs: 3, players: 4, matches: 2, finished: 1, goals: 12, avgGoals: 12
+}, 'PostgREST puede entregar enteros y promedios como strings decimales');
+assert.equal(summaryIntegrityReads, 6, 'cada resumen inválido debe permitir reintento');
+console.log('API summary integrity: métricas inválidas rechazadas, recuperación OK');
