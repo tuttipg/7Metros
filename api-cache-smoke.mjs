@@ -176,3 +176,33 @@ assert.deepEqual(await validatedSummaryApi.loadGlobalSummaryFast(), {
 }, 'PostgREST puede entregar enteros y promedios como strings decimales');
 assert.equal(summaryIntegrityReads, 6, 'cada resumen inválido debe permitir reintento');
 console.log('API summary integrity: métricas inválidas rechazadas, recuperación OK');
+
+
+// Pagination regression: a pageSize of zero previously never advanced 'from',
+// repeatedly requesting Range 0--1 with no upper bound. Invalid options must
+// fail before touching the network; a valid small page still paginates.
+const { supabaseGetAll, DataError } = await import('./api.js');
+let paginationCalls = 0;
+globalThis.fetch = async () => {
+  paginationCalls++;
+  throw new Error('invalid page size must not reach the network');
+};
+for (const pageSize of [0, -1, 1.5, NaN, Infinity, 1001, '2', null]) {
+  await assert.rejects(
+    () => supabaseGetAll('partidos', '?select=id', { pageSize }),
+    error => error instanceof DataError && /Tamaño de página inválido/.test(error.message),
+    `invalid pageSize ${String(pageSize)} must fail closed`
+  );
+}
+assert.equal(paginationCalls, 0, 'invalid pagination options must issue zero GETs');
+
+const requestedRanges = [];
+globalThis.fetch = async (_input, options) => {
+  requestedRanges.push(options.headers.Range);
+  const rows = requestedRanges.length === 1 ? [{ id: 1 }, { id: 2 }] : [{ id: 3 }];
+  return new Response(JSON.stringify(rows), { status: 200 });
+};
+assert.deepEqual(await supabaseGetAll('partidos', '?select=id', { pageSize: 2 }),
+  [{ id: 1 }, { id: 2 }, { id: 3 }], 'valid pagination preserves all rows');
+assert.deepEqual(requestedRanges, ['0-1', '2-3'], 'ranges advance by pageSize');
+console.log('API pagination: invalid sizes fail before fetch; valid ranges advance OK');
