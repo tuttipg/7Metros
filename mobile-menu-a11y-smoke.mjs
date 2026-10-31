@@ -138,4 +138,88 @@ listeners.click();
 frameQueue.splice(0).forEach(callback => callback());
 assert.equal(drawerFocus, 1, 'opening the drawer should focus its navigation');
 
-console.log('Mobile menu accessibility, toggle and connection-state smoke tests passed.');
+// El shell inicial es el único menú disponible si falla import('./ui.js').
+// Ejercitar el código real de renderBootstrapShell, sin acceso a red ni DOM externo.
+const bootstrapSource = fs.readFileSync(new URL('./script.js', import.meta.url), 'utf8');
+const shellStart = bootstrapSource.indexOf('function renderBootstrapShell() {');
+const shellEnd = bootstrapSource.indexOf('function showBootstrapError(', shellStart);
+assert.ok(shellStart >= 0 && shellEnd > shellStart, 'bootstrap shell function must exist');
+const shellCode = bootstrapSource.slice(shellStart, shellEnd);
+const bootstrapEvents = {};
+const bootstrapSidebarAttrs = {};
+const bootstrapMenuAttrs = {};
+let bootstrapTriggerFocus = 0;
+const bootstrapSidebar = {
+  innerHTML: '',
+  classList: makeClasses(),
+  inert: false,
+  setAttribute: (name, value) => { bootstrapSidebarAttrs[name] = value; }
+};
+const bootstrapMenu = {
+  setAttribute: (name, value) => { bootstrapMenuAttrs[name] = value; },
+  addEventListener: (name, fn) => { bootstrapEvents['menu:' + name] = fn; },
+  focus: () => { bootstrapTriggerFocus++; }
+};
+const bootstrapOverlay = {
+  classList: makeClasses(),
+  addEventListener: (name, fn) => { bootstrapEvents['overlay:' + name] = fn; }
+};
+const bootstrapMedia = {
+  matches: true,
+  addEventListener: (name, fn) => { bootstrapEvents['media:' + name] = fn; }
+};
+const bootstrapBody = { dataset: { page: 'inicio' }, classList: makeClasses() };
+const bootstrapDocument = {
+  body: bootstrapBody,
+  getElementById: id => ({
+    sidebar: bootstrapSidebar,
+    'mobile-bar': { innerHTML: '' },
+    overlay: bootstrapOverlay,
+    'menu-open': bootstrapMenu
+  })[id] || null,
+  querySelectorAll: () => [],
+  addEventListener: (name, fn) => { bootstrapEvents['document:' + name] = fn; }
+};
+const bootstrapWindow = {
+  matchMedia: () => bootstrapMedia,
+  SEVEN_METROS_CONFIG: { seasonLabel: 'CLAUSURA 2026', links: { femebal: 'https://femebal.com/' } }
+};
+const renderFallbackShell = new Function('document', 'window', 'bootIcon',
+  shellCode + '\nreturn renderBootstrapShell;'
+)(bootstrapDocument, bootstrapWindow, () => '');
+renderFallbackShell();
+assert.equal(bootstrapSidebar.inert, true, 'closed bootstrap drawer must be inert');
+assert.equal(bootstrapSidebarAttrs['aria-hidden'], 'true');
+assert.equal(bootstrapMenuAttrs['aria-expanded'], 'false');
+bootstrapEvents['menu:click']();
+assert.equal(bootstrapSidebar.classList.contains('open'), true, 'fallback menu must open');
+assert.equal(bootstrapMenuAttrs['aria-label'], 'Cerrar menú');
+assert.equal(bootstrapSidebar.inert, false);
+bootstrapEvents['menu:click']();
+assert.equal(bootstrapSidebar.classList.contains('open'), false, 'fallback menu must toggle closed');
+assert.equal(bootstrapMenuAttrs['aria-expanded'], 'false');
+assert.equal(bootstrapSidebar.inert, true);
+assert.equal(bootstrapTriggerFocus, 1, 'closing via button restores focus');
+bootstrapEvents['menu:click']();
+let escapePrevented = false;
+bootstrapEvents['document:keydown']({ key: 'Escape', preventDefault: () => { escapePrevented = true; } });
+assert.equal(escapePrevented, true, 'Escape should be handled when open');
+assert.equal(bootstrapSidebar.classList.contains('open'), false, 'Escape closes fallback menu');
+assert.equal(bootstrapTriggerFocus, 2);
+bootstrapEvents['menu:click']();
+bootstrapEvents['overlay:click']();
+assert.equal(bootstrapSidebar.classList.contains('open'), false, 'overlay closes fallback menu');
+assert.equal(bootstrapTriggerFocus, 3);
+bootstrapEvents['menu:click']();
+bootstrapMedia.matches = false;
+bootstrapEvents['media:change']();
+assert.equal(bootstrapSidebar.classList.contains('open'), false, 'resize closes fallback drawer');
+assert.equal(bootstrapSidebar.inert, false, 'desktop sidebar must remain keyboard accessible');
+assert.equal(bootstrapSidebarAttrs['aria-hidden'], 'false');
+bootstrapEvents['menu:click']();
+assert.equal(bootstrapSidebar.classList.contains('open'), false, 'desktop cannot open mobile drawer');
+bootstrapMedia.matches = true;
+bootstrapEvents['media:change']();
+assert.equal(bootstrapSidebar.inert, true, 'returning to mobile hides closed drawer');
+
+console.log('Mobile menu accessibility, fallback toggle and connection-state smoke tests passed.');
