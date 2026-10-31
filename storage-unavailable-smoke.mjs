@@ -71,10 +71,13 @@ assert.doesNotThrow(() => store.clearStoredFilters());
 
 // Restablecer con borrado bloqueado no debe recargar: una recarga recuperaría
 // preferencias viejas y anularía el restablecimiento temporal.
+const settingChangeHandlers = new Map();
 const settingsInputs = ['filters', 'compact', 'motion'].map(setting => ({
   dataset: { setting },
   checked: false,
-  addEventListener() {}
+  addEventListener(event, handler) {
+    if (event === 'change') settingChangeHandlers.set(setting, handler);
+  }
 }));
 let resetHandler;
 let filtersChanged = 0;
@@ -90,6 +93,12 @@ globalThis.document = {
 globalThis.CustomEvent ??= class { constructor(type) { this.type = type; } };
 ui.initSettingsPage();
 assert.equal(typeof resetHandler, 'function');
+// Desactivar "Recordar filtros" debe actualizar las vistas sin navegar ni recargar.
+store.state.filters.categoria = 'Cadetes';
+settingsInputs[0].checked = false;
+settingChangeHandlers.get('filters')();
+assert.equal(store.state.filters.categoria, 'Mayores', 'desactivar persistencia restablece filtros activos');
+assert.equal(filtersChanged, 1, 'desactivar persistencia debe avisar a las vistas del cambio');
 store.state.filters.categoria = 'Cadetes';
 const originalSetTimeout = globalThis.setTimeout;
 try {
@@ -103,7 +112,7 @@ assert.equal(store.state.filters.categoria, 'Mayores');
 assert.equal(readLocalPreference('7m_setting_compact'), null);
 assert.equal(toggles.get('compact-tables'), false);
 assert.equal(toggles.get('reduce-motion'), false);
-assert.equal(filtersChanged, 1);
+assert.equal(filtersChanged, 2, 'restablecer también debe avisar a las vistas del cambio');
 
 // Flujo normal: las preferencias siguen siendo persistentes cuando hay almacenamiento.
 Object.defineProperty(globalThis, 'localStorage', {
