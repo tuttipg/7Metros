@@ -113,14 +113,38 @@ function renderBootstrapShell() {
 
   const overlay = document.getElementById('overlay');
   const menuOpen = document.getElementById('menu-open');
+  // El shell de respaldo debe funcionar incluso si falla la carga de módulos.
+  const mobileMedia = window.matchMedia('(max-width: 940px)');
   const setBootstrapMenu = open => {
-    sidebar?.classList.toggle('open', open);
-    overlay?.classList.toggle('show', open);
-    menuOpen?.setAttribute('aria-expanded', String(open));
-    document.body.classList.toggle('nav-open', open);
+    const shouldOpen = mobileMedia.matches && open;
+    sidebar?.classList.toggle('open', shouldOpen);
+    overlay?.classList.toggle('show', shouldOpen);
+    menuOpen?.setAttribute('aria-expanded', String(shouldOpen));
+    menuOpen?.setAttribute('aria-label', shouldOpen ? 'Cerrar menú' : 'Abrir menú');
+    if (sidebar) {
+      const hidden = mobileMedia.matches && !shouldOpen;
+      sidebar.inert = hidden;
+      sidebar.setAttribute('aria-hidden', String(hidden));
+    }
+    document.body.classList.toggle('nav-open', shouldOpen);
   };
-  menuOpen?.addEventListener('click', () => setBootstrapMenu(true));
-  overlay?.addEventListener('click', () => setBootstrapMenu(false));
+  const closeBootstrapMenu = (returnFocus = false) => {
+    setBootstrapMenu(false);
+    if (returnFocus) menuOpen?.focus();
+  };
+  menuOpen?.addEventListener('click', () => {
+    if (sidebar?.classList.contains('open')) closeBootstrapMenu(true);
+    else setBootstrapMenu(true);
+  });
+  overlay?.addEventListener('click', () => closeBootstrapMenu(true));
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && sidebar?.classList.contains('open')) {
+      event.preventDefault();
+      closeBootstrapMenu(true);
+    }
+  });
+  mobileMedia.addEventListener?.('change', () => closeBootstrapMenu());
+  setBootstrapMenu(false);
 }
 
 function showBootstrapError(error) {
