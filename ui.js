@@ -4,6 +4,7 @@ import {
   getStandings, clearStoredFilters, selectedCompetitionLabel
 } from './store.js';
 import { esc, initials, currentDateLabel, csvDownload, metric, normalizeText, safeHttpUrl } from './utils.js';
+import { readLocalPreference, writeLocalPreference, removeLocalPreference } from './storage-preferences.mjs';
 
 const ICONS = {
   home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/>',
@@ -361,8 +362,8 @@ function initGlobalSearch() {
 }
 
 export function applySettings() {
-  const compact = localStorage.getItem(STORAGE_KEYS.compact) === '1';
-  const motion = localStorage.getItem(STORAGE_KEYS.motion) === '1';
+  const compact = readLocalPreference(STORAGE_KEYS.compact) === '1';
+  const motion = readLocalPreference(STORAGE_KEYS.motion) === '1';
   document.body.classList.toggle('compact-tables', compact);
   document.body.classList.toggle('reduce-motion', motion);
 }
@@ -377,19 +378,19 @@ export function initSettingsPage() {
   document.querySelectorAll('[data-setting]').forEach(input => {
     const item = map[input.dataset.setting];
     if (!item) return;
-    const stored = localStorage.getItem(item.key);
+    const stored = readLocalPreference(item.key);
     input.checked = stored === null ? item.default : stored === '1';
     input.addEventListener('change', () => {
-      localStorage.setItem(item.key, input.checked ? '1' : '0');
+      const saved = writeLocalPreference(item.key, input.checked ? '1' : '0');
       if (input.dataset.setting === 'filters' && !input.checked) clearStoredFilters();
       applySettings();
-      showToast('Preferencia guardada.');
+      showToast(saved ? 'Preferencia guardada.' : 'No se pudo guardar la preferencia en este navegador.');
     });
   });
 
   document.getElementById('reset-settings')?.addEventListener('click', () => {
-    Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
-    showToast('Preferencias restablecidas.');
+    const cleared = Object.values(STORAGE_KEYS).every(key => removeLocalPreference(key));
+    showToast(cleared ? 'Preferencias restablecidas.' : 'No se pudieron borrar todas las preferencias guardadas.');
     setTimeout(() => location.reload(), 350);
   });
 }
