@@ -41,6 +41,7 @@ jobs:
           node --check store-integrity-smoke.mjs
           node --check team-integrity-smoke.mjs
           node --check match-scope-smoke.mjs
+          node --check club-profile-scope-smoke.mjs
           node --check navigation-smoke.mjs
           node --check category-order-smoke.mjs
           node --check dashboard-scope-smoke.mjs
@@ -91,6 +92,9 @@ jobs:
 
       - name: Match scope smoke test
         run: node match-scope-smoke.mjs
+
+      - name: Club profile competition scope smoke test
+        run: node club-profile-scope-smoke.mjs
 
       - name: Navigation smoke test
         run: node navigation-smoke.mjs
