@@ -17,6 +17,29 @@ function datasetCacheKey(season) {
 
 // A corrupt or older cache payload must not reach prepareDataset(), which
 // maps these collections. A truthy but malformed value could break navigation.
+// A malformed summary must never be displayed as 0, NaN or Infinity,
+// including when it was restored from an older sessionStorage entry.
+function isValidGlobalSummary(summary) {
+  if (!summary || typeof summary !== 'object' || Array.isArray(summary)) return false;
+  const counts = ['clubs', 'players', 'matches', 'finished', 'goals'];
+  return counts.every(key => Number.isSafeInteger(summary[key]) && summary[key] >= 0)
+    && summary.finished <= summary.matches
+    && (summary.avgGoals === null ||
+      (typeof summary.avgGoals === 'number' && Number.isFinite(summary.avgGoals) && summary.avgGoals >= 0));
+}
+
+function readSummaryCount(value) {
+  // PostgREST may serialize SQL bigint counts as decimal strings.
+  if (typeof value !== 'number' && (typeof value !== 'string' || !/^\\d+$/.test(value))) return NaN;
+  return Number(value);
+}
+
+function readSummaryAverage(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return NaN;
+  return Number(value);
+}
+
 function isValidCachedDataset(dataset) {
   if (!dataset || typeof dataset !== 'object' || Array.isArray(dataset)) return false;
   const collections = ['clubes', 'equipos', 'jugadores', 'planteles', 'partidos', 'participaciones'];
@@ -24,9 +47,7 @@ function isValidCachedDataset(dataset) {
     dataset[key].every(row => row !== null && typeof row === 'object' && !Array.isArray(row)))) {
     return false;
   }
-  return dataset.globalSummary !== null
-    && typeof dataset.globalSummary === 'object'
-    && !Array.isArray(dataset.globalSummary);
+  return isValidGlobalSummary(dataset.globalSummary);
 }
 
 function readDatasetCache(season) {
@@ -262,16 +283,18 @@ async function loadGlobalSummaryView() {
     // An empty but existing view is not proof that the view is absent.
     // Fail closed rather than scanning every match through the legacy fallback.
     if (!row) throw new DataError('La vista de resumen global no devolvió filas.');
-    return {
-      clubs: Number(row.clubes || 0),
-      players: Number(row.jugadores || 0),
-      matches: Number(row.partidos || 0),
-      finished: Number(row.partidos_con_resultado || 0),
-      goals: Number(row.goles || 0),
-      avgGoals: row.promedio_goles === null || row.promedio_goles === undefined
-        ? null
-        : Number(row.promedio_goles)
+    const summary = {
+      clubs: readSummaryCount(row.clubes),
+      players: readSummaryCount(row.jugadores),
+      matches: readSummaryCount(row.partidos),
+      finished: readSummaryCount(row.partidos_con_resultado),
+      goals: readSummaryCount(row.goles),
+      avgGoals: readSummaryAverage(row.promedio_goles)
     };
+    if (!isValidGlobalSummary(summary)) {
+      throw new DataError('La vista de resumen global devolvió estadísticas inválidas.');
+    }
+    return summary;
   } catch (error) {
     if (!isMissingGlobalSummaryView(error)) throw error;
     // Only an absent legacy view authorizes the expensive global fallback.
