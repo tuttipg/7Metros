@@ -79,6 +79,14 @@ function matchSortKey(match) {
   return `${match?.date || ''}${match?.time || ''}`;
 }
 
+// No presentar un partido sin estado confirmado como próximo encuentro.
+export function isUpcomingScheduledMatch(match, todayIso) {
+  return match?.status === 'Programado'
+    && typeof match.date === 'string'
+    && /^\d{4}-\d{2}-\d{2}$/.test(match.date)
+    && match.date >= todayIso;
+}
+
 function resultForTeam(match, teamId) {
   if (match.status !== 'Finalizado') return null;
   const home = Number(match.homeTeamId) === Number(teamId);
@@ -248,7 +256,8 @@ function renderClubProfile() {
   const players = getPlayersForTeamIds(selectedSet).sort((a, b) => b.goals - a.goals || bySpanishName(a.name, b.name));
   const matches = getMatchesForTeamIds(selectedSet).slice().sort((a, b) => matchSortKey(b).localeCompare(matchSortKey(a)));
   const finished = matches.filter(match => match.status === 'Finalizado');
-  const future = matches.filter(match => match.status !== 'Finalizado' && match.date >= localISODate()).sort((a, b) => matchSortKey(a).localeCompare(matchSortKey(b)));
+  const today = localISODate();
+  const future = matches.filter(match => isUpcomingScheduledMatch(match, today)).sort((a, b) => matchSortKey(a).localeCompare(matchSortKey(b)));
   const planillas = matches.filter(match => safeHttpUrl(match.planillaUrl)).length;
   const programaciones = matches.filter(match => safeHttpUrl(match.raw?.programacion_pdf_url || match.raw?.programacion_url)).length;
   const form = finished.slice(0, 5).reverse().map(match => resultForTeam(match, selectedTeam.id));
