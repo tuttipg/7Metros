@@ -182,7 +182,7 @@ export async function supabaseGetByIds(
     if (typeof value === 'number') {
       return Number.isSafeInteger(value) && value > 0 ? value : null;
     }
-    if (typeof value === 'string' && /^[1-9]\\d*$/.test(value)) {
+    if (typeof value === 'string' && /^[1-9][0-9]*$/.test(value)) {
       const parsed = Number(value);
       return Number.isSafeInteger(parsed) ? parsed : null;
     }
