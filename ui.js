@@ -102,7 +102,8 @@ export function renderShell() {
 
   const overlay = document.getElementById('overlay');
   const menuOpen = document.getElementById('menu-open');
-  const mobileMedia = window.matchMedia('(max-width: 980px)');
+  // Debe coincidir con el breakpoint que oculta .sidebar en style.css.
+  const mobileMedia = window.matchMedia('(max-width: 940px)');
 
   const syncMenuAccessibility = open => {
     const isMobile = mobileMedia.matches;
