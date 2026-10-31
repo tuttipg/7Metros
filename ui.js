@@ -382,7 +382,13 @@ export function initSettingsPage() {
     input.checked = stored === null ? item.default : stored === '1';
     input.addEventListener('change', () => {
       const saved = writeLocalPreference(item.key, input.checked ? '1' : '0');
-      if (input.dataset.setting === 'filters' && !input.checked) clearStoredFilters();
+      if (input.dataset.setting === 'filters' && !input.checked) {
+        // Al dejar de recordar filtros también cambia la competición activa:
+        // sincronizar la barra y las vistas, no solo el almacenamiento.
+        clearStoredFilters();
+        renderCompetitionBar();
+        document.dispatchEvent(new CustomEvent('7m:filters-changed'));
+      }
       applySettings();
       showToast(saved ? 'Preferencia guardada.' : 'No se pudo guardar la preferencia en este navegador.');
     });
