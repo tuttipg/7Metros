@@ -263,10 +263,14 @@ export function setFilters(next) {
 
 export function persistFilters() {
   const remember = settingEnabled(STORAGE_KEYS.rememberFilters, true);
-  if (!remember) return;
-  writeLocalPreference(STORAGE_KEYS.categoria, state.filters.categoria || '');
-  writeLocalPreference(STORAGE_KEYS.division, state.filters.division || '');
-  writeLocalPreference(STORAGE_KEYS.rama, state.filters.rama || '');
+  if (!remember) return true;
+  // Intentar las tres escrituras incluso si una falla (cuota o bloqueo).
+  const writes = [
+    writeLocalPreference(STORAGE_KEYS.categoria, state.filters.categoria || ''),
+    writeLocalPreference(STORAGE_KEYS.division, state.filters.division || ''),
+    writeLocalPreference(STORAGE_KEYS.rama, state.filters.rama || '')
+  ];
+  return writes.every(Boolean);
 }
 
 export function clearStoredFilters() {
