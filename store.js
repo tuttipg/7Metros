@@ -2,6 +2,7 @@ import { loadPublicDataset } from './api.js';
 import { DEFAULT_FILTERS, SEASON_ID, STORAGE_KEYS } from './config.js';
 import { field, numericField, initials, ratio, toNumber, unique, bySpanishName, normalizeText } from './utils.js';
 import { sortStandingsOlympic } from './standings-core.mjs';
+import { hasVerifiedMatchResult, matchPublicStatus } from './match-result-core.mjs';
 
 function settingEnabled(key, defaultValue = false) {
   const stored = localStorage.getItem(key);
@@ -70,7 +71,7 @@ export function prepareDataset(dataset) {
     abbr: row.abreviatura || initials(row.nombre || '7Metros'),
     city: row.ciudad || '',
     logoUrl: row.logo_url || null
-  })).filter(row => Number.isFinite(row.id));
+  })).filter(row => Number.isSafeInteger(row.id) && row.id > 0);
 
   const validClubIds = new Set(state.clubs.map(row => row.id));
   state.teams = (dataset.equipos || []).map(row => ({
@@ -80,7 +81,7 @@ export function prepareDataset(dataset) {
     temporada_id: Number(row.temporada_id),
     equipo_codigo: teamCode(row)
   })).filter(row =>
-    Number.isFinite(row.id) &&
+    Number.isSafeInteger(row.id) && row.id > 0 &&
     Number.isFinite(row.club_id) &&
     Number.isFinite(row.temporada_id) &&
     row.temporada_id === SEASON_ID &&
@@ -96,7 +97,7 @@ export function prepareDataset(dataset) {
     dominantArm: row.brazo_habil || null,
     height: numericField(row, ['altura_cm']),
     weight: numericField(row, ['peso_kg'])
-  })).filter(row => Number.isFinite(row.id));
+  })).filter(row => Number.isSafeInteger(row.id) && row.id > 0);
 
   const validPlayerIds = new Set(state.players.map(row => row.id));
   const validTeamIds = new Set(state.teams.map(row => row.id));
@@ -131,6 +132,10 @@ export function prepareDataset(dataset) {
   const clubById = new Map(state.clubs.map(row => [row.id, row]));
 
   state.matches = (dataset.partidos || []).map(row => {
+    if (!row || typeof row !== 'object') return null;
+    const matchId = Number(row.id);
+    // Never expose unaddressable match cards (NaN, 0, fractions or unsafe IDs).
+    if (!Number.isSafeInteger(matchId) || matchId <= 0) return null;
     const homeTeamId = Number(field(row, ['local_equipo_id', 'local_id'], NaN));
     const awayTeamId = Number(field(row, ['visitante_equipo_id', 'visitante_id'], NaN));
     const homeTeam = teamById.get(homeTeamId) || null;
@@ -139,12 +144,10 @@ export function prepareDataset(dataset) {
 
     const homeClub = clubById.get(Number(homeTeam.club_id)) || null;
     const awayClub = clubById.get(Number(awayTeam.club_id)) || null;
-    const statusRaw = String(field(row, ['estado'], '') || '').toLowerCase();
-    const hasScores = field(row, ['goles_local'], null) !== null && field(row, ['goles_visitante'], null) !== null;
-    const finished = statusRaw === 'finalizado' || statusRaw === 'final' || (hasScores && statusRaw !== 'programado');
+    const finished = hasVerifiedMatchResult(row);
 
     return {
-      id: Number(row.id),
+      id: matchId,
       date: field(row, ['fecha'], ''),
       time: String(field(row, ['hora'], '') || '').slice(0, 5),
       round: field(row, ['jornada', 'fecha_torneo'], null),
@@ -159,7 +162,7 @@ export function prepareDataset(dataset) {
       away: teamDisplayName(awayTeam, awayClub),
       homeScore: finished ? toNumber(field(row, ['goles_local'], 0)) : null,
       awayScore: finished ? toNumber(field(row, ['goles_visitante'], 0)) : null,
-      status: finished ? 'Finalizado' : 'Programado',
+      status: matchPublicStatus(row),
       notes: field(row, ['observaciones', 'notas'], '') || '',
       planillaUrl: field(row, ['fuente_planilla', 'planilla_url', 'url_planilla', 'link_planilla'], null),
       videoUrl: field(row, ['fuente_video', 'video_url', 'url_video', 'link_video'], null),

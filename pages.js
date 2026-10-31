@@ -35,7 +35,7 @@ function matchCard(match) {
   const isFinal = match.status === 'Finalizado';
   const middle = isFinal
     ? `<strong>${match.homeScore}<span>–</span>${match.awayScore}</strong><small>FINAL</small>`
-    : `<strong class="vs">VS</strong><small>${esc(match.time || 'Horario a confirmar')}</small>`;
+    : `<strong class="vs">VS</strong><small>${esc(match.status === 'Programado' ? (match.time || 'Horario a confirmar') : match.status)}</small>`;
 
   return `<article class="card match-row">
     <div class="match-date-box"><span>${d.day}</span><small>${d.month}</small></div>
@@ -51,7 +51,7 @@ function compactMatch(match) {
   const homeClub = getBaseClub(match.homeClubId) || { id: match.homeClubId, name: match.home, abbr: initials(match.home) };
   const awayClub = getBaseClub(match.awayClubId) || { id: match.awayClubId, name: match.away, abbr: initials(match.away) };
   const d = formatShortDate(match.date);
-  const score = match.status === 'Finalizado' ? `${match.homeScore}–${match.awayScore}` : (match.time || 'VS');
+  const score = match.status === 'Finalizado' ? `${match.homeScore}–${match.awayScore}` : (match.status === 'Programado' ? (match.time || 'VS') : match.status);
   return `<a class="compact-match" href="partido.html?id=${match.id}"><span class="date-box"><b>${d.day}</b><small>${d.month}</small></span><span class="compact-team">${clubBadge(homeClub, true)}${esc(match.home)}</span><strong>${esc(score)}</strong><span class="compact-team right">${esc(match.away)}${clubBadge(awayClub, true)}</span></a>`;
 }
 
@@ -81,7 +81,7 @@ export function renderDashboardSummary(summary, { loadingDetail = false } = {}) 
   const healthMeta = document.getElementById('data-health-meta');
   const healthFinished = document.getElementById('data-health-finished');
   const healthScheduled = document.getElementById('data-health-scheduled');
-  const scheduled = Math.max(0, matches - finished);
+  const withoutResult = Math.max(0, matches - finished);
 
   if (healthLabel) healthLabel.textContent = matches ? `${metric(matches)} partidos cargados` : 'Base conectada';
   if (healthMeta) {
@@ -90,7 +90,7 @@ export function renderDashboardSummary(summary, { loadingDetail = false } = {}) 
       : `${metric(players)} jugadores · ${metric(clubs)} clubes · ${dataFreshnessLabel()}`;
   }
   if (healthFinished) healthFinished.textContent = metric(finished);
-  if (healthScheduled) healthScheduled.textContent = metric(scheduled);
+  if (healthScheduled) healthScheduled.textContent = metric(withoutResult);
 }
 
 function renderDashboard() {
@@ -101,7 +101,7 @@ function renderDashboard() {
   // La portada deportiva se concentra por defecto en las dos ramas de Liga de Honor.
   const matches = getTopDivisionMatches();
   const finished = matches.filter(m => m.status === 'Finalizado').sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
-  const upcoming = matches.filter(m => m.status !== 'Finalizado' && m.date >= localISODate()).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
+  const upcoming = matches.filter(m => m.status === 'Programado' && m.date >= localISODate()).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
 
   const last = document.getElementById('dashboard-last');
   if (last) {
@@ -159,11 +159,20 @@ function renderClubes() {
   grid.innerHTML = clubs.map(club => `<a class="card club-card" href="club.html?id=${club.id}"><div class="club-card-head">${clubBadge(club)}<div><span class="mini-label">CLUB</span><h3>${esc(club.name)}</h3><p>${club.played} partidos · ${club.gf} GF · ${club.ga} GC</p></div></div><div class="club-card-stats"><span><b>${club.points}</b>Puntos</span><span><b>${club.players}</b>Jugadores</span><span><b>${club.gd >= 0 ? '+' : ''}${club.gd}</b>Diferencia</span></div><div class="club-card-form"><span>Forma</span><div>${club.form.length ? club.form.map(resultPill).join('') : '<small>Sin resultados</small>'}</div><strong>Ver club →</strong></div></a>`).join('');
 }
 
+// Los enlaces internos generan IDs decimales canónicos. Number(...) solo
+// aceptaría también "01", "1e2" o IDs duplicados, resolviendo otra ficha.
+function routeEntityId() {
+  const ids = new URLSearchParams(location.search).getAll('id');
+  if (ids.length !== 1 || !/^[1-9][0-9]*$/.test(ids[0])) return null;
+  const id = Number(ids[0]);
+  return Number.isSafeInteger(id) ? id : null;
+}
+
 function renderClubDetail() {
   const root = document.getElementById('club-detail');
   if (!root) return;
-  const id = Number(new URLSearchParams(location.search).get('id'));
-  const club = getClub(id) || getClubs()[0];
+  const id = routeEntityId();
+  const club = id === null ? null : getClub(id);
   if (!club) { root.innerHTML = emptyState('Club no disponible', 'No encontramos este club en la competencia seleccionada.', '<a class="btn" href="clubes.html">Volver a clubes</a>'); return; }
 
   const header = document.querySelector('.page-header h1');
@@ -220,8 +229,8 @@ function renderJugadores() {
 function renderPlayerDetail() {
   const root = document.getElementById('player-detail');
   if (!root) return;
-  const id = Number(new URLSearchParams(location.search).get('id'));
-  const player = getPlayer(id) || getPlayers()[0];
+  const id = routeEntityId();
+  const player = id === null ? null : getPlayer(id);
   if (!player) { root.innerHTML = emptyState('Jugador no disponible', 'No encontramos este jugador en la competencia seleccionada.'); return; }
   const age = ageFromBirthDate(player.birthDate);
   const rows = getPlayerMatchRows(player.id);
@@ -249,7 +258,7 @@ function renderPlayerDetail() {
       <article class="card section-card"><div class="section-head"><div><span class="section-kicker">FORMA RECIENTE</span><h2>Goles por partido</h2></div></div>${recent.length ? `<div class="spark-bars">${recent.slice().reverse().map(r => `<a href="partido.html?id=${r.match.id}" class="spark-item" title="${esc(r.match.home)} vs ${esc(r.match.away)}: ${r.goals} goles"><div class="spark-track"><span style="--h:${Math.max(8, Math.round((r.goals / maxGoals) * 100))}%"></span></div><b>${r.goals}</b><small>${formatShortDate(r.match.date).day}/${new Date(`${r.match.date}T12:00:00`).getMonth()+1}</small></a>`).join('')}</div>` : emptyState('Sin partidos', 'No hay participaciones recientes para graficar.')}</article>
       <article class="card section-card"><div class="section-head"><div><span class="section-kicker">DISCIPLINA</span><h2>Sanciones</h2></div></div><div class="discipline-grid"><div><span class="tag gold">2 MIN</span><b>${player.twoMin}</b></div><div><span class="tag yellow">AMARILLAS</span><b>${player.yellow}</b></div><div><span class="tag red">ROJAS</span><b>${player.red}</b></div></div></article>
     </section>
-    <section class="card section-card"><div class="section-head"><div><span class="section-kicker">PARTIDOS</span><h2>Rendimiento reciente</h2></div></div><div class="table-scroll"><table class="data-table"><thead><tr><th>FECHA</th><th>PARTIDO</th><th>RESULTADO</th><th>GOLES</th><th>2MIN</th><th></th></tr></thead><tbody>${recent.map(r => { const m = r.match; const score = m.status === 'Finalizado' ? `${m.homeScore}–${m.awayScore}` : 'Programado'; return `<tr><td>${formatDateISO(m.date)}</td><td><b>${esc(m.home)}</b> vs ${esc(m.away)}</td><td>${score}</td><td><b>${r.goals}</b></td><td>${r.twoMin}</td><td><a class="row-action" href="partido.html?id=${m.id}">Ver partido →</a></td></tr>`; }).join('') || `<tr><td colspan="6">${emptyState('Sin participaciones', 'Todavía no hay partidos asociados a este jugador.')}</td></tr>`}</tbody></table></div></section>
+    <section class="card section-card"><div class="section-head"><div><span class="section-kicker">PARTIDOS</span><h2>Rendimiento reciente</h2></div></div><div class="table-scroll"><table class="data-table"><thead><tr><th>FECHA</th><th>PARTIDO</th><th>RESULTADO</th><th>GOLES</th><th>2MIN</th><th></th></tr></thead><tbody>${recent.map(r => { const m = r.match; const score = m.status === 'Finalizado' ? `${m.homeScore}–${m.awayScore}` : esc(m.status); return `<tr><td>${formatDateISO(m.date)}</td><td><b>${esc(m.home)}</b> vs ${esc(m.away)}</td><td>${score}</td><td><b>${r.goals}</b></td><td>${r.twoMin}</td><td><a class="row-action" href="partido.html?id=${m.id}">Ver partido →</a></td></tr>`; }).join('') || `<tr><td colspan="6">${emptyState('Sin participaciones', 'Todavía no hay partidos asociados a este jugador.')}</td></tr>`}</tbody></table></div></section>
     <section class="card advanced-player-teaser"><div class="teaser-target">${icon('goal')}</div><div><span class="section-kicker">PRÓXIMAMENTE CON VIDEO</span><h2>Mapa de lanzamiento, zonas y clips</h2><p>La ficha está preparada para incorporar tiros, efectividad, ubicación en cancha y acceso al timestamp del video cuando el pipeline de IA genere esos eventos.</p></div></section>`;
 }
 
@@ -302,8 +311,8 @@ function participationTable(rows, title, club) {
 function renderMatchDetail() {
   const root = document.getElementById('match-detail');
   if (!root) return;
-  const id = Number(new URLSearchParams(location.search).get('id'));
-  const match = getMatch(id) || getMatches()[0];
+  const id = routeEntityId();
+  const match = id === null ? null : getMatch(id);
   if (!match) { root.innerHTML = emptyState('Partido no disponible', 'No encontramos este partido en la competencia seleccionada.'); return; }
   const home = getBaseClub(match.homeClubId) || { id: match.homeClubId, name: match.home, abbr: initials(match.home) };
   const away = getBaseClub(match.awayClubId) || { id: match.awayClubId, name: match.away, abbr: initials(match.away) };

@@ -1,4 +1,5 @@
 import { CONFIG } from './config.js';
+import { hasVerifiedMatchResult } from './match-result-core.mjs';
 
 const PAGE_SIZE = 1000;
 const REQUEST_TIMEOUT = 15000;
@@ -14,6 +15,41 @@ function datasetCacheKey(season) {
   return `7m:dataset:${SESSION_CACHE_VERSION}:${season}`;
 }
 
+// A corrupt or older cache payload must not reach prepareDataset(), which
+// maps these collections. A truthy but malformed value could break navigation.
+// A malformed summary must never be displayed as 0, NaN or Infinity,
+// including when it was restored from an older sessionStorage entry.
+function isValidGlobalSummary(summary) {
+  if (!summary || typeof summary !== 'object' || Array.isArray(summary)) return false;
+  const counts = ['clubs', 'players', 'matches', 'finished', 'goals'];
+  return counts.every(key => Number.isSafeInteger(summary[key]) && summary[key] >= 0)
+    && summary.finished <= summary.matches
+    && (summary.avgGoals === null ||
+      (typeof summary.avgGoals === 'number' && Number.isFinite(summary.avgGoals) && summary.avgGoals >= 0));
+}
+
+function readSummaryCount(value) {
+  // PostgREST may serialize SQL bigint counts as decimal strings.
+  if (typeof value !== 'number' && (typeof value !== 'string' || !/^\d+$/.test(value))) return NaN;
+  return Number(value);
+}
+
+function readSummaryAverage(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return NaN;
+  return Number(value);
+}
+
+function isValidCachedDataset(dataset) {
+  if (!dataset || typeof dataset !== 'object' || Array.isArray(dataset)) return false;
+  const collections = ['clubes', 'equipos', 'jugadores', 'planteles', 'partidos', 'participaciones'];
+  if (!collections.every(key => Array.isArray(dataset[key]) &&
+    dataset[key].every(row => row !== null && typeof row === 'object' && !Array.isArray(row)))) {
+    return false;
+  }
+  return isValidGlobalSummary(dataset.globalSummary);
+}
+
 function readDatasetCache(season) {
   const store = sessionStore();
   if (!store) return null;
@@ -22,7 +58,11 @@ function readDatasetCache(season) {
     const raw = store.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed?.at || !parsed?.dataset || Date.now() - Number(parsed.at) > SESSION_CACHE_TTL) {
+    const cachedAt = parsed?.at;
+    const age = Date.now() - cachedAt;
+    // Un reloj adelantado o una marca corrupta no deben extender el TTL indefinidamente.
+    if (!Number.isSafeInteger(cachedAt) || cachedAt <= 0 ||
+        age < 0 || age > SESSION_CACHE_TTL || !isValidCachedDataset(parsed?.dataset)) {
       store.removeItem(key);
       return null;
     }
@@ -98,18 +138,29 @@ function headers(range = null, extra = {}) {
   return { ...result, ...extra };
 }
 
-async function request(url, options = {}) {
+async function request(url, options = {}, consume = response => response) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
   try {
     const response = await fetch(url, { ...options, signal: controller.signal });
     if (!response.ok) {
       const detail = await response.text().catch(() => '');
-      throw new DataError(`Error ${response.status} al consultar datos. ${detail}`.trim());
+      const failure = new DataError(`Error ${response.status} al consultar datos. ${detail}`.trim());
+      // Preserve PostgREST code to distinguish missing legacy schema from 5xx/paused service.
+      try {
+        const payload = JSON.parse(detail);
+        if (typeof payload?.code === 'string') failure.code = payload.code;
+      } catch {
+        // A non-JSON error must never authorize a full-table fallback.
+      }
+      throw failure;
     }
-    return response;
+    // Keep the deadline active while reading the body, not only the headers.
+    return await consume(response);
   } catch (error) {
-    if (error?.name === 'AbortError') throw new DataError('La consulta de datos excedió el tiempo de espera.', error);
+    if (controller.signal.aborted || error?.name === 'AbortError') {
+      throw new DataError('La consulta de datos excedió el tiempo de espera.', error);
+    }
     if (error instanceof DataError) throw error;
     throw new DataError('No se pudo conectar con la fuente de datos.', error);
   } finally {
@@ -118,16 +169,20 @@ async function request(url, options = {}) {
 }
 
 export async function supabaseGetAll(table, query = '', { pageSize = PAGE_SIZE } = {}) {
+  // A zero page size never advances `from`, causing unbounded repeated GETs.
+  // Fractional, negative or oversized ranges must also fail before any request.
+  if (!Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > PAGE_SIZE) {
+    throw new DataError(`Tamaño de página inválido (1-${PAGE_SIZE}).`);
+  }
   const rows = [];
   let from = 0;
 
   while (true) {
     const to = from + pageSize - 1;
-    const response = await request(endpoint(table, query), {
+    const page = await request(endpoint(table, query), {
       method: 'GET',
       headers: headers(`${from}-${to}`)
-    });
-    const page = await response.json();
+    }, response => response.json());
     if (!Array.isArray(page)) throw new DataError(`Respuesta inesperada al consultar ${table}.`);
     rows.push(...page);
     if (page.length < pageSize) break;
@@ -139,17 +194,20 @@ export async function supabaseGetAll(table, query = '', { pageSize = PAGE_SIZE }
 }
 
 export async function supabaseCount(table) {
-  const response = await request(endpoint(table, '?select=id'), {
+  return request(endpoint(table, '?select=id'), {
     method: 'GET',
     headers: headers('0-0', { Prefer: 'count=exact' })
+  }, response => {
+    const contentRange = response.headers.get('content-range') || '';
+    const match = contentRange.match(/\/(\d+)$/);
+    // A one-row range is not a total. Never publish an estimated count.
+    if (!match) throw new DataError(`Conteo exacto no disponible para ${table}.`);
+    const count = Number(match[1]);
+    if (!Number.isSafeInteger(count)) {
+      throw new DataError(`Conteo exacto inválido para ${table}.`);
+    }
+    return count;
   });
-
-  const contentRange = response.headers.get('content-range') || '';
-  const match = contentRange.match(/\/(\d+)$/);
-  if (match) return Number(match[1]);
-
-  const page = await response.json();
-  return Array.isArray(page) ? page.length : 0;
 }
 
 export async function supabaseGetByIds(
@@ -159,7 +217,18 @@ export async function supabaseGetByIds(
   select = '*',
   { chunkSize = 100, concurrency = 4 } = {}
 ) {
-  const values = [...new Set((ids || []).map(Number).filter(Number.isFinite))];
+  // IDs externos pueden contener null, strings vacíos o enteros fuera de rango.
+  // Number(...) los convierte silenciosamente en 0 o redondea valores grandes.
+  const values = [...new Set((ids || []).map(value => {
+    if (typeof value === 'number') {
+      return Number.isSafeInteger(value) && value > 0 ? value : null;
+    }
+    if (typeof value === 'string' && /^[1-9][0-9]*$/.test(value)) {
+      const parsed = Number(value);
+      return Number.isSafeInteger(parsed) ? parsed : null;
+    }
+    return null;
+  }).filter(value => value !== null))];
   if (!values.length) return [];
   if (!Number.isInteger(chunkSize) || chunkSize <= 0 || chunkSize > 500) {
     throw new DataError('El tamaño de bloque para IDs no es válido.');
@@ -186,12 +255,7 @@ export async function supabaseGetByIds(
 }
 
 function summaryFromMatches(matches, clubs, players) {
-  const finalizados = matches.filter(row => {
-    const estado = String(row.estado || '').toLowerCase();
-    const tieneResultado = row.goles_local !== null && row.goles_local !== undefined
-      && row.goles_visitante !== null && row.goles_visitante !== undefined;
-    return estado === 'finalizado' || estado === 'final' || (tieneResultado && estado !== 'programado');
-  });
+  const finalizados = matches.filter(hasVerifiedMatchResult);
   const goals = finalizados.reduce((sum, row) =>
     sum + Number(row.goles_local || 0) + Number(row.goles_visitante || 0), 0
   );
@@ -206,6 +270,13 @@ function summaryFromMatches(matches, clubs, players) {
 }
 
 let globalSummaryPromise = null;
+let globalSummaryCachedAt = 0;
+
+function isMissingGlobalSummaryView(error) {
+  return error instanceof DataError
+    && (error.code === '42P01' || error.code === 'PGRST205')
+    && /\bv_global_summary\b/i.test(error.message);
+}
 
 async function loadGlobalSummaryView() {
   try {
@@ -214,26 +285,48 @@ async function loadGlobalSummaryView() {
       '?select=clubes,jugadores,partidos,partidos_con_resultado,goles,promedio_goles'
     );
     const row = rows[0];
-    if (!row) return null;
-    return {
-      clubs: Number(row.clubes || 0),
-      players: Number(row.jugadores || 0),
-      matches: Number(row.partidos || 0),
-      finished: Number(row.partidos_con_resultado || 0),
-      goals: Number(row.goles || 0),
-      avgGoals: row.promedio_goles === null || row.promedio_goles === undefined
-        ? null
-        : Number(row.promedio_goles)
+    // An empty but existing view is not proof that the view is absent.
+    // Fail closed rather than scanning every match through the legacy fallback.
+    if (!row) throw new DataError('La vista de resumen global no devolvió filas.');
+    const summary = {
+      clubs: readSummaryCount(row.clubes),
+      players: readSummaryCount(row.jugadores),
+      matches: readSummaryCount(row.partidos),
+      finished: readSummaryCount(row.partidos_con_resultado),
+      goals: readSummaryCount(row.goles),
+      avgGoals: readSummaryAverage(row.promedio_goles)
     };
-  } catch {
-    // Compatibilidad con instalaciones anteriores a v_global_summary.
+    if (!isValidGlobalSummary(summary)) {
+      throw new DataError('La vista de resumen global devolvió estadísticas inválidas.');
+    }
+    return summary;
+  } catch (error) {
+    if (!isMissingGlobalSummaryView(error)) throw error;
+    // Only an absent legacy view authorizes the expensive global fallback.
     return null;
   }
 }
 
 export function loadGlobalSummaryFast() {
-  if (!globalSummaryPromise) {
-    globalSummaryPromise = loadGlobalSummaryView();
+  const now = Date.now();
+  const age = now - globalSummaryCachedAt;
+  // Reuse concurrent reads and recent results, but never retain a successful
+  // summary indefinitely after the two-minute dataset cache has expired.
+  // A clock rollback also invalidates the cached value.
+  if (!globalSummaryPromise || !Number.isSafeInteger(globalSummaryCachedAt) ||
+      age < 0 || age > SESSION_CACHE_TTL) {
+    const pending = loadGlobalSummaryView();
+    const tracked = pending.catch(error => {
+      // A failed request is retryable; an older failure must not clear a
+      // newer in-flight request after the TTL has elapsed.
+      if (globalSummaryPromise === tracked) {
+        globalSummaryPromise = null;
+        globalSummaryCachedAt = 0;
+      }
+      throw error;
+    });
+    globalSummaryPromise = tracked;
+    globalSummaryCachedAt = now;
   }
   return globalSummaryPromise;
 }
@@ -273,13 +366,19 @@ export function filterParticipationsToMatches(participations, matches) {
   });
 }
 
+function isMissingSeasonColumn(error) {
+  return error instanceof DataError
+    && error.code === '42703'
+    && /\btemporada_id\b/i.test(error.message);
+}
+
 async function loadSeasonMatches(season, teamIds) {
   let rows;
   try {
     rows = await supabaseGetAll('partidos', `?select=*&temporada_id=eq.${season}`);
-  } catch {
-    // Fallback para esquemas antiguos. Igual se vuelve a validar contra el catálogo
-    // de equipos de la temporada para evitar cruces parciales o cross-scope.
+  } catch (error) {
+    if (!isMissingSeasonColumn(error)) throw error;
+    // Legacy schema only: keep both teams scoped to the requested season.
     rows = await supabaseGetAll('partidos', '?select=*');
   }
   return filterMatchesToTeamIds(rows, teamIds);
@@ -294,7 +393,11 @@ export async function loadPublicDataset(seasonId) {
 
   // Arranca el resumen global en paralelo para que Inicio pueda mostrar escala
   // de la base mientras todavía se cargan los datos detallados de la temporada.
-  const summaryViewPromise = loadGlobalSummaryFast();
+  // Attach rejection handling immediately; the summary may fail before teams load.
+  const summaryViewOutcome = loadGlobalSummaryFast().then(
+    value => ({ value }),
+    error => ({ error })
+  );
 
   const rawEquipos = await supabaseGetAll(
     'equipos',
@@ -309,10 +412,12 @@ export async function loadPublicDataset(seasonId) {
   );
   const requestedClubIds = scopedEquipos.map(row => Number(row.club_id));
 
-  const [clubes, summaryView] = await Promise.all([
+  const [clubes, summaryOutcome] = await Promise.all([
     supabaseGetByIds('clubes', 'id', requestedClubIds, 'id,nombre,abreviatura,ciudad,logo_url'),
-    summaryViewPromise
+    summaryViewOutcome
   ]);
+  if (summaryOutcome.error) throw summaryOutcome.error;
+  const summaryView = summaryOutcome.value;
 
   const validClubIds = new Set(clubes.map(row => Number(row.id)).filter(Number.isFinite));
   const equipos = scopedEquipos.filter(row => validClubIds.has(Number(row.club_id)));

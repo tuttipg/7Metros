@@ -37,6 +37,7 @@ jobs:
           node --check config.js
           node --check config-season-smoke.mjs
           node --check api-loading-smoke.mjs
+          node --check api-cache-smoke.mjs
           node --check store-smoke.mjs
           node --check store-integrity-smoke.mjs
           node --check team-integrity-smoke.mjs
@@ -59,6 +60,8 @@ jobs:
           node --check scoped-route-core.mjs
           node --check scoped-route-fix.js
           node --check scoped-route-smoke.mjs
+          node --check match-result-core.mjs
+          node --check match-result-smoke.mjs
           node --check match-freshness-core.mjs
           node --check match-freshness.js
           node --check match-freshness-smoke.mjs
@@ -79,6 +82,9 @@ jobs:
 
       - name: API loading smoke test
         run: node api-loading-smoke.mjs
+
+      - name: API cache TTL smoke test
+        run: node api-cache-smoke.mjs
 
       - name: Store smoke test
         run: node store-smoke.mjs
@@ -127,6 +133,9 @@ jobs:
 
       - name: Club and match route context smoke test
         run: node scoped-route-smoke.mjs
+
+      - name: Verified match result smoke test
+        run: node match-result-smoke.mjs
 
       - name: Match freshness smoke test
         run: node match-freshness-smoke.mjs
