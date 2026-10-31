@@ -320,6 +320,36 @@ try {
     globalThis.clearTimeout = realClearTimeout;
   }
 
+  // Range 0-1 / 2-3 without ORDER BY is not a stable dataset contract:
+  // the same row can reappear on a later page. Keep a deterministic id order
+  // on the six public tables, but never assume the summary view has an id.
+  const paginationReads = [];
+  globalThis.fetch = async (input, options) => {
+    const url = new URL(input);
+    const table = url.pathname.split('/').at(-1);
+    const order = url.searchParams.get('order');
+    const range = options.headers.Range;
+    paginationReads.push({ table, order, range });
+    if (table === 'partidos' && order === 'id.asc') {
+      return mockJson(range === '0-1' ? [{ id: 1 }, { id: 2 }] : [{ id: 3 }]);
+    }
+    return mockJson([]);
+  };
+  const orderedRows = await countApi.supabaseGetAll('partidos', '?select=id', { pageSize: 2 });
+  assert.deepEqual(orderedRows.map(row => row.id), [1, 2, 3],
+    'paginated public records must have a stable order and no duplicate page boundaries');
+  assert.deepEqual(paginationReads.slice(0, 2), [
+    { table: 'partidos', order: 'id.asc', range: '0-1' },
+    { table: 'partidos', order: 'id.asc', range: '2-3' }
+  ], 'all pages must share the same id ordering');
+  await countApi.supabaseGetAll('partidos', '?select=id&order=fecha.desc');
+  await countApi.supabaseGetAll('v_global_summary', '?select=clubes');
+  assert.equal(paginationReads[2].order, 'fecha.desc',
+    'a caller-provided ordering must be preserved');
+  assert.equal(paginationReads[3].order, null,
+    'the global summary view has no guaranteed id column');
+  console.log('api-loading-smoke: stable pagination order OK.');
+
   console.log('api-loading-smoke: OK — fallbacks, conteos exactos y timeout de body verificados.');
 } finally {
   globalThis.fetch = originalFetch;
