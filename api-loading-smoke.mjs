@@ -129,6 +129,7 @@ try {
       if (summaryMode === 'paused') {
         return mockJson({ code: 'PGRST000', message: 'Servicio temporalmente no disponible' }, 503);
       }
+      if (summaryMode === 'empty-view') return mockJson([]);
       return mockJson({
         code: 'PGRST205',
         message: "Could not find the table 'public.v_global_summary' in the schema cache"
@@ -176,6 +177,17 @@ try {
   assert.equal(summaryGlobalMatchReads, 1, 'sólo una vista realmente ausente habilita fallback global');
   assert.equal(legacySummary.globalSummary.matches, 1);
   assert.equal(legacySummary.globalSummary.goals, 45);
+
+  // Una vista existente que responde [] NO está ausente: no descargar todos
+  // los partidos como si fuera un esquema legacy (costo alto e inesperado).
+  summaryMode = 'empty-view';
+  const emptySummaryApi = await import('./api.js?empty-summary-view-smoke');
+  await assert.rejects(
+    () => emptySummaryApi.loadPublicDataset(3),
+    error => error instanceof emptySummaryApi.DataError && /no devolvió filas/.test(error.message),
+    'la vista vacía debe informar error y no autorizar fallback global'
+  );
+  assert.equal(summaryGlobalMatchReads, 1, 'la vista vacía no debe provocar otra lectura global');
 
   // El resumen puede fallar antes de que responda equipos. Si el rechazo no
   // tiene handler desde el inicio, Node emite unhandledRejection y el navegador
