@@ -50,6 +50,26 @@ try {
   assert.equal(maxActive, 2, 'la lectura debe usar concurrencia acotada');
   assert.ok(maxActive <= 2, 'nunca debe exceder la concurrencia solicitada');
 
+  // Regresión de IDs: Number(null), Number('') y enteros > MAX_SAFE_INTEGER
+  // antes terminaban en consultas por 0 o IDs redondeados.
+  const idQueries = [];
+  globalThis.fetch = async input => {
+    idQueries.push(new URL(input).searchParams.get('equipo_id'));
+    return new Response('[]', { status: 200 });
+  };
+  await supabaseGetByIds('planteles', 'equipo_id', [
+    null, undefined, '', ' 4 ', '01', '1e3', -3, 0, 2.5,
+    '9007199254740993', Number.MAX_SAFE_INTEGER + 1, true, '1', 2, 2
+  ], 'id');
+  assert.deepEqual(idQueries, ['in.(1,2)'],
+    'solo IDs decimales canónicos, positivos y seguros deben llegar a la API');
+  idQueries.length = 0;
+  assert.deepEqual(await supabaseGetByIds('planteles', 'equipo_id', [
+    null, '', '1e3', Number.MAX_SAFE_INTEGER + 1
+  ], 'id'), []);
+  assert.deepEqual(idQueries, [], 'IDs inválidos no deben generar requests');
+
+
   await assert.rejects(
     () => supabaseGetByIds('planteles', 'equipo_id', [1], 'id', { concurrency: 7 }),
     DataError,
@@ -129,6 +149,7 @@ try {
       if (summaryMode === 'paused') {
         return mockJson({ code: 'PGRST000', message: 'Servicio temporalmente no disponible' }, 503);
       }
+      if (summaryMode === 'empty-view') return mockJson([]);
       return mockJson({
         code: 'PGRST205',
         message: "Could not find the table 'public.v_global_summary' in the schema cache"
@@ -181,6 +202,17 @@ try {
     'el resumen legacy no debe contar finales sin marcador completo o con notación inválida');
   assert.equal(legacySummary.globalSummary.goals, 45,
     'el resumen legacy sólo debe sumar goles de resultados verificados');
+
+  // Una vista existente que responde [] NO está ausente: no descargar todos
+  // los partidos como si fuera un esquema legacy (costo alto e inesperado).
+  summaryMode = 'empty-view';
+  const emptySummaryApi = await import('./api.js?empty-summary-view-smoke');
+  await assert.rejects(
+    () => emptySummaryApi.loadPublicDataset(3),
+    error => error instanceof emptySummaryApi.DataError && /no devolvió filas/.test(error.message),
+    'la vista vacía debe informar error y no autorizar fallback global'
+  );
+  assert.equal(summaryGlobalMatchReads, 1, 'la vista vacía no debe provocar otra lectura global');
 
   // El resumen puede fallar antes de que responda equipos. Si el rechazo no
   // tiene handler desde el inicio, Node emite unhandledRejection y el navegador
