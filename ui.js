@@ -87,7 +87,7 @@ export function renderShell() {
       <div class="brand"><a href="index.html" aria-label="7Metros - Inicio"><div class="brand-logo"><span class="seven">7</span><span class="m">M</span></div><span class="brand-name">7<b>METROS</b></span><span class="brand-sub">HANDBALL APP</span></a></div>
       <button class="nav-search" id="global-search-open" type="button"><span class="nav-icon">${icon('search')}</span><span>Buscar</span><kbd>Ctrl K</kbd></button>
       <nav class="nav"><span class="nav-group-label">COMPETICIÓN</span>${links(primary)}<span class="nav-group-label">DATOS</span>${links(data)}<button class="nav-link disabled" type="button" title="Análisis de video e IA en desarrollo"><span class="nav-icon">${icon('ball')}</span><span>IA / VIDEO</span><em>LAB</em></button><div class="nav-sep"></div>${links(secondary)}</nav>
-      <div class="sidebar-foot"><span class="live-dot"></span><span>Datos conectados</span></div>`;
+      <div class="sidebar-foot" data-connection-state="loading"><span class="live-dot"></span><span class="connection-label">Conectando datos…</span></div>`;
   }
 
   const mobile = document.getElementById('mobile-bar');
@@ -102,7 +102,8 @@ export function renderShell() {
 
   const overlay = document.getElementById('overlay');
   const menuOpen = document.getElementById('menu-open');
-  const mobileMedia = window.matchMedia('(max-width: 980px)');
+  // Debe coincidir con el breakpoint que oculta .sidebar en style.css.
+  const mobileMedia = window.matchMedia('(max-width: 940px)');
 
   const syncMenuAccessibility = open => {
     const isMobile = mobileMedia.matches;
@@ -126,7 +127,10 @@ export function renderShell() {
   const openMenu = () => {
     setMenuState(true);
     requestAnimationFrame(() => {
-      sidebar?.querySelector('a[aria-current="page"], a.nav-link')?.focus();
+      // Evita devolver el foco al drawer si se cerró antes del siguiente frame.
+      if (sidebar?.classList.contains('open')) {
+        sidebar.querySelector('a[aria-current="page"], a.nav-link')?.focus();
+      }
     });
   };
   const closeMenu = ({ returnFocus = false } = {}) => {
@@ -134,7 +138,10 @@ export function renderShell() {
     if (returnFocus) menuOpen?.focus();
   };
 
-  menuOpen?.addEventListener('click', openMenu);
+  menuOpen?.addEventListener('click', () => {
+    if (sidebar?.classList.contains('open')) closeMenu({ returnFocus: true });
+    else openMenu();
+  });
   overlay?.addEventListener('click', () => closeMenu({ returnFocus: true }));
   sidebar?.querySelectorAll('a').forEach(a => a.addEventListener('click', () => closeMenu()));
   document.addEventListener('keydown', event => {
@@ -156,13 +163,29 @@ export function renderShell() {
   initGlobalSearch();
 }
 
+export function setConnectionStatus(status) {
+  const labels = {
+    loading: 'Conectando datos…',
+    ready: 'Datos disponibles',
+    error: 'Datos no disponibles'
+  };
+  if (!Object.hasOwn(labels, status)) return;
+  const indicator = document.querySelector('.sidebar-foot');
+  if (!indicator) return;
+  indicator.dataset.connectionState = status;
+  const label = indicator.querySelector('.connection-label');
+  if (label) label.textContent = labels[status];
+}
+
 export function renderLoadingStatus() {
+  setConnectionStatus('loading');
   const root = document.getElementById('data-status');
   if (!root) return;
   root.innerHTML = `<div class="status-banner loading"><span class="spinner"></span><div><b>Cargando datos</b><small>Conectando con la base de 7Metros…</small></div></div>`;
 }
 
 export function renderSuccessStatus() {
+  setConnectionStatus('ready');
   const root = document.getElementById('data-status');
   if (!root) return;
   root.innerHTML = '';
@@ -170,6 +193,7 @@ export function renderSuccessStatus() {
 }
 
 export function renderErrorStatus(error) {
+  setConnectionStatus('error');
   const root = document.getElementById('data-status');
   if (!root) return;
   root.innerHTML = `<div class="status-banner error"><span>${icon('info')}</span><div><b>No pudimos cargar los datos</b><small>${esc(error?.message || 'Revisá la conexión e intentá nuevamente.')}</small></div><button class="btn light" id="retry-data">${icon('refresh')}Reintentar</button></div>`;
