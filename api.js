@@ -22,7 +22,11 @@ function readDatasetCache(season) {
     const raw = store.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed?.at || !parsed?.dataset || Date.now() - Number(parsed.at) > SESSION_CACHE_TTL) {
+    const cachedAt = parsed?.at;
+    const age = Date.now() - cachedAt;
+    // Un reloj adelantado o una marca corrupta no deben extender el TTL indefinidamente.
+    if (!Number.isSafeInteger(cachedAt) || cachedAt <= 0 ||
+        age < 0 || age > SESSION_CACHE_TTL || !parsed?.dataset) {
       store.removeItem(key);
       return null;
     }
