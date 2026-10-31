@@ -127,7 +127,10 @@ export function renderShell() {
   const openMenu = () => {
     setMenuState(true);
     requestAnimationFrame(() => {
-      sidebar?.querySelector('a[aria-current="page"], a.nav-link')?.focus();
+      // Evita devolver el foco al drawer si se cerró antes del siguiente frame.
+      if (sidebar?.classList.contains('open')) {
+        sidebar.querySelector('a[aria-current="page"], a.nav-link')?.focus();
+      }
     });
   };
   const closeMenu = ({ returnFocus = false } = {}) => {
@@ -135,7 +138,10 @@ export function renderShell() {
     if (returnFocus) menuOpen?.focus();
   };
 
-  menuOpen?.addEventListener('click', openMenu);
+  menuOpen?.addEventListener('click', () => {
+    if (sidebar?.classList.contains('open')) closeMenu({ returnFocus: true });
+    else openMenu();
+  });
   overlay?.addEventListener('click', () => closeMenu({ returnFocus: true }));
   sidebar?.querySelectorAll('a').forEach(a => a.addEventListener('click', () => closeMenu()));
   document.addEventListener('keydown', event => {
