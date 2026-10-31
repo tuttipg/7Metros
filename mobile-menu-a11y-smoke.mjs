@@ -94,7 +94,8 @@ const sidebar = {
   querySelector: () => ({ focus: () => { drawerFocus++; } })
 };
 const trigger = {
-  attributes: {},
+  // El HTML real nace con aria-expanded="false"; el DOM simulado no parsea innerHTML.
+  attributes: { 'aria-expanded': 'false' },
   addEventListener: (name, handler) => { listeners[name] = handler; },
   setAttribute(name, value) { this.attributes[name] = value; },
   focus: () => { triggerFocus++; }
