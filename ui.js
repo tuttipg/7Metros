@@ -240,13 +240,15 @@ function initGlobalSearch() {
   if (!root) return;
 
   const hint = 'Escribí un nombre para buscar en toda la temporada.';
-  root.innerHTML = `<div class="search-modal" id="global-search-modal" aria-hidden="true"><div class="search-dialog" role="dialog" aria-modal="true" aria-label="Buscar en 7Metros"><div class="search-dialog-head"><span>${icon('search')}</span><input id="global-search-input" type="search" placeholder="Buscar jugador o club…" autocomplete="off"><button id="global-search-close" class="icon-btn" aria-label="Cerrar">${icon('close')}</button></div><div id="global-search-results" class="search-results"><div class="search-hint">${hint}</div></div><div class="search-dialog-foot"><span>Enter para abrir</span><span>Esc para cerrar</span></div></div></div>`;
+  root.innerHTML = `<div class="search-modal" id="global-search-modal" aria-hidden="true"><div class="search-dialog" role="dialog" aria-modal="true" aria-label="Buscar en 7Metros"><div class="search-dialog-head"><span>${icon('search')}</span><input id="global-search-input" type="search" aria-label="Buscar jugador o club" placeholder="Buscar jugador o club…" autocomplete="off"><button id="global-search-close" class="icon-btn" aria-label="Cerrar">${icon('close')}</button></div><div id="global-search-results" class="search-results"><div class="search-hint">${hint}</div></div><div class="search-dialog-foot"><span>Enter para abrir</span><span>Esc para cerrar</span></div></div></div>`;
 
   const modal = document.getElementById('global-search-modal');
   const input = document.getElementById('global-search-input');
   const results = document.getElementById('global-search-results');
   let searchIndex = null;
   let searchTimer = null;
+  let focusTimer = null;
+  let previousFocus = null;
 
   const buildSearchIndex = () => {
     const clubs = state.clubs.map(club => ({
@@ -320,20 +322,31 @@ function initGlobalSearch() {
 
   const open = () => {
     if (!state.loaded) { showToast('Esperá a que terminen de cargar los datos.'); return; }
+    if (modal?.classList.contains('show')) { input?.focus(); return; }
+    previousFocus = document.activeElement;
     searchIndex ||= buildSearchIndex();
     modal?.classList.add('show');
     modal?.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
-    setTimeout(() => input?.focus(), 30);
+    clearTimeout(focusTimer);
+    focusTimer = setTimeout(() => {
+      // Evita enfocar un campo ya oculto si se cierra inmediatamente.
+      if (modal?.classList.contains('show')) input?.focus();
+    }, 30);
   };
 
   const close = () => {
-    modal?.classList.remove('show');
-    modal?.setAttribute('aria-hidden', 'true');
+    if (!modal?.classList.contains('show')) return;
+    clearTimeout(focusTimer);
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-open');
     clearTimeout(searchTimer);
     if (input) input.value = '';
     if (results) results.innerHTML = `<div class="search-hint">${hint}</div>`;
+    const returnTo = previousFocus;
+    previousFocus = null;
+    if (returnTo?.isConnected && typeof returnTo.focus === 'function') returnTo.focus();
   };
 
   document.getElementById('global-search-open')?.addEventListener('click', open);
@@ -342,8 +355,32 @@ function initGlobalSearch() {
   modal?.addEventListener('click', event => { if (event.target === modal) close(); });
 
   document.addEventListener('keydown', event => {
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); open(); }
-    if (event.key === 'Escape' && modal?.classList.contains('show')) close();
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      open();
+      return;
+    }
+    if (!modal?.classList.contains('show')) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      close();
+    }
+    if (event.key === 'Tab') {
+      // aria-modal requiere que el foco permanezca en el diálogo mientras está abierto.
+      // Se consulta en cada Tab porque los resultados de búsqueda cambian dinámicamente.
+      const focusable = [...modal.querySelectorAll('input:not([disabled]), button:not([disabled]), a[href]')]
+        .filter(element => element.getClientRects().length > 0);
+      if (!focusable.length) { event.preventDefault(); return; }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !modal.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
   });
 
   input?.addEventListener('input', () => {
