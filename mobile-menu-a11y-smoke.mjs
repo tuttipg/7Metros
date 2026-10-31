@@ -13,8 +13,8 @@ assert.match(ui, /document\.body\.classList\.toggle\('nav-open'/, 'open mobile n
 // El sidebar pasa a drawer en CSS a 940px. Entre 941 y 980px antes era visible
 // pero aria-hidden/inert, lo que impedía navegarlo con teclado.
 const drawerCss = fs.readFileSync(new URL('./style.css', import.meta.url), 'utf8');
-const accessibilityBreakpoint = ui.match(/window\\.matchMedia\\('\\(max-width: (\\d+)px\\)'\\)/);
-const drawerBreakpoint = drawerCss.match(/@media\\(max-width:(\\d+)px\\)\\{\\s*:root\\{--sidebar:0px\\}/);
+const accessibilityBreakpoint = ui.match(/window\.matchMedia\('\(max-width: (\d+)px\)'\)/);
+const drawerBreakpoint = drawerCss.match(/@media\(max-width:(\d+)px\)\{\s*:root\{--sidebar:0px\}/);
 assert.ok(accessibilityBreakpoint, 'JS must define the mobile navigation breakpoint');
 assert.ok(drawerBreakpoint, 'CSS must define the sidebar drawer breakpoint');
 assert.equal(accessibilityBreakpoint[1], drawerBreakpoint[1], 'visible desktop sidebar must never be aria-hidden/inert');
