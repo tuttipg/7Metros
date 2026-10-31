@@ -1,7 +1,7 @@
 import { CONFIG, SEASON_LABEL, STORAGE_KEYS } from './config.js';
 import {
   state, getCompetitionOptions, setFilters, getPlayers, getClubs, getMatches,
-  getStandings, clearStoredFilters, selectedCompetitionLabel
+  getStandings, clearStoredFilters, persistFilters, selectedCompetitionLabel
 } from './store.js';
 import { esc, initials, currentDateLabel, csvDownload, metric, normalizeText, safeHttpUrl } from './utils.js';
 import { readLocalPreference, writeLocalPreference, removeLocalPreference } from './storage-preferences.mjs';
@@ -381,13 +381,18 @@ export function initSettingsPage() {
     const stored = readLocalPreference(item.key);
     input.checked = stored === null ? item.default : stored === '1';
     input.addEventListener('change', () => {
-      const saved = writeLocalPreference(item.key, input.checked ? '1' : '0');
+      let saved = writeLocalPreference(item.key, input.checked ? '1' : '0');
       if (input.dataset.setting === 'filters' && !input.checked) {
         // Al dejar de recordar filtros también cambia la competición activa:
         // sincronizar la barra y las vistas, no solo el almacenamiento.
         clearStoredFilters();
         renderCompetitionBar();
         document.dispatchEvent(new CustomEvent('7m:filters-changed'));
+      } else if (input.dataset.setting === 'filters' && input.checked) {
+        // Al activar «Recordar filtros», guardar también la competición actual.
+        // Antes sólo se guardaba el interruptor y se perdían los filtros al recargar.
+        const filtersSaved = persistFilters();
+        saved = saved && filtersSaved;
       }
       applySettings();
       showToast(saved ? 'Preferencia guardada.' : 'No se pudo guardar la preferencia en este navegador.');
