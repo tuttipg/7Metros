@@ -30,7 +30,7 @@ function isValidGlobalSummary(summary) {
 
 function readSummaryCount(value) {
   // PostgREST may serialize SQL bigint counts as decimal strings.
-  if (typeof value !== 'number' && (typeof value !== 'string' || !/^\\d+$/.test(value))) return NaN;
+  if (typeof value !== 'number' && (typeof value !== 'string' || !/^\d+$/.test(value))) return NaN;
   return Number(value);
 }
 
