@@ -79,6 +79,25 @@ function matchSortKey(match) {
   return `${match?.date || ''}${match?.time || ''}`;
 }
 
+// La ficha de un equipo necesita partidos contra sus rivales de competencia.
+// getMatchesForTeamIds exige AMBOS equipos en el alcance (correcto para tablas),
+// por eso un Set con sólo el equipo seleccionado devuelve cero encuentros.
+export function clubProfileCompetitionScope(selectedTeam) {
+  if (!selectedTeam) return { teamIds: new Set(), matches: [] };
+  const selectedId = Number(selectedTeam.id);
+  const teamIds = new Set(state.teams
+    .filter(team => Number(team.temporada_id) === SEASON_ID
+      && team.activo !== false
+      && team.rama === selectedTeam.rama
+      && team.categoria === selectedTeam.categoria
+      && team.division === selectedTeam.division)
+    .map(team => Number(team.id)));
+  const matches = getMatchesForTeamIds(teamIds).filter(match =>
+    Number(match.homeTeamId) === selectedId || Number(match.awayTeamId) === selectedId
+  );
+  return { teamIds, matches };
+}
+
 function resultForTeam(match, teamId) {
   if (match.status !== 'Finalizado') return null;
   const home = Number(match.homeTeamId) === Number(teamId);
@@ -244,9 +263,11 @@ function renderClubProfile() {
   if (!selectedTeam) return;
 
   const selectedSet = new Set([Number(selectedTeam.id)]);
-  const teamStats = getClubsForTeamIds(selectedSet)[0] || teamRow(selectedTeam);
+  const { teamIds: competitionTeamIds, matches: scopedMatches } = clubProfileCompetitionScope(selectedTeam);
+  const teamStats = getClubsForTeamIds(competitionTeamIds)
+    .find(row => Number(row.teamId) === Number(selectedTeam.id)) || teamRow(selectedTeam);
   const players = getPlayersForTeamIds(selectedSet).sort((a, b) => b.goals - a.goals || bySpanishName(a.name, b.name));
-  const matches = getMatchesForTeamIds(selectedSet).slice().sort((a, b) => matchSortKey(b).localeCompare(matchSortKey(a)));
+  const matches = scopedMatches.slice().sort((a, b) => matchSortKey(b).localeCompare(matchSortKey(a)));
   const finished = matches.filter(match => match.status === 'Finalizado');
   const future = matches.filter(match => match.status !== 'Finalizado' && match.date >= localISODate()).sort((a, b) => matchSortKey(a).localeCompare(matchSortKey(b)));
   const planillas = matches.filter(match => safeHttpUrl(match.planillaUrl)).length;
