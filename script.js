@@ -132,19 +132,32 @@ function renderBootstrapShell() {
     setBootstrapMenu(false);
     if (returnFocus) menuOpen?.focus();
   };
-  menuOpen?.addEventListener('click', () => {
+  const onMenuClick = () => {
     if (sidebar?.classList.contains('open')) closeBootstrapMenu(true);
     else setBootstrapMenu(true);
-  });
-  overlay?.addEventListener('click', () => closeBootstrapMenu(true));
-  document.addEventListener('keydown', event => {
+  };
+  const onOverlayClick = () => closeBootstrapMenu(true);
+  const onEscape = event => {
     if (event.key === 'Escape' && sidebar?.classList.contains('open')) {
       event.preventDefault();
       closeBootstrapMenu(true);
     }
-  });
-  mobileMedia.addEventListener?.('change', () => closeBootstrapMenu());
+  };
+  const onMediaChange = () => closeBootstrapMenu();
+  menuOpen?.addEventListener('click', onMenuClick);
+  overlay?.addEventListener('click', onOverlayClick);
+  document.addEventListener('keydown', onEscape);
+  mobileMedia.addEventListener?.('change', onMediaChange);
   setBootstrapMenu(false);
+
+  // Al sustituir el shell inicial, sus listeners no deben cerrar el nuevo drawer
+  // ni devolver el foco al botón antiguo (ya separado del DOM).
+  return () => {
+    menuOpen?.removeEventListener?.('click', onMenuClick);
+    overlay?.removeEventListener?.('click', onOverlayClick);
+    document.removeEventListener?.('keydown', onEscape);
+    mobileMedia.removeEventListener?.('change', onMediaChange);
+  };
 }
 
 function showBootstrapError(error) {
@@ -174,7 +187,7 @@ function filtersFromUrl() {
   return next;
 }
 
-renderBootstrapShell();
+const disposeBootstrapMenu = renderBootstrapShell();
 autoStart();
 
 async function autoStart() {
@@ -189,6 +202,7 @@ async function autoStart() {
     ]);
 
     ui.renderShell();
+    disposeBootstrapMenu();
     ui.initSettingsPage();
     ui.initReports();
     ui.renderLoadingStatus();
