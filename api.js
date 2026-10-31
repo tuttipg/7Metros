@@ -199,10 +199,12 @@ export async function supabaseCount(table) {
     headers: headers('0-0', { Prefer: 'count=exact' })
   }, response => {
     const contentRange = response.headers.get('content-range') || '';
-    const match = contentRange.trim().match(/^(?:\d+-\d+|\*)\/(\d+)$/);
+    const match = contentRange.trim().match(/^(?:0-0\/([1-9]\d*)|\*\/0)$/);
     // A one-row range is not a total. Never publish an estimated count.
     if (!match) throw new DataError(`Conteo exacto no disponible para ${table}.`);
-    const count = Number(match[1]);
+    // The request asks for Range 0-0: only 0-0/N (N >= 1) or */0 is coherent.
+    // Reject shifted/oversized ranges and */N for a non-empty table.
+    const count = match[1] ? Number(match[1]) : 0;
     if (!Number.isSafeInteger(count)) {
       throw new DataError(`Conteo exacto inválido para ${table}.`);
     }
