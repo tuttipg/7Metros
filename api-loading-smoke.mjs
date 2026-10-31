@@ -271,7 +271,14 @@ try {
   await assert.rejects(() => countApi.supabaseCount('clubes'), countApi.DataError);
   countHeader = '0-0/147 trailing';
   await assert.rejects(() => countApi.supabaseCount('clubes'), countApi.DataError);
-  assert.equal(countCalls, 7, 'no se debe intentar un segundo GET para inferir el total');
+  // Range requested was 0-0: these headers are syntactically plausible but
+  // contradictory (empty total with a row, shifted/oversized range, or */N).
+  for (const invalidRange of ['0-0/0', '1-1/147', '0-2/147', '*/147']) {
+    countHeader = invalidRange;
+    await assert.rejects(() => countApi.supabaseCount('clubes'), countApi.DataError,
+      `inconsistent Content-Range ${invalidRange} must not be shown as an exact count`);
+  }
+  assert.equal(countCalls, 11, 'no se debe intentar un segundo GET para inferir el total');
 
   // Regresión: fetch puede entregar headers, pero el body JSON no terminar.
   // Simular el reloj evita esperar 15 segundos y comprueba el abort del body.
