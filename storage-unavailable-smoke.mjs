@@ -32,6 +32,16 @@ assert.doesNotThrow(() => ui.applySettings());
 assert.equal(toggles.get('compact-tables'), false);
 assert.equal(toggles.get('reduce-motion'), false);
 
+// La preferencia debe aplicarse durante esta visita aunque no pueda persistirse.
+assert.equal(writeLocalPreference('7m_setting_motion', '1'), false);
+assert.equal(readLocalPreference('7m_setting_motion'), '1');
+ui.applySettings();
+assert.equal(toggles.get('reduce-motion'), true, 'el modo reducido debe funcionar sin localStorage');
+assert.equal(removeLocalPreference('7m_setting_motion'), false);
+assert.equal(readLocalPreference('7m_setting_motion'), null);
+ui.applySettings();
+assert.equal(toggles.get('reduce-motion'), false);
+
 // Si el navegador permite leer pero bloquea escrituras por cuota, tampoco debe fallar.
 const values = new Map([['7m_setting_compact', '1']]);
 Object.defineProperty(globalThis, 'localStorage', {
@@ -46,6 +56,15 @@ assert.equal(readLocalPreference('7m_setting_compact'), '1');
 assert.equal(writeLocalPreference('x', '1'), false);
 assert.equal(removeLocalPreference('x'), false);
 assert.doesNotThrow(() => ui.applySettings());
+assert.equal(toggles.get('compact-tables'), true);
+// Con cuota llena, una escritura fallida debe prevalecer sobre el valor viejo
+// durante esta visita, sin afirmar que se guardó.
+assert.equal(writeLocalPreference('7m_setting_compact', '0'), false);
+assert.equal(readLocalPreference('7m_setting_compact'), '0');
+ui.applySettings();
+assert.equal(toggles.get('compact-tables'), false, 'no debe reaplicar un valor viejo del storage');
+assert.equal(writeLocalPreference('7m_setting_compact', '1'), false);
+ui.applySettings();
 assert.equal(toggles.get('compact-tables'), true);
 assert.doesNotThrow(() => store.persistFilters());
 assert.doesNotThrow(() => store.clearStoredFilters());
