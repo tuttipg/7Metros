@@ -69,6 +69,42 @@ assert.equal(toggles.get('compact-tables'), true);
 assert.doesNotThrow(() => store.persistFilters());
 assert.doesNotThrow(() => store.clearStoredFilters());
 
+// Restablecer con borrado bloqueado no debe recargar: una recarga recuperaría
+// preferencias viejas y anularía el restablecimiento temporal.
+const settingsInputs = ['filters', 'compact', 'motion'].map(setting => ({
+  dataset: { setting },
+  checked: false,
+  addEventListener() {}
+}));
+let resetHandler;
+let filtersChanged = 0;
+const resetButton = { addEventListener(event, handler) {
+  if (event === 'click') resetHandler = handler;
+} };
+globalThis.document = {
+  body: { dataset: { page: 'ajustes' }, classList: { toggle(name, enabled) { toggles.set(name, enabled); } } },
+  querySelectorAll(selector) { return selector === '[data-setting]' ? settingsInputs : []; },
+  getElementById(id) { return id === 'reset-settings' ? resetButton : null; },
+  dispatchEvent(event) { if (event.type === '7m:filters-changed') filtersChanged++; }
+};
+globalThis.CustomEvent ??= class { constructor(type) { this.type = type; } };
+ui.initSettingsPage();
+assert.equal(typeof resetHandler, 'function');
+store.state.filters.categoria = 'Cadetes';
+const originalSetTimeout = globalThis.setTimeout;
+try {
+  globalThis.setTimeout = () => { throw new Error('reset must not schedule reload on storage failure'); };
+  resetHandler();
+} finally {
+  globalThis.setTimeout = originalSetTimeout;
+}
+assert.deepEqual(settingsInputs.map(input => input.checked), [true, false, false]);
+assert.equal(store.state.filters.categoria, 'Mayores');
+assert.equal(readLocalPreference('7m_setting_compact'), null);
+assert.equal(toggles.get('compact-tables'), false);
+assert.equal(toggles.get('reduce-motion'), false);
+assert.equal(filtersChanged, 1);
+
 // Flujo normal: las preferencias siguen siendo persistentes cuando hay almacenamiento.
 Object.defineProperty(globalThis, 'localStorage', {
   configurable: true,
