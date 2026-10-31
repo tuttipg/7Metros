@@ -15,6 +15,20 @@ function datasetCacheKey(season) {
   return `7m:dataset:${SESSION_CACHE_VERSION}:${season}`;
 }
 
+// A corrupt or older cache payload must not reach prepareDataset(), which
+// maps these collections. A truthy but malformed value could break navigation.
+function isValidCachedDataset(dataset) {
+  if (!dataset || typeof dataset !== 'object' || Array.isArray(dataset)) return false;
+  const collections = ['clubes', 'equipos', 'jugadores', 'planteles', 'partidos', 'participaciones'];
+  if (!collections.every(key => Array.isArray(dataset[key]) &&
+    dataset[key].every(row => row !== null && typeof row === 'object' && !Array.isArray(row)))) {
+    return false;
+  }
+  return dataset.globalSummary !== null
+    && typeof dataset.globalSummary === 'object'
+    && !Array.isArray(dataset.globalSummary);
+}
+
 function readDatasetCache(season) {
   const store = sessionStore();
   if (!store) return null;
@@ -23,7 +37,11 @@ function readDatasetCache(season) {
     const raw = store.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed?.at || !parsed?.dataset || Date.now() - Number(parsed.at) > SESSION_CACHE_TTL) {
+    const cachedAt = parsed?.at;
+    const age = Date.now() - cachedAt;
+    // Un reloj adelantado o una marca corrupta no deben extender el TTL indefinidamente.
+    if (!Number.isSafeInteger(cachedAt) || cachedAt <= 0 ||
+        age < 0 || age > SESSION_CACHE_TTL || !isValidCachedDataset(parsed?.dataset)) {
       store.removeItem(key);
       return null;
     }
@@ -173,7 +191,18 @@ export async function supabaseGetByIds(
   select = '*',
   { chunkSize = 100, concurrency = 4 } = {}
 ) {
-  const values = [...new Set((ids || []).map(Number).filter(Number.isFinite))];
+  // IDs externos pueden contener null, strings vacíos o enteros fuera de rango.
+  // Number(...) los convierte silenciosamente en 0 o redondea valores grandes.
+  const values = [...new Set((ids || []).map(value => {
+    if (typeof value === 'number') {
+      return Number.isSafeInteger(value) && value > 0 ? value : null;
+    }
+    if (typeof value === 'string' && /^[1-9][0-9]*$/.test(value)) {
+      const parsed = Number(value);
+      return Number.isSafeInteger(parsed) ? parsed : null;
+    }
+    return null;
+  }).filter(value => value !== null))];
   if (!values.length) return [];
   if (!Number.isInteger(chunkSize) || chunkSize <= 0 || chunkSize > 500) {
     throw new DataError('El tamaño de bloque para IDs no es válido.');
@@ -215,6 +244,7 @@ function summaryFromMatches(matches, clubs, players) {
 }
 
 let globalSummaryPromise = null;
+let globalSummaryCachedAt = 0;
 
 function isMissingGlobalSummaryView(error) {
   return error instanceof DataError
@@ -229,7 +259,9 @@ async function loadGlobalSummaryView() {
       '?select=clubes,jugadores,partidos,partidos_con_resultado,goles,promedio_goles'
     );
     const row = rows[0];
-    if (!row) return null;
+    // An empty but existing view is not proof that the view is absent.
+    // Fail closed rather than scanning every match through the legacy fallback.
+    if (!row) throw new DataError('La vista de resumen global no devolvió filas.');
     return {
       clubs: Number(row.clubes || 0),
       players: Number(row.jugadores || 0),
@@ -248,12 +280,25 @@ async function loadGlobalSummaryView() {
 }
 
 export function loadGlobalSummaryFast() {
-  if (!globalSummaryPromise) {
-    globalSummaryPromise = loadGlobalSummaryView().catch(error => {
-      // Do not retain a transient failure for the rest of the session.
-      globalSummaryPromise = null;
+  const now = Date.now();
+  const age = now - globalSummaryCachedAt;
+  // Reuse concurrent reads and recent results, but never retain a successful
+  // summary indefinitely after the two-minute dataset cache has expired.
+  // A clock rollback also invalidates the cached value.
+  if (!globalSummaryPromise || !Number.isSafeInteger(globalSummaryCachedAt) ||
+      age < 0 || age > SESSION_CACHE_TTL) {
+    const pending = loadGlobalSummaryView();
+    const tracked = pending.catch(error => {
+      // A failed request is retryable; an older failure must not clear a
+      // newer in-flight request after the TTL has elapsed.
+      if (globalSummaryPromise === tracked) {
+        globalSummaryPromise = null;
+        globalSummaryCachedAt = 0;
+      }
       throw error;
     });
+    globalSummaryPromise = tracked;
+    globalSummaryCachedAt = now;
   }
   return globalSummaryPromise;
 }
