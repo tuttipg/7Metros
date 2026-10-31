@@ -53,6 +53,12 @@ function parseCalendarDate(value) {
   return date;
 }
 
+export function formatDayMonthISO(iso) {
+  const date = parseCalendarDate(iso);
+  if (!date) return 'Fecha a confirmar';
+  return `${String(date.getUTCDate()).padStart(2, '0')}/${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
 export function formatDateISO(iso, options = {}) {
   const date = parseCalendarDate(iso);
   if (!date) return 'Fecha a confirmar';
