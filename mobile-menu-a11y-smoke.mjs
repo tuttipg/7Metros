@@ -146,6 +146,12 @@ const shellEnd = bootstrapSource.indexOf('function showBootstrapError(', shellSt
 assert.ok(shellStart >= 0 && shellEnd > shellStart, 'bootstrap shell function must exist');
 const shellCode = bootstrapSource.slice(shellStart, shellEnd);
 const bootstrapEvents = {};
+const removedBootstrapEvents = [];
+const removeBootstrapEvent = (key, fn) => {
+  assert.equal(bootstrapEvents[key], fn, `cleanup must remove the registered ${key} handler`);
+  removedBootstrapEvents.push(key);
+  delete bootstrapEvents[key];
+};
 const bootstrapSidebarAttrs = {};
 const bootstrapMenuAttrs = {};
 let bootstrapTriggerFocus = 0;
@@ -158,15 +164,18 @@ const bootstrapSidebar = {
 const bootstrapMenu = {
   setAttribute: (name, value) => { bootstrapMenuAttrs[name] = value; },
   addEventListener: (name, fn) => { bootstrapEvents['menu:' + name] = fn; },
+  removeEventListener: (name, fn) => removeBootstrapEvent('menu:' + name, fn),
   focus: () => { bootstrapTriggerFocus++; }
 };
 const bootstrapOverlay = {
   classList: makeClasses(),
-  addEventListener: (name, fn) => { bootstrapEvents['overlay:' + name] = fn; }
+  addEventListener: (name, fn) => { bootstrapEvents['overlay:' + name] = fn; },
+  removeEventListener: (name, fn) => removeBootstrapEvent('overlay:' + name, fn)
 };
 const bootstrapMedia = {
   matches: true,
-  addEventListener: (name, fn) => { bootstrapEvents['media:' + name] = fn; }
+  addEventListener: (name, fn) => { bootstrapEvents['media:' + name] = fn; },
+  removeEventListener: (name, fn) => removeBootstrapEvent('media:' + name, fn)
 };
 const bootstrapBody = { dataset: { page: 'inicio' }, classList: makeClasses() };
 const bootstrapDocument = {
@@ -178,7 +187,8 @@ const bootstrapDocument = {
     'menu-open': bootstrapMenu
   })[id] || null,
   querySelectorAll: () => [],
-  addEventListener: (name, fn) => { bootstrapEvents['document:' + name] = fn; }
+  addEventListener: (name, fn) => { bootstrapEvents['document:' + name] = fn; },
+  removeEventListener: (name, fn) => removeBootstrapEvent('document:' + name, fn)
 };
 const bootstrapWindow = {
   matchMedia: () => bootstrapMedia,
@@ -187,7 +197,7 @@ const bootstrapWindow = {
 const renderFallbackShell = new Function('document', 'window', 'bootIcon',
   shellCode + '\nreturn renderBootstrapShell;'
 )(bootstrapDocument, bootstrapWindow, () => '');
-renderFallbackShell();
+const disposeFallbackShell = renderFallbackShell();
 assert.equal(bootstrapSidebar.inert, true, 'closed bootstrap drawer must be inert');
 assert.equal(bootstrapSidebarAttrs['aria-hidden'], 'true');
 assert.equal(bootstrapMenuAttrs['aria-expanded'], 'false');
@@ -222,4 +232,12 @@ bootstrapMedia.matches = true;
 bootstrapEvents['media:change']();
 assert.equal(bootstrapSidebar.inert, true, 'returning to mobile hides closed drawer');
 
-console.log('Mobile menu accessibility, fallback toggle and connection-state smoke tests passed.');
+// Tras renderShell(), los listeners del bootstrap no deben intervenir sobre el nuevo menú.
+assert.match(bootstrapSource, /ui\.renderShell\(\);\s*disposeBootstrapMenu\(\);/, 'module shell must dispose bootstrap listeners immediately after handoff');
+disposeFallbackShell();
+assert.deepEqual(removedBootstrapEvents.sort(), [
+  'document:keydown', 'media:change', 'menu:click', 'overlay:click'
+].sort(), 'bootstrap handoff must unregister every menu handler');
+assert.equal(Object.keys(bootstrapEvents).length, 0, 'no bootstrap menu listener may survive handoff');
+
+console.log('Mobile menu accessibility, fallback toggle, handoff and connection-state smoke tests passed.');
