@@ -237,7 +237,9 @@ async function loadGlobalSummaryView() {
       '?select=clubes,jugadores,partidos,partidos_con_resultado,goles,promedio_goles'
     );
     const row = rows[0];
-    if (!row) return null;
+    // An empty but existing view is not proof that the view is absent.
+    // Fail closed rather than scanning every match through the legacy fallback.
+    if (!row) throw new DataError('La vista de resumen global no devolvió filas.');
     return {
       clubs: Number(row.clubes || 0),
       players: Number(row.jugadores || 0),
