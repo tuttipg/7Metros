@@ -50,6 +50,26 @@ try {
   assert.equal(maxActive, 2, 'la lectura debe usar concurrencia acotada');
   assert.ok(maxActive <= 2, 'nunca debe exceder la concurrencia solicitada');
 
+  // Regresión de IDs: Number(null), Number('') y enteros > MAX_SAFE_INTEGER
+  // antes terminaban en consultas por 0 o IDs redondeados.
+  const idQueries = [];
+  globalThis.fetch = async input => {
+    idQueries.push(new URL(input).searchParams.get('equipo_id'));
+    return new Response('[]', { status: 200 });
+  };
+  await supabaseGetByIds('planteles', 'equipo_id', [
+    null, undefined, '', ' 4 ', '01', '1e3', -3, 0, 2.5,
+    '9007199254740993', Number.MAX_SAFE_INTEGER + 1, true, '1', 2, 2
+  ], 'id');
+  assert.deepEqual(idQueries, ['in.(1,2)'],
+    'solo IDs decimales canónicos, positivos y seguros deben llegar a la API');
+  idQueries.length = 0;
+  assert.deepEqual(await supabaseGetByIds('planteles', 'equipo_id', [
+    null, '', '1e3', Number.MAX_SAFE_INTEGER + 1
+  ], 'id'), []);
+  assert.deepEqual(idQueries, [], 'IDs inválidos no deben generar requests');
+
+
   await assert.rejects(
     () => supabaseGetByIds('planteles', 'equipo_id', [1], 'id', { concurrency: 7 }),
     DataError,
