@@ -199,7 +199,7 @@ export async function supabaseCount(table) {
     headers: headers('0-0', { Prefer: 'count=exact' })
   }, response => {
     const contentRange = response.headers.get('content-range') || '';
-    const match = contentRange.match(/\/(\d+)$/);
+    const match = contentRange.trim().match(/^(?:\d+-\d+|\*)\/(\d+)$/);
     // A one-row range is not a total. Never publish an estimated count.
     if (!match) throw new DataError(`Conteo exacto no disponible para ${table}.`);
     const count = Number(match[1]);
