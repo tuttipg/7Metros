@@ -133,4 +133,17 @@ assert.equal(readLocalPreference('7m_categoria'), 'Cadetes');
 store.clearStoredFilters();
 assert.equal(readLocalPreference('7m_categoria'), null);
 
+// Regresión: volver a activar «Recordar filtros» debe guardar la competición
+// que está seleccionada AHORA, sin esperar a un cambio posterior de filtros.
+settingsInputs[0].checked = false;
+settingChangeHandlers.get('filters')();
+store.state.filters = { categoria: 'Cadetes', division: 'Plata', rama: 'F' };
+assert.equal(values.has('7m_categoria'), false, 'con recordar desactivado no se guardan filtros');
+settingsInputs[0].checked = true;
+settingChangeHandlers.get('filters')();
+assert.equal(values.get('7m_setting_filters'), '1');
+assert.equal(values.get('7m_categoria'), 'Cadetes');
+assert.equal(values.get('7m_division'), 'Plata');
+assert.equal(values.get('7m_rama'), 'F');
+
 console.log('Storage unavailable smoke: import, lectura, escritura, cuota y preferencias OK');
