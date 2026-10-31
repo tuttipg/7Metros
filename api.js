@@ -7,6 +7,22 @@ const SESSION_CACHE_VERSION = 'public-v1';
 const SESSION_CACHE_TTL = 2 * 60 * 1000;
 const SESSION_CACHE_MAX_CHARS = 3_500_000;
 
+// Range pagination needs a stable order: otherwise successive pages can
+// duplicate or skip records when PostgREST has no explicit ordering.
+// These public tables all expose an id; the global summary view does not.
+const ID_ORDERED_TABLES = new Set([
+  'clubes', 'equipos', 'jugadores', 'planteles', 'partidos', 'participaciones'
+]);
+
+function paginatedQuery(table, query) {
+  const raw = String(query || '');
+  if (!ID_ORDERED_TABLES.has(table)) return raw;
+  const params = new URLSearchParams(raw.startsWith('?') ? raw.slice(1) : raw);
+  if (params.has('order')) return raw;
+  params.set('order', 'id.asc');
+  return `?${params.toString()}`;
+}
+
 function sessionStore() {
   try { return globalThis.sessionStorage || null; } catch { return null; }
 }
@@ -176,10 +192,11 @@ export async function supabaseGetAll(table, query = '', { pageSize = PAGE_SIZE }
   }
   const rows = [];
   let from = 0;
+  const stableQuery = paginatedQuery(table, query);
 
   while (true) {
     const to = from + pageSize - 1;
-    const page = await request(endpoint(table, query), {
+    const page = await request(endpoint(table, stableQuery), {
       method: 'GET',
       headers: headers(`${from}-${to}`)
     }, response => response.json());
