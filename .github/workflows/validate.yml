@@ -105,7 +105,9 @@ jobs:
         run: node csv-safety-smoke.mjs
 
       - name: Date utilities smoke test
-        run: node date-utils-smoke.mjs
+        run: |
+          node date-utils-smoke.mjs
+          TZ=Australia/Sydney node date-utils-smoke.mjs
 
       - name: URL safety smoke test
         run: node url-safety-smoke.mjs
