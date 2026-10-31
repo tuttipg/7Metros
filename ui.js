@@ -389,7 +389,7 @@ export function initSettingsPage() {
   });
 
   document.getElementById('reset-settings')?.addEventListener('click', () => {
-    const cleared = Object.values(STORAGE_KEYS).every(key => removeLocalPreference(key));
+    const cleared = Object.values(STORAGE_KEYS).map(key => removeLocalPreference(key)).every(Boolean);
     showToast(cleared ? 'Preferencias restablecidas.' : 'No se pudieron borrar todas las preferencias guardadas.');
     setTimeout(() => location.reload(), 350);
   });
