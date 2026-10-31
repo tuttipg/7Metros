@@ -64,4 +64,77 @@ assert.equal(label.textContent, 'Datos no disponibles');
 setConnectionStatus('invalid');
 assert.equal(indicator.dataset.connectionState, 'error', 'unknown status must not overwrite a known state');
 
-console.log('Mobile menu accessibility and connection-state smoke tests passed.');
+// Regresión funcional: el botón que anuncia «Cerrar menú» debe cerrarlo al
+// segundo clic. Un requestAnimationFrame pendiente no debe enfocar el drawer cerrado.
+const makeClasses = () => {
+  const values = new Set();
+  return {
+    contains: name => values.has(name),
+    add: name => values.add(name),
+    remove: name => values.delete(name),
+    toggle: (name, force) => {
+      const enabled = force === undefined ? !values.has(name) : Boolean(force);
+      if (enabled) values.add(name);
+      else values.delete(name);
+      return enabled;
+    }
+  };
+};
+const listeners = {};
+const attributes = {};
+let triggerFocus = 0;
+let drawerFocus = 0;
+const frameQueue = [];
+const sidebar = {
+  innerHTML: '',
+  classList: makeClasses(),
+  inert: false,
+  setAttribute: (name, value) => { attributes[name] = value; },
+  querySelectorAll: () => [],
+  querySelector: () => ({ focus: () => { drawerFocus++; } })
+};
+const trigger = {
+  attributes: {},
+  addEventListener: (name, handler) => { listeners[name] = handler; },
+  setAttribute(name, value) { this.attributes[name] = value; },
+  focus: () => { triggerFocus++; }
+};
+const overlay = { classList: makeClasses(), addEventListener: () => {} };
+const mobile = { innerHTML: '' };
+const media = { matches: true, addEventListener: () => {} };
+globalThis.matchMedia = () => media;
+globalThis.requestAnimationFrame = callback => { frameQueue.push(callback); };
+globalThis.document = {
+  body: { dataset: { page: 'inicio' }, classList: makeClasses() },
+  getElementById: id => ({
+    sidebar, 'mobile-bar': mobile, overlay, 'menu-open': trigger
+  })[id] || null,
+  querySelectorAll: () => [],
+  addEventListener: () => {}
+};
+const { renderShell } = await import('./ui.js');
+renderShell();
+assert.equal(sidebar.inert, true, 'closed mobile drawer must be inert');
+assert.equal(trigger.attributes['aria-expanded'], 'false');
+assert.equal(typeof listeners.click, 'function', 'menu trigger must have a click handler');
+
+listeners.click();
+assert.equal(sidebar.classList.contains('open'), true, 'first click opens the drawer');
+assert.equal(trigger.attributes['aria-expanded'], 'true');
+assert.equal(trigger.attributes['aria-label'], 'Cerrar menú');
+assert.equal(sidebar.inert, false);
+
+listeners.click();
+assert.equal(sidebar.classList.contains('open'), false, 'second click closes the drawer');
+assert.equal(trigger.attributes['aria-expanded'], 'false');
+assert.equal(trigger.attributes['aria-label'], 'Abrir menú');
+assert.equal(sidebar.inert, true);
+assert.equal(triggerFocus, 1, 'closing via trigger restores focus');
+frameQueue.splice(0).forEach(callback => callback());
+assert.equal(drawerFocus, 0, 'late animation frame must not focus closed drawer');
+
+listeners.click();
+frameQueue.splice(0).forEach(callback => callback());
+assert.equal(drawerFocus, 1, 'opening the drawer should focus its navigation');
+
+console.log('Mobile menu accessibility, toggle and connection-state smoke tests passed.');
