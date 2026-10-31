@@ -10,7 +10,19 @@ assert.match(ui, /closeMenu\(\{ returnFocus: true \}\)/, 'keyboard/overlay close
 assert.match(ui, /if \(returnFocus\) menuOpen\?\.focus\(\)/, 'closing the menu must be able to return focus to its trigger');
 assert.match(ui, /sidebar\.inert = hidden/, 'hidden mobile navigation must be removed from the focus order');
 assert.match(ui, /document\.body\.classList\.toggle\('nav-open'/, 'open mobile navigation must lock page scrolling');
-assert.match(ui, /window\.matchMedia\('\(max-width: 980px\)'\)/, 'menu accessibility state must respond to the mobile breakpoint');
+// El sidebar pasa a drawer en CSS a 940px. Entre 941 y 980px antes era visible
+// pero aria-hidden/inert, lo que impedía navegarlo con teclado.
+const drawerCss = fs.readFileSync(new URL('./style.css', import.meta.url), 'utf8');
+const accessibilityBreakpoint = ui.match(/window\\.matchMedia\\('\\(max-width: (\\d+)px\\)'\\)/);
+const drawerBreakpoint = drawerCss.match(/@media\\(max-width:(\\d+)px\\)\\{\\s*:root\\{--sidebar:0px\\}/);
+assert.ok(accessibilityBreakpoint, 'JS must define the mobile navigation breakpoint');
+assert.ok(drawerBreakpoint, 'CSS must define the sidebar drawer breakpoint');
+assert.equal(accessibilityBreakpoint[1], drawerBreakpoint[1], 'visible desktop sidebar must never be aria-hidden/inert');
+for (const width of [320, 940, 941, 960, 980, 1200]) {
+  const cssDrawer = width <= Number(drawerBreakpoint[1]);
+  const jsMobile = width <= Number(accessibilityBreakpoint[1]);
+  assert.equal(jsMobile, cssDrawer, `sidebar accessibility must match CSS at ${width}px`);
+}
 assert.match(ui, /requestAnimationFrame\(\(\) => \{[\s\S]*aria-current="page"/, 'opening the drawer should move focus into the navigation');
 
 // El indicador del sidebar debe reflejar el estado real, no afirmar conexión
