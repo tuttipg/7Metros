@@ -19,8 +19,11 @@ function paginatedQuery(table, query) {
   if (!ID_ORDERED_TABLES.has(table)) return raw;
   const params = new URLSearchParams(raw.startsWith('?') ? raw.slice(1) : raw);
   if (params.has('order')) return raw;
-  params.set('order', 'id.asc');
-  return `?${params.toString()}`;
+  // Preserve existing PostgREST filter syntax (e.g. in.(101)) verbatim:
+  // reserializing with URLSearchParams encodes parentheses and changes
+  // request URLs expected by callers and integrity checks.
+  const existing = raw.startsWith('?') ? raw.slice(1) : raw;
+  return `?${existing}${existing ? '&' : ''}order=id.asc`;
 }
 
 function sessionStore() {
