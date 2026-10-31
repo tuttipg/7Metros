@@ -1,9 +1,10 @@
 import { CONFIG, SEASON_LABEL, STORAGE_KEYS } from './config.js';
 import {
   state, getCompetitionOptions, setFilters, getPlayers, getClubs, getMatches,
-  getStandings, clearStoredFilters, selectedCompetitionLabel
+  getStandings, clearStoredFilters, persistFilters, selectedCompetitionLabel
 } from './store.js';
 import { esc, initials, currentDateLabel, csvDownload, metric, normalizeText, safeHttpUrl } from './utils.js';
+import { readLocalPreference, writeLocalPreference, removeLocalPreference } from './storage-preferences.mjs';
 
 const ICONS = {
   home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/>',
@@ -361,8 +362,8 @@ function initGlobalSearch() {
 }
 
 export function applySettings() {
-  const compact = localStorage.getItem(STORAGE_KEYS.compact) === '1';
-  const motion = localStorage.getItem(STORAGE_KEYS.motion) === '1';
+  const compact = readLocalPreference(STORAGE_KEYS.compact) === '1';
+  const motion = readLocalPreference(STORAGE_KEYS.motion) === '1';
   document.body.classList.toggle('compact-tables', compact);
   document.body.classList.toggle('reduce-motion', motion);
 }
@@ -377,18 +378,42 @@ export function initSettingsPage() {
   document.querySelectorAll('[data-setting]').forEach(input => {
     const item = map[input.dataset.setting];
     if (!item) return;
-    const stored = localStorage.getItem(item.key);
+    const stored = readLocalPreference(item.key);
     input.checked = stored === null ? item.default : stored === '1';
     input.addEventListener('change', () => {
-      localStorage.setItem(item.key, input.checked ? '1' : '0');
-      if (input.dataset.setting === 'filters' && !input.checked) clearStoredFilters();
+      let saved = writeLocalPreference(item.key, input.checked ? '1' : '0');
+      if (input.dataset.setting === 'filters' && !input.checked) {
+        // Al dejar de recordar filtros también cambia la competición activa:
+        // sincronizar la barra y las vistas, no solo el almacenamiento.
+        clearStoredFilters();
+        renderCompetitionBar();
+        document.dispatchEvent(new CustomEvent('7m:filters-changed'));
+      } else if (input.dataset.setting === 'filters' && input.checked) {
+        // Al activar «Recordar filtros», guardar también la competición actual.
+        // Antes sólo se guardaba el interruptor y se perdían los filtros al recargar.
+        const filtersSaved = persistFilters();
+        saved = saved && filtersSaved;
+      }
       applySettings();
-      showToast('Preferencia guardada.');
+      showToast(saved ? 'Preferencia guardada.' : 'No se pudo guardar la preferencia en este navegador.');
     });
   });
 
   document.getElementById('reset-settings')?.addEventListener('click', () => {
-    Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
+    const cleared = Object.values(STORAGE_KEYS).map(key => removeLocalPreference(key)).every(Boolean);
+    if (!cleared) {
+      // Recargar descartaría el respaldo temporal y volvería a leer valores viejos.
+      clearStoredFilters();
+      document.querySelectorAll('[data-setting]').forEach(input => {
+        const item = map[input.dataset.setting];
+        if (item) input.checked = item.default;
+      });
+      applySettings();
+      renderCompetitionBar();
+      document.dispatchEvent(new CustomEvent('7m:filters-changed'));
+      showToast('No se pudo borrar el almacenamiento. Ajustes restablecidos solo durante esta visita.');
+      return;
+    }
     showToast('Preferencias restablecidas.');
     setTimeout(() => location.reload(), 350);
   });

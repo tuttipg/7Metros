@@ -35,6 +35,8 @@ jobs:
           node --check script.js
           node --check utils.js
           node --check config.js
+          node --check storage-preferences.mjs
+          node --check storage-unavailable-smoke.mjs
           node --check config-season-smoke.mjs
           node --check api-loading-smoke.mjs
           node --check store-smoke.mjs
@@ -73,6 +75,9 @@ jobs:
 
       - name: Check Python syntax
         run: python -m py_compile validate_site.py validate_backend_contract.py
+
+      - name: Storage unavailable smoke test
+        run: node storage-unavailable-smoke.mjs
 
       - name: Season config regression smoke test
         run: node config-season-smoke.mjs
