@@ -265,7 +265,13 @@ try {
   await assert.rejects(() => countApi.supabaseCount('clubes'), countApi.DataError);
   countHeader = '0-0/9007199254740992';
   await assert.rejects(() => countApi.supabaseCount('clubes'), countApi.DataError);
-  assert.equal(countCalls, 5, 'no se debe intentar un segundo GET para inferir el total');
+  // Antes se aceptaba cualquier header que terminara en /N, incluso basura.
+  // Un total sin Content-Range válido no es evidencia de un conteo exacto.
+  countHeader = 'invalid-range/147';
+  await assert.rejects(() => countApi.supabaseCount('clubes'), countApi.DataError);
+  countHeader = '0-0/147 trailing';
+  await assert.rejects(() => countApi.supabaseCount('clubes'), countApi.DataError);
+  assert.equal(countCalls, 7, 'no se debe intentar un segundo GET para inferir el total');
 
   // Regresión: fetch puede entregar headers, pero el body JSON no terminar.
   // Simular el reloj evita esperar 15 segundos y comprueba el abort del body.
