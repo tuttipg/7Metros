@@ -14,6 +14,20 @@ function datasetCacheKey(season) {
   return `7m:dataset:${SESSION_CACHE_VERSION}:${season}`;
 }
 
+// A corrupt or older cache payload must not reach prepareDataset(), which
+// maps these collections. A truthy but malformed value could break navigation.
+function isValidCachedDataset(dataset) {
+  if (!dataset || typeof dataset !== 'object' || Array.isArray(dataset)) return false;
+  const collections = ['clubes', 'equipos', 'jugadores', 'planteles', 'partidos', 'participaciones'];
+  if (!collections.every(key => Array.isArray(dataset[key]) &&
+    dataset[key].every(row => row !== null && typeof row === 'object' && !Array.isArray(row)))) {
+    return false;
+  }
+  return dataset.globalSummary !== null
+    && typeof dataset.globalSummary === 'object'
+    && !Array.isArray(dataset.globalSummary);
+}
+
 function readDatasetCache(season) {
   const store = sessionStore();
   if (!store) return null;
@@ -26,7 +40,7 @@ function readDatasetCache(season) {
     const age = Date.now() - cachedAt;
     // Un reloj adelantado o una marca corrupta no deben extender el TTL indefinidamente.
     if (!Number.isSafeInteger(cachedAt) || cachedAt <= 0 ||
-        age < 0 || age > SESSION_CACHE_TTL || !parsed?.dataset) {
+        age < 0 || age > SESSION_CACHE_TTL || !isValidCachedDataset(parsed?.dataset)) {
       store.removeItem(key);
       return null;
     }
