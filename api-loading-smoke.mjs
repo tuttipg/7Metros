@@ -171,7 +171,7 @@ try {
     if (table === 'jugadores') {
       return new Response('[]', {
         status: 200,
-        headers: { 'Content-Type': 'application/json', 'Content-Range': '0-0/0' }
+        headers: { 'Content-Type': 'application/json', 'Content-Range': '*/0' }
       });
     }
     if (table === 'partidos') {
