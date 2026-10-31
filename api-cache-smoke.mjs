@@ -55,3 +55,65 @@ assert.deepEqual(await loadPublicDataset(3), fresh);
 assert.equal(requests, 0, 'caché reciente no debe generar consultas');
 
 console.log('API cache smoke: fecha futura, corrupta, vencida y válida OK');
+
+
+// El resumen global se consultaba una sola vez por pestaña, incluso después
+// de vencer el TTL del dataset. Usar reloj y respuestas simuladas para
+// comprobar deduplicación, caducidad, rollback y reintento tras un error.
+const realDateNow = Date.now;
+let simulatedNow = realDateNow();
+let summaryReads = 0;
+let nextSummaryValue = 1;
+Date.now = () => simulatedNow;
+try {
+  globalThis.fetch = async input => {
+    assert.equal(new URL(input).pathname.split('/').at(-1), 'v_global_summary');
+    summaryReads++;
+    if (nextSummaryValue === 'error') {
+      return new Response(JSON.stringify({ code: 'PGRST000', message: 'offline' }), {
+        status: 503, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    return new Response(JSON.stringify([{
+      clubes: nextSummaryValue, jugadores: 0, partidos: 0,
+      partidos_con_resultado: 0, goles: 0, promedio_goles: null
+    }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+
+  const summaryApi = await import('./api.js?summary-ttl-smoke');
+  const first = summaryApi.loadGlobalSummaryFast();
+  const concurrent = summaryApi.loadGlobalSummaryFast();
+  assert.strictEqual(first, concurrent, 'dos consumidores simultáneos comparten una petición');
+  assert.equal((await first).clubs, 1);
+  assert.equal(summaryReads, 1);
+
+  nextSummaryValue = 2;
+  simulatedNow += 120000;
+  assert.equal((await summaryApi.loadGlobalSummaryFast()).clubs, 1,
+    'un resumen dentro del TTL se puede reutilizar');
+  assert.equal(summaryReads, 1);
+
+  simulatedNow += 1;
+  assert.equal((await summaryApi.loadGlobalSummaryFast()).clubs, 2,
+    'tras vencer el TTL se consulta un resumen actualizado');
+  assert.equal(summaryReads, 2);
+
+  nextSummaryValue = 3;
+  simulatedNow -= 300000;
+  assert.equal((await summaryApi.loadGlobalSummaryFast()).clubs, 3,
+    'un reloj que retrocede invalida el resumen');
+  assert.equal(summaryReads, 3);
+
+  nextSummaryValue = 'error';
+  simulatedNow += 120001;
+  await assert.rejects(() => summaryApi.loadGlobalSummaryFast(), summaryApi.DataError,
+    'una caída de la vista se propaga');
+  nextSummaryValue = 4;
+  assert.equal((await summaryApi.loadGlobalSummaryFast()).clubs, 4,
+    'un error transitorio no debe quedar cacheado');
+  assert.equal(summaryReads, 5);
+} finally {
+  Date.now = realDateNow;
+}
+
+console.log('API global summary cache: concurrencia, TTL, reloj y retry OK');
