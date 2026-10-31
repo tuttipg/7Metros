@@ -48,13 +48,35 @@ for (const [label, at] of [
 }
 
 // Una entrada válida y reciente debe conservar el beneficio de carga instantánea.
-const fresh = { marker: 'fresh' };
+const fresh = {
+  marker: 'fresh',
+  clubes: [], equipos: [], jugadores: [], planteles: [], partidos: [],
+  participaciones: [],
+  globalSummary: { clubs: 0, players: 0, matches: 0, finished: 0, goals: 0, avgGoals: null }
+};
 entries.set(cacheKey, JSON.stringify({ at: Date.now(), dataset: fresh }));
 requests = 0;
 assert.deepEqual(await loadPublicDataset(3), fresh);
 assert.equal(requests, 0, 'caché reciente no debe generar consultas');
 
-console.log('API cache smoke: fecha futura, corrupta, vencida y válida OK');
+// Un timestamp reciente no vuelve confiable un dataset malformado.
+// Antes se aceptaba cualquier valor truthy, y prepareDataset().map podía fallar.
+for (const [label, dataset] of [
+  ['dataset string', 'cached-data'],
+  ['colección ausente', { ...fresh, partidos: undefined }],
+  ['colección no array', { ...fresh, equipos: 'invalid' }],
+  ['fila null', { ...fresh, clubes: [null] }],
+  ['resumen no objeto', { ...fresh, globalSummary: [] }]
+]) {
+  entries.set(cacheKey, JSON.stringify({ at: Date.now(), dataset }));
+  requests = 0;
+  const reloaded = await loadPublicDataset(3);
+  assert.ok(requests >= 2, `${label}: debe ignorar caché malformada y consultar mocks`);
+  assert.ok(Array.isArray(reloaded.equipos), `${label}: debe devolver dataset válido`);
+  assert.equal(reloaded.marker, undefined, `${label}: no debe devolver caché malformada`);
+}
+
+console.log('API cache smoke: fechas y estructura de dataset verificadas');
 
 
 // El resumen global se consultaba una sola vez por pestaña, incluso después
