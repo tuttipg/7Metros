@@ -1,0 +1,111 @@
+{
+  "source": {
+    "package": "com.tecdata.larrysportmobile.cah",
+    "clientVersion": "1.1.3",
+    "apiBase": "https://api.femebal.cam.larrysport.tecdata.net",
+    "headers": {
+      "X-App-Variant": "cah",
+      "X-App-Version": "1.1.3"
+    },
+    "bundle": {
+      "format": "Hermes bytecode",
+      "bytecodeVersion": 96,
+      "sha256": "1c4d137233e2524f8491a332caad17e6058fc44d0228568fb746f0377f869681"
+    }
+  },
+  "statusLegend": {
+    "confirmed_in_code_1_1_3": "Observed in the Hermes 96 client bundle.",
+    "runtime_confirmed": "Observed in a live response using the documented guest flow.",
+    "pending_runtime": "Static contract is known, but a live response has not yet been captured."
+  },
+  "guestAuth": {
+    "status": "confirmed_in_code_1_1_3",
+    "method": "POST",
+    "path": "/init-onboarding",
+    "requestBody": null,
+    "skipAuth": true,
+    "responseTokensConsumedByClient": ["accessToken", "refreshToken"],
+    "normalAuthorization": "Bearer <accessToken>",
+    "note": "The probe never persists or prints access/refresh tokens."
+  },
+  "search": {
+    "status": "confirmed_in_code_1_1_3",
+    "method": "GET",
+    "path": "/search",
+    "parametersObservedInSearchView": {
+      "query": "text query",
+      "type": ["athletes", "clubs"],
+      "gender": ["F", "M"],
+      "skip": "offset-like pagination cursor"
+    },
+    "athleteSearch": {
+      "type": "athletes",
+      "exampleTemplate": "/search?query=<name>&type=athletes&skip=0"
+    },
+    "responseFieldsConsumedByView": ["athletes", "clubs", "limit", "skip"],
+    "pagination": {
+      "model": "skip-based",
+      "serverResponseIncludes": ["limit", "skip"],
+      "requestSideLimitConfirmed": false
+    }
+  },
+  "athleteEndpoints": [
+    {"clientMethod":"athleteIdentifiedAs","method":"GET","pathTemplate":"/athletes/{athleteId}","returns":"Athlete","status":"confirmed_in_code_1_1_3"},
+    {"clientMethod":"tournaments","method":"GET","pathTemplate":"/athletes/{athleteId}/tournaments","returns":"array of {team, tournament}","status":"confirmed_in_code_1_1_3"},
+    {"clientMethod":"tournamentStats","method":"GET","pathTemplate":"/athletes/{athleteId}/tournaments/{tournamentId}/stats","returns":"athlete tournament/match stats","status":"confirmed_in_code_1_1_3","scope":"not needed for basic player identity/context"},
+    {"clientMethod":"getAthletesByTeam","method":"GET","pathTemplate":"/athletes/athletesByTeam/{teamId}?tournamentId={tournamentId}","returns":"Athlete[]","status":"confirmed_in_code_1_1_3","paginationInClient":"none observed","scope":"documented, not used for bulk roster discovery"},
+    {"clientMethod":"getSocials","method":"GET","pathTemplate":"/athletes/{athleteId}/socials","returns":"Socials","status":"confirmed_in_code_1_1_3"},
+    {"clientMethod":"defaultTeamAs","method":"GET","pathTemplate":"/athletes/{athleteId}/default-team","returns":"Team","status":"confirmed_in_code_1_1_3"},
+    {"clientMethod":"clubIdByAthleteIdAs","method":"GET","pathTemplate":"/athletes/{athleteId}/club-id","returns":"raw club id response","status":"confirmed_in_code_1_1_3"},
+    {"clientMethod":"getPositionAndNumberByAthleteIds","method":"GET","pathTemplate":"/athletes/formation/positionAndNumber?athleteIds={commaSeparatedAthleteIds}","returns":"position / shirt number mapping","status":"confirmed_in_code_1_1_3","inputNormalization":"client de-duplicates athlete ids, filters finite numeric values, joins with comma"},
+    {"clientMethod":"getMvpAwardsByAthleteIdAs","method":"GET","pathTemplate":"/athletes/{athleteId}/mvp-awards","returns":"MVP awards","status":"confirmed_in_code_1_1_3"},
+    {"clientMethod":"federativeCardByAthleteIdAs","method":"GET","pathTemplate":"/athletes/{athleteId}/federative-card","returns":"AthleteFederativeCard","status":"confirmed_in_code_1_1_3","runtimePolicy":"do not probe in the minimal sample because the model contains documentNumber"},
+    {"clientMethod":"athleteByDocumentNumber","method":"GET","pathTemplate":"/athletes/document/{documentNumber}","returns":"Athlete","status":"confirmed_in_code_1_1_3","runtimePolicy":"static documentation only; do not use for discovery"},
+    {"clientMethod":"getTopScorersByMatchId","method":"GET","pathTemplate":"/athletes/topScorers/{matchId}","returns":"match top scorers","status":"confirmed_in_code_1_1_3","scope":"out of scope for player discovery"}
+  ],
+  "profileEndpoint": {
+    "clientMethod": "getAthleteProfileByAthleteIdAs",
+    "method": "GET",
+    "pathTemplate": "/users/athlete-profile/{athleteId}",
+    "returns": "AthleteProfile",
+    "status": "confirmed_in_code_1_1_3"
+  },
+  "models": {
+    "Athlete": {"scope":"base/permanent federative identity as consumed by the app","fieldsFromJson":["id","firstName","lastName","birthDate","picture","avatarUrl"]},
+    "ProfileBase": {"scope":"community profile","fields":["userId","alias","avatarUrl","avatarType"]},
+    "AthleteProfile": {"scope":"community/player profile layered on Athlete","fields":["athlete","status","shirtNumber","worldMessage","height","position","useFederationPicture","socialMedia"],"additionalObservedFieldsInCopy/updateLogic":["userId","alias","avatarUrl","avatarType"],"statusWarning":"profile status is used for verification UI; do not interpret as sporting active/inactive state"},
+    "Team": {"fields":["id","name","club","ageCategory","division","gender"],"relation":"team.id = teamId; team.club.id = clubId"},
+    "Club": {"fields":["id","name","picture"]},
+    "Tournament": {"fields":["id","name","type","federationId","ageCategory","season","gender","startDate","status","division","isRelevant"]},
+    "Season": {"fields":["id","description","startDate","endDate","previousSeasonId"]},
+    "AthleteFederativeCard": {"fields":["athleteId","picture","fullName","documentNumber","birthDate","habilitationYear","category","clubName","status"],"sensitivity":"contains documentNumber; excluded from minimal runtime probe"}
+  },
+  "relationship": {
+    "canonicalFlow": [
+      "GET /search?query=<name>&type=athletes&skip=0 -> Athlete.id",
+      "GET /athletes/{athleteId} -> base Athlete",
+      "GET /users/athlete-profile/{athleteId} -> community/profile fields",
+      "GET /athletes/{athleteId}/tournaments -> [{team, tournament}]",
+      "team.id -> teamId",
+      "team.club.id -> clubId",
+      "tournament.id -> tournamentId"
+    ],
+    "permanentVsContextual": {
+      "baseAthlete": ["id","firstName","lastName","birthDate","picture","avatarUrl"],
+      "communityProfile": ["alias","height","position","shirtNumber","worldMessage","socialMedia","verification/profile status"],
+      "teamTournamentContext": ["teamId","clubId","category","division","gender/branch","season","tournamentId"],
+      "positionNumberSemantics": "used by team formation UI but endpoint only receives athleteIds; exact season/team semantics remain pending runtime/backend confirmation"
+    }
+  },
+  "runtime": {
+    "status": "pending_runtime",
+    "attemptFromCurrentEnvironment": {
+      "reachedServer": false,
+      "failure": "DNS resolution failed before any HTTP response",
+      "interpretation": "not evidence of auth failure or endpoint failure"
+    },
+    "massImportPerformed": false,
+    "supabaseWritesPerformed": false,
+    "productionModified": false
+  }
+}

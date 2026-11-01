@@ -11,6 +11,29 @@ function requireMatch(text, re, label) {
   return match[1].trim();
 }
 
+function requireIsoDate(value, label) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) throw new Error(`${label} debe usar YYYY-MM-DD`);
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) {
+    throw new Error(`${label} no es una fecha calendario válida`);
+  }
+  return value;
+}
+
+function requireClock(value, label) {
+  const match = /^(\d{2}):(\d{2}):(\d{2})$/.exec(value);
+  if (!match) throw new Error(`${label} debe usar HH:MM:SS`);
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const seconds = Number(match[3]);
+  if (hours > 23 || minutes > 59 || seconds > 59) throw new Error(`${label} inválida`);
+  return value;
+}
+
 function parsePlayerLine(line) {
   const match = String(line).trim().match(/^(\d+)\s+(.+?),\s*(.+?)\s+(\d+|-)\s+(\d+|-)\s+(\d+|-)\s+(\d+|-)\s+(\d+|-)$/);
   if (!match) return null;
@@ -138,8 +161,8 @@ export function parseOfficialFemebalSheet(text) {
     .filter(Boolean);
   const flat = lines.join('\n');
 
-  const fecha = requireMatch(flat, /(?:^|\n)Fecha:\s*\n?(\d{4}-\d{2}-\d{2})(?:\n|$)/i, 'fecha');
-  const hora = requireMatch(flat, /(?:^|\n)Hora:\s*\n?(\d{2}:\d{2}:\d{2})(?:\n|$)/i, 'hora');
+  const fecha = requireIsoDate(requireMatch(flat, /(?:^|\n)Fecha:\s*\n?(\d{4}-\d{2}-\d{2})(?:\n|$)/i, 'fecha'), 'fecha');
+  const hora = requireClock(requireMatch(flat, /(?:^|\n)Hora:\s*\n?(\d{2}:\d{2}:\d{2})(?:\n|$)/i, 'hora'), 'hora');
   const scope = requireMatch(flat, /(?:^|\n)Categoria\s*-\s*Division:\s*\n?([^\n]+)/i, 'categoría/división');
   const scopeParts = scope.split(/\s+-\s+/, 2);
   if (scopeParts.length !== 2) throw new Error('Categoría/división inválida');

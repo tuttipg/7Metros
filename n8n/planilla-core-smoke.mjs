@@ -72,6 +72,15 @@ assert.equal(parsed.jugadores_visitante.find((p) => p.apellido === 'Aguero').gol
 assert.equal(parsed.diagnostico.marcador_local_metodo, 'encabezado');
 assert.equal(parsed.diagnostico.marcador_visitante_metodo, 'encabezado');
 
+assert.throws(
+  () => parseOfficialFemebalSheet(fixture.replace('2026-03-21', '2026-02-30')),
+  /fecha no es una fecha calendario válida/,
+);
+assert.throws(
+  () => parseOfficialFemebalSheet(fixture.replace('20:15:00', '25:61:00')),
+  /hora inválida/,
+);
+
 const n8nCloudFixture = `Torneo Metropolitano Apertura
 Fecha:
 2026-03-21
