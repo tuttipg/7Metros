@@ -2,9 +2,29 @@ from pathlib import Path
 from html.parser import HTMLParser
 import re
 import sys
+from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parent
 errors = []
+
+
+def is_direct_config_script(src):
+    """Detect local config.js script tags even with ./, query or URL encoding."""
+    parsed = urlsplit(src or '')
+    if parsed.scheme or parsed.netloc:
+        return False
+    return Path(unquote(parsed.path).replace('\\', '/')).name == 'config.js'
+
+
+# Synthetic regression cases for the static guard; no browser/network required.
+for candidate in ('config.js', './config.js', './config.js?v=7', '/config.js#v',
+                  'config%2Ejs', '../config.js', 'assets/config.js'):
+    if not is_direct_config_script(candidate):
+        errors.append(f'config.js script guard missed {candidate}')
+for candidate in ('script.js', './config.json', 'https://example.org/config.js',
+                  '//example.org/config.js', None):
+    if is_direct_config_script(candidate):
+        errors.append(f'config.js script guard falsely blocked {candidate}')
 
 
 class Parser(HTMLParser):
@@ -26,7 +46,7 @@ class Parser(HTMLParser):
             if data.get(attr):
                 self.links.append(data[attr])
 
-        if tag == 'script' and data.get('src', '').split('?', 1)[0] == 'config.js':
+        if tag == 'script' and is_direct_config_script(data.get('src')):
             errors.append(f'{self.source_name}: config.js is an ES module imported by script.js; remove direct script tag')
 
         if tag == 'a' and data.get('target', '').lower() == '_blank':
