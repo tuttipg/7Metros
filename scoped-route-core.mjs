@@ -1,5 +1,7 @@
+import { canonicalPositiveId } from './route-id-core.mjs';
+
 function validId(value) {
-  return Number.isInteger(Number(value)) && Number(value) > 0;
+  return canonicalPositiveId(value) !== null;
 }
 
 export function resolveScopedRouteContext({
@@ -8,8 +10,8 @@ export function resolveScopedRouteContext({
   currentPresent = false,
   memberships = []
 } = {}) {
-  const normalizedEntityId = Number(entityId);
-  if (!validId(normalizedEntityId)) return { status: 'invalid', entityId: null };
+  const normalizedEntityId = canonicalPositiveId(entityId);
+  if (normalizedEntityId === null) return { status: 'invalid', entityId: null };
 
   const normalized = (memberships || [])
     .map(row => ({
@@ -20,8 +22,11 @@ export function resolveScopedRouteContext({
 
   if (!normalized.length) return { status: 'missing', entityId: normalizedEntityId };
 
-  const explicitTeamId = Number(requestedTeamId);
-  if (validId(explicitTeamId)) {
+  if (requestedTeamId !== null && requestedTeamId !== undefined) {
+    const explicitTeamId = canonicalPositiveId(requestedTeamId);
+    if (explicitTeamId === null) {
+      return { status: 'invalid-team', entityId: normalizedEntityId, teamId: null };
+    }
     const membership = normalized.find(row => row.teamId === explicitTeamId);
     if (!membership) {
       return { status: 'invalid-team', entityId: normalizedEntityId, teamId: explicitTeamId };
