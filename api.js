@@ -406,6 +406,10 @@ async function loadSeasonMatches(season, teamIds) {
   return filterMatchesToTeamIds(rows, teamIds);
 }
 
+// Multiple views can request the same season before sessionStorage is populated.
+// Share only in-flight loads, keyed by season; do not cache errors in memory.
+const pendingDatasetLoads = new Map();
+
 export async function loadPublicDataset(seasonId) {
   const season = Number(seasonId);
   if (!Number.isInteger(season) || season <= 0) throw new DataError('La temporada configurada no es válida.');
@@ -413,6 +417,20 @@ export async function loadPublicDataset(seasonId) {
   const cached = readDatasetCache(season);
   if (cached) return cached;
 
+  const existing = pendingDatasetLoads.get(season);
+  if (existing) return existing;
+
+  const pending = loadPublicDatasetUncached(season);
+  pendingDatasetLoads.set(season, pending);
+  try {
+    return await pending;
+  } finally {
+    // A failed load must be retryable, and one season must not clear another.
+    if (pendingDatasetLoads.get(season) === pending) pendingDatasetLoads.delete(season);
+  }
+}
+
+async function loadPublicDatasetUncached(season) {
   // Arranca el resumen global en paralelo para que Inicio pueda mostrar escala
   // de la base mientras todavía se cargan los datos detallados de la temporada.
   // Attach rejection handling immediately; the summary may fail before teams load.
