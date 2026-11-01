@@ -3,6 +3,7 @@ import { readFileSync, existsSync } from 'node:fs';
 
 const script = readFileSync(new URL('./script.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('./ui.js', import.meta.url), 'utf8');
+const features = readFileSync(new URL('./features.js', import.meta.url), 'utf8');
 
 const expectedPrimary = [
   ['inicio', 'index.html', 'home', 'Inicio'],
@@ -38,9 +39,19 @@ function assertNavigation(source, label) {
     previous = index;
     assert.ok(existsSync(new URL(`./${href}`, import.meta.url)), `${label}: ${href} no existe`);
   }
+  const competitions = block.match(/competiciones\.html/g) || [];
+  assert.equal(competitions.length, 1, `${label}: Competiciones debe existir exactamente una vez`);
 }
 
 assertNavigation(script, 'script.js');
 assertNavigation(ui, 'ui.js');
 
-console.log('navigation-smoke: OK — bootstrap y navegación final conservan las mismas secciones principales.');
+assert.doesNotMatch(
+  features,
+  /injectCompetitionNav|data\.navCompetitions|\.sidebar \.nav/,
+  'features.js: la capa de features no debe crear ni reparar items del menú'
+);
+assert.match(script, /Promise\.all\(\[/, 'script.js: los módulos principales deben cargarse en paralelo');
+assert.doesNotMatch(script, /loadStylesheet\(/, 'script.js: los estilos no deben inyectarse después del render');
+
+console.log('navigation-smoke: OK — navegación única, orden estable y Competiciones sin duplicados.');
