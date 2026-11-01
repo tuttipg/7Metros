@@ -92,7 +92,7 @@ function renderBootstrapShell() {
       <div class="brand"><a href="index.html" aria-label="7Metros - Inicio"><div class="brand-logo"><span class="seven">7</span><span class="m">M</span></div><span class="brand-name">7<b>METROS</b></span><span class="brand-sub">HANDBALL APP</span></a></div>
       <a class="nav-search" href="jugadores.html"><span class="nav-icon">${bootIcon('search')}</span><span>Buscar</span><kbd>Ctrl K</kbd></a>
       <nav class="nav"><span class="nav-group-label">COMPETICIÓN</span>${links(groups.primary)}<span class="nav-group-label">DATOS</span>${links(groups.data)}<div class="nav-link disabled"><span class="nav-icon">${bootIcon('ball')}</span><span>IA / VIDEO</span><em>LAB</em></div><div class="nav-sep"></div>${links(groups.secondary)}</nav>
-      <div class="sidebar-foot"><span class="live-dot"></span><span>7Metros conectado</span></div>`;
+      <div class="sidebar-foot" data-connection-state="loading"><span class="live-dot"></span><span class="connection-label">Conectando datos…</span></div>`;
   }
 
   const mobile = document.getElementById('mobile-bar');
@@ -113,14 +113,51 @@ function renderBootstrapShell() {
 
   const overlay = document.getElementById('overlay');
   const menuOpen = document.getElementById('menu-open');
+  // El shell de respaldo debe funcionar incluso si falla la carga de módulos.
+  const mobileMedia = window.matchMedia('(max-width: 940px)');
   const setBootstrapMenu = open => {
-    sidebar?.classList.toggle('open', open);
-    overlay?.classList.toggle('show', open);
-    menuOpen?.setAttribute('aria-expanded', String(open));
-    document.body.classList.toggle('nav-open', open);
+    const shouldOpen = mobileMedia.matches && open;
+    sidebar?.classList.toggle('open', shouldOpen);
+    overlay?.classList.toggle('show', shouldOpen);
+    menuOpen?.setAttribute('aria-expanded', String(shouldOpen));
+    menuOpen?.setAttribute('aria-label', shouldOpen ? 'Cerrar menú' : 'Abrir menú');
+    if (sidebar) {
+      const hidden = mobileMedia.matches && !shouldOpen;
+      sidebar.inert = hidden;
+      sidebar.setAttribute('aria-hidden', String(hidden));
+    }
+    document.body.classList.toggle('nav-open', shouldOpen);
   };
-  menuOpen?.addEventListener('click', () => setBootstrapMenu(true));
-  overlay?.addEventListener('click', () => setBootstrapMenu(false));
+  const closeBootstrapMenu = (returnFocus = false) => {
+    setBootstrapMenu(false);
+    if (returnFocus) menuOpen?.focus();
+  };
+  const onMenuClick = () => {
+    if (sidebar?.classList.contains('open')) closeBootstrapMenu(true);
+    else setBootstrapMenu(true);
+  };
+  const onOverlayClick = () => closeBootstrapMenu(true);
+  const onEscape = event => {
+    if (event.key === 'Escape' && sidebar?.classList.contains('open')) {
+      event.preventDefault();
+      closeBootstrapMenu(true);
+    }
+  };
+  const onMediaChange = () => closeBootstrapMenu();
+  menuOpen?.addEventListener('click', onMenuClick);
+  overlay?.addEventListener('click', onOverlayClick);
+  document.addEventListener('keydown', onEscape);
+  mobileMedia.addEventListener?.('change', onMediaChange);
+  setBootstrapMenu(false);
+
+  // Al sustituir el shell inicial, sus listeners no deben cerrar el nuevo drawer
+  // ni devolver el foco al botón antiguo (ya separado del DOM).
+  return () => {
+    menuOpen?.removeEventListener?.('click', onMenuClick);
+    overlay?.removeEventListener?.('click', onOverlayClick);
+    document.removeEventListener?.('keydown', onEscape);
+    mobileMedia.removeEventListener?.('change', onMediaChange);
+  };
 }
 
 function showBootstrapError(error) {
@@ -128,6 +165,12 @@ function showBootstrapError(error) {
   const root = document.getElementById('data-status');
   const health = document.getElementById('data-health-label');
   const meta = document.getElementById('data-health-meta');
+  const indicator = document.querySelector('.sidebar-foot');
+  if (indicator) {
+    indicator.dataset.connectionState = 'error';
+    const label = indicator.querySelector('.connection-label');
+    if (label) label.textContent = 'Datos no disponibles';
+  }
   if (health) health.textContent = 'Navegación disponible';
   if (meta) meta.textContent = 'No se pudieron iniciar los datos; el menú sigue funcionando.';
   if (root) {
@@ -144,7 +187,7 @@ function filtersFromUrl() {
   return next;
 }
 
-renderBootstrapShell();
+const disposeBootstrapMenu = renderBootstrapShell();
 autoStart();
 
 async function autoStart() {
@@ -159,6 +202,7 @@ async function autoStart() {
     ]);
 
     ui.renderShell();
+    disposeBootstrapMenu();
     ui.initSettingsPage();
     ui.initReports();
     ui.renderLoadingStatus();
