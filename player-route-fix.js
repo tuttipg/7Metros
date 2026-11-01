@@ -1,4 +1,5 @@
 import { SEASON_ID } from './config.js';
+import { readRouteParam } from './route-id-core.mjs';
 import { state, filteredTeamIds } from './store.js';
 import { renderCurrentPage } from './pages.js';
 import { renderCompetitionBar } from './ui.js';
@@ -70,8 +71,8 @@ function guardPlayerRoute() {
   }
 
   const params = new URLSearchParams(location.search);
-  const playerId = Number(params.get('id'));
-  const requestedTeamId = Number(params.get('team'));
+  const playerId = readRouteParam(params, 'id');
+  const requestedTeamId = readRouteParam(params, 'team');
   const memberships = seasonMemberships(playerId);
   const visibleTeamIds = filteredTeamIds();
   const visibleMembershipTeamIds = memberships
