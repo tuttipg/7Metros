@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolvePlayerRouteContext } from './player-route-core.mjs';
+import { readRouteParam } from './route-id-core.mjs';
 
 assert.deepEqual(
   resolvePlayerRouteContext({ playerId: 10, visibleMembershipTeamIds: [101], membershipTeamIds: [101] }),
@@ -52,6 +53,15 @@ assert.equal(
 
 assert.equal(resolvePlayerRouteContext({ playerId: 'x' }).status, 'missing');
 
+for (const bad of ['', '0', '0101', '101e0', '101.0', '-1', 'oops', '9007199254740992']) {
+  assert.equal(resolvePlayerRouteContext({
+    playerId: 10, requestedTeamId: bad, visibleMembershipTeamIds: [101], membershipTeamIds: [101]
+  }).status, 'invalid-team', `team=${bad} must not fall back to visible roster`);
+}
+for (const bad of ['', '0', '010', '10e0', '10.0', '9007199254740992']) {
+  assert.equal(resolvePlayerRouteContext({ playerId: bad, membershipTeamIds: [101] }).status, 'missing');
+}
+assert.equal(readRouteParam(new URLSearchParams('team=101&team=101'), 'team'), '');
 console.log('✓ player-route-smoke: filtros guardados, contexto visible/explicito, multi-plantel e IDs inválidos fail-closed OK');
 
 

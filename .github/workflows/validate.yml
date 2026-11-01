@@ -39,10 +39,12 @@ jobs:
           node --check storage-unavailable-smoke.mjs
           node --check config-season-smoke.mjs
           node --check api-loading-smoke.mjs
+          node --check api-cache-smoke.mjs
           node --check store-smoke.mjs
           node --check store-integrity-smoke.mjs
           node --check team-integrity-smoke.mjs
           node --check match-scope-smoke.mjs
+          node --check club-profile-scope-smoke.mjs
           node --check navigation-smoke.mjs
           node --check category-order-smoke.mjs
           node --check dashboard-scope-smoke.mjs
@@ -55,12 +57,15 @@ jobs:
           node --check standings-core-smoke.mjs
           node --check standings-adjustments.mjs
           node --check standings-adjustments-smoke.mjs
+          node --check route-id-core.mjs
           node --check player-route-core.mjs
           node --check player-route-fix.js
           node --check player-route-smoke.mjs
           node --check scoped-route-core.mjs
           node --check scoped-route-fix.js
           node --check scoped-route-smoke.mjs
+          node --check match-result-core.mjs
+          node --check match-result-smoke.mjs
           node --check match-freshness-core.mjs
           node --check match-freshness.js
           node --check match-freshness-smoke.mjs
@@ -86,6 +91,9 @@ jobs:
       - name: API loading smoke test
         run: node api-loading-smoke.mjs
 
+      - name: API cache TTL smoke test
+        run: node api-cache-smoke.mjs
+
       - name: Store smoke test
         run: node store-smoke.mjs
 
@@ -97,6 +105,9 @@ jobs:
 
       - name: Match scope smoke test
         run: node match-scope-smoke.mjs
+
+      - name: Club profile competition scope smoke test
+        run: node club-profile-scope-smoke.mjs
 
       - name: Navigation smoke test
         run: node navigation-smoke.mjs
@@ -111,7 +122,9 @@ jobs:
         run: node csv-safety-smoke.mjs
 
       - name: Date utilities smoke test
-        run: node date-utils-smoke.mjs
+        run: |
+          node date-utils-smoke.mjs
+          TZ=Australia/Sydney node date-utils-smoke.mjs
 
       - name: URL safety smoke test
         run: node url-safety-smoke.mjs
@@ -133,6 +146,9 @@ jobs:
 
       - name: Club and match route context smoke test
         run: node scoped-route-smoke.mjs
+
+      - name: Verified match result smoke test
+        run: node match-result-smoke.mjs
 
       - name: Match freshness smoke test
         run: node match-freshness-smoke.mjs
