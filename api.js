@@ -411,8 +411,15 @@ async function loadSeasonMatches(season, teamIds) {
 const pendingDatasetLoads = Object.create(null);
 
 export async function loadPublicDataset(seasonId) {
-  const season = Number(seasonId);
-  if (!Number.isInteger(season) || season <= 0) throw new DataError('La temporada configurada no es válida.');
+  // Number(true), Number('1e3') and unsafe integers can silently select
+  // a different season. Accept only positive, safe decimal identifiers.
+  const season = typeof seasonId === 'number'
+    ? seasonId
+    : (typeof seasonId === 'string' && /^[1-9][0-9]*$/.test(seasonId)
+      ? Number(seasonId) : NaN);
+  if (!Number.isSafeInteger(season) || season <= 0) {
+    throw new DataError('La temporada configurada no es válida.');
+  }
 
   const cached = readDatasetCache(season);
   if (cached) return cached;
