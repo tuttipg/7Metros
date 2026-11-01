@@ -62,6 +62,16 @@ export function teamDisplayName(team, club = null, { compact = false } = {}) {
   return compact ? `${base} ${code}` : `${base} · Equipo ${code}`;
 }
 
+// Accept only positive safe integers or canonical decimal strings as match IDs.
+function positiveSafeMatchId(value) {
+  if (typeof value === 'number') {
+    return Number.isSafeInteger(value) && value > 0 ? value : null;
+  }
+  if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) return null;
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
 export function prepareDataset(dataset) {
   state.globalSummary = { ...state.globalSummary, ...(dataset.globalSummary || {}) };
 
@@ -133,9 +143,8 @@ export function prepareDataset(dataset) {
 
   state.matches = (dataset.partidos || []).map(row => {
     if (!row || typeof row !== 'object') return null;
-    const matchId = Number(row.id);
-    // Never expose unaddressable match cards (NaN, 0, fractions or unsafe IDs).
-    if (!Number.isSafeInteger(matchId) || matchId <= 0) return null;
+    const matchId = positiveSafeMatchId(row.id);
+    if (matchId === null) return null;
     const homeTeamId = Number(field(row, ['local_equipo_id', 'local_id'], NaN));
     const awayTeamId = Number(field(row, ['visitante_equipo_id', 'visitante_id'], NaN));
     const homeTeam = teamById.get(homeTeamId) || null;
