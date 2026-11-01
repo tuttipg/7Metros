@@ -29,7 +29,11 @@ else:
     # Regression guard: a scoped report must never put the temporal predicate
     # before the orphan-partido predicate. If p is NULL, p.temporada_id cannot
     # resolve the scope and the corruption must be counted fail-closed.
-    compact = re.sub(r'\s+', ' ', sql)
+    # The draft intentionally keeps SQL fragments commented out. Normalize
+    # only leading SQL comment markers before checking the proposed WHERE clause;
+    # otherwise a safe `-- where ...` block falsely fails the regex.
+    sql_contract = re.sub(r'(?m)^[ \t]*--[ \t]?', '', sql)
+    compact = re.sub(r'\s+', ' ', sql_contract)
     unsafe = re.search(
         r'v_invalid_participation_refs.*?where\s*\('
         r'p_temporada_id\s+is\s+null\s+or\s+p\.temporada_id\s*=\s*p_temporada_id\)'
