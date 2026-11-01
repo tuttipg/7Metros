@@ -45,6 +45,20 @@ globalThis.fetch = async input => {
 
 const { loadPublicDataset, DataError } = await import('./api.js?inflight-dedupe-smoke');
 
+// Reject malformed/unsafe season identifiers before cache lookup or network.
+// Number(...) previously accepted booleans, exponent notation and rounded IDs.
+for (const invalidSeason of [
+  null, undefined, true, false, [], {}, '', ' 3', '03', '3.0',
+  '1e3', '9007199254740993', Number.MAX_SAFE_INTEGER + 1, 0, -1, 2.5
+]) {
+  await assert.rejects(
+    () => loadPublicDataset(invalidSeason),
+    error => error instanceof DataError && /temporada configurada/.test(error.message),
+    `invalid season ${String(invalidSeason)} must fail before fetching`
+  );
+}
+assert.equal(reads.size, 0, 'invalid seasons must issue zero requests');
+
 // Before this fix, two simultaneous page consumers started duplicate GETs.
 const [first, second] = await Promise.all([loadPublicDataset(3), loadPublicDataset(3)]);
 assert.strictEqual(first, second, 'concurrent consumers receive the same dataset');
