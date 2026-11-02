@@ -72,7 +72,7 @@ jobs:
           node --check n8n/community-api-core-smoke.mjs
 
       - name: Check Python syntax
-        run: python -m py_compile validate_site.py validate_backend_contract.py validate_admin_adjustments_persistence.py
+        run: python -m py_compile validate_site.py validate_backend_contract.py validate_admin_adjustments_persistence.py validate_least_privilege_contract.py validate_integrity_report_contract.py
 
       - name: Season config regression smoke test
         run: node config-season-smoke.mjs
@@ -154,3 +154,9 @@ jobs:
 
       - name: Validate backend/importer contract
         run: python validate_backend_contract.py
+
+      - name: Validate unapplied least-privilege draft (static + mutation regressions)
+        run: python validate_least_privilege_contract.py --self-test
+
+      - name: Validate integrity report draft contract
+        run: python validate_integrity_report_contract.py
