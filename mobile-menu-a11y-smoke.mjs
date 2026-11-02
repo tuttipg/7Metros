@@ -10,7 +10,345 @@ assert.match(ui, /closeMenu\(\{ returnFocus: true \}\)/, 'keyboard/overlay close
 assert.match(ui, /if \(returnFocus\) menuOpen\?\.focus\(\)/, 'closing the menu must be able to return focus to its trigger');
 assert.match(ui, /sidebar\.inert = hidden/, 'hidden mobile navigation must be removed from the focus order');
 assert.match(ui, /document\.body\.classList\.toggle\('nav-open'/, 'open mobile navigation must lock page scrolling');
-assert.match(ui, /window\.matchMedia\('\(max-width: 980px\)'\)/, 'menu accessibility state must respond to the mobile breakpoint');
+// El sidebar pasa a drawer en CSS a 940px. Entre 941 y 980px antes era visible
+// pero aria-hidden/inert, lo que impedía navegarlo con teclado.
+const drawerCss = fs.readFileSync(new URL('./style.css', import.meta.url), 'utf8');
+const accessibilityBreakpoint = ui.match(/window\.matchMedia\('\(max-width: (\d+)px\)'\)/);
+const drawerBreakpoint = drawerCss.match(/@media\(max-width:(\d+)px\)\{\s*:root\{--sidebar:0px\}/);
+assert.ok(accessibilityBreakpoint, 'JS must define the mobile navigation breakpoint');
+assert.ok(drawerBreakpoint, 'CSS must define the sidebar drawer breakpoint');
+assert.equal(accessibilityBreakpoint[1], drawerBreakpoint[1], 'visible desktop sidebar must never be aria-hidden/inert');
+for (const width of [320, 940, 941, 960, 980, 1200]) {
+  const cssDrawer = width <= Number(drawerBreakpoint[1]);
+  const jsMobile = width <= Number(accessibilityBreakpoint[1]);
+  assert.equal(jsMobile, cssDrawer, `sidebar accessibility must match CSS at ${width}px`);
+}
 assert.match(ui, /requestAnimationFrame\(\(\) => \{[\s\S]*aria-current="page"/, 'opening the drawer should move focus into the navigation');
 
-console.log('Mobile menu accessibility smoke test passed.');
+// El indicador del sidebar debe reflejar el estado real, no afirmar conexión
+// antes de terminar la carga o después de un fallo.
+const bootstrap = fs.readFileSync(new URL('./script.js', import.meta.url), 'utf8');
+const styles = fs.readFileSync(new URL('./style.css', import.meta.url), 'utf8');
+assert.match(bootstrap, /data-connection-state="loading"/, 'bootstrap starts with a pending state');
+assert.match(bootstrap, /indicator\.dataset\.connectionState = 'error'/, 'bootstrap failure must mark data unavailable');
+assert.match(styles, /data-connection-state="loading"/, 'pending indicator must not look connected');
+assert.match(styles, /data-connection-state="error"/, 'failed indicator must not look connected');
+
+globalThis.window = globalThis;
+globalThis.localStorage = { getItem: () => null };
+globalThis.SEVEN_METROS_CONFIG = {
+  seasonId: 3,
+  defaults: { categoria: 'Mayores', division: 'LHC Hipotecario Seguros', rama: 'M' }
+};
+const { setConnectionStatus, renderLoadingStatus, renderSuccessStatus, renderErrorStatus } = await import('./ui.js');
+const label = { textContent: '' };
+const indicator = {
+  dataset: { connectionState: 'loading' },
+  querySelector: selector => selector === '.connection-label' ? label : null
+};
+const statusRoot = { innerHTML: '' };
+globalThis.document = {
+  querySelector: selector => selector === '.sidebar-foot' ? indicator : null,
+  querySelectorAll: () => [],
+  getElementById: id => id === 'data-status' ? statusRoot : null
+};
+renderLoadingStatus();
+assert.equal(indicator.dataset.connectionState, 'loading');
+assert.equal(label.textContent, 'Conectando datos…');
+renderSuccessStatus();
+assert.equal(indicator.dataset.connectionState, 'ready');
+assert.equal(label.textContent, 'Datos disponibles');
+renderErrorStatus(new Error('servicio no disponible'));
+assert.equal(indicator.dataset.connectionState, 'error');
+assert.equal(label.textContent, 'Datos no disponibles');
+setConnectionStatus('invalid');
+assert.equal(indicator.dataset.connectionState, 'error', 'unknown status must not overwrite a known state');
+
+// Regresión funcional: el botón que anuncia «Cerrar menú» debe cerrarlo al
+// segundo clic. Un requestAnimationFrame pendiente no debe enfocar el drawer cerrado.
+const makeClasses = () => {
+  const values = new Set();
+  return {
+    contains: name => values.has(name),
+    add: name => values.add(name),
+    remove: name => values.delete(name),
+    toggle: (name, force) => {
+      const enabled = force === undefined ? !values.has(name) : Boolean(force);
+      if (enabled) values.add(name);
+      else values.delete(name);
+      return enabled;
+    }
+  };
+};
+const listeners = {};
+const attributes = {};
+let triggerFocus = 0;
+let drawerFocus = 0;
+const frameQueue = [];
+const bootstrapFocusedLink = {};
+const sidebar = {
+  _html: '',
+  get innerHTML() { return this._html; },
+  set innerHTML(value) {
+    this._html = value;
+    // Simulate the browser dropping focus when the old bootstrap link is removed.
+    if (globalThis.document?.activeElement === bootstrapFocusedLink) {
+      globalThis.document.activeElement = globalThis.document.body;
+    }
+  },
+  contains: node => node === bootstrapFocusedLink,
+  classList: makeClasses(),
+  inert: false,
+  setAttribute: (name, value) => { attributes[name] = value; },
+  querySelectorAll: () => [],
+  querySelector: () => ({ focus: () => { drawerFocus++; } })
+};
+const trigger = {
+  // El HTML real nace con aria-expanded="false"; el DOM simulado no parsea innerHTML.
+  attributes: { 'aria-expanded': 'false' },
+  addEventListener: (name, handler) => { listeners[name] = handler; },
+  setAttribute(name, value) { this.attributes[name] = value; },
+  focus: () => { triggerFocus++; globalThis.document.activeElement = trigger; }
+};
+const overlay = { classList: makeClasses(), addEventListener: () => {} };
+const mobile = { innerHTML: '' };
+const mediaEvents = {};
+const media = { matches: true, addEventListener: (name, fn) => { mediaEvents[name] = fn; } };
+globalThis.matchMedia = () => media;
+globalThis.requestAnimationFrame = callback => { frameQueue.push(callback); };
+globalThis.document = {
+  body: { dataset: { page: 'inicio' }, classList: makeClasses() },
+  getElementById: id => ({
+    sidebar, 'mobile-bar': mobile, overlay, 'menu-open': trigger
+  })[id] || null,
+  querySelectorAll: () => [],
+  addEventListener: () => {}
+};
+const { renderShell } = await import('./ui.js');
+// Bootstrap can leave its drawer and overlay open before modules finish loading.
+// The replacement shell must close both, not just set aria-hidden/inert.
+sidebar.classList.add('open');
+overlay.classList.add('show');
+globalThis.document.body.classList.add('nav-open');
+globalThis.document.activeElement = bootstrapFocusedLink;
+renderShell();
+assert.equal(globalThis.document.activeElement, trigger, 'handoff must restore focus after replacing a focused bootstrap link');
+assert.equal(sidebar.classList.contains('open'), false, 'shell handoff must close old bootstrap drawer');
+assert.equal(overlay.classList.contains('show'), false, 'shell handoff must remove stale bootstrap overlay');
+assert.equal(globalThis.document.body.classList.contains('nav-open'), false, 'shell handoff must unlock scrolling');
+assert.equal(sidebar.inert, true, 'closed mobile drawer must be inert');
+assert.equal(trigger.attributes['aria-expanded'], 'false');
+assert.equal(typeof listeners.click, 'function', 'menu trigger must have a click handler');
+
+listeners.click();
+assert.equal(sidebar.classList.contains('open'), true, 'first click opens the drawer');
+assert.equal(trigger.attributes['aria-expanded'], 'true');
+assert.equal(trigger.attributes['aria-label'], 'Cerrar menú');
+assert.equal(sidebar.inert, false);
+
+listeners.click();
+assert.equal(sidebar.classList.contains('open'), false, 'second click closes the drawer');
+assert.equal(trigger.attributes['aria-expanded'], 'false');
+assert.equal(trigger.attributes['aria-label'], 'Abrir menú');
+assert.equal(sidebar.inert, true);
+assert.equal(triggerFocus, 2, 'handoff and closing via trigger both restore focus');
+frameQueue.splice(0).forEach(callback => callback());
+assert.equal(drawerFocus, 0, 'late animation frame must not focus closed drawer');
+
+listeners.click();
+frameQueue.splice(0).forEach(callback => callback());
+assert.equal(drawerFocus, 1, 'opening the drawer should focus its navigation');
+
+// Desktop -> mobile hides the sidebar. Move focus out BEFORE it becomes inert.
+const navLink = {};
+sidebar.contains = node => node === navLink;
+media.matches = false;
+mediaEvents.change();
+assert.equal(sidebar.inert, false, 'desktop sidebar remains accessible');
+globalThis.document.activeElement = navLink;
+media.matches = true;
+mediaEvents.change();
+assert.equal(sidebar.inert, true, 'mobile sidebar closes on breakpoint change');
+assert.equal(globalThis.document.activeElement, trigger, 'responsive close restores focus outside hidden sidebar');
+
+// El shell inicial es el único menú disponible si falla import('./ui.js').
+// Ejercitar el código real de renderBootstrapShell, sin acceso a red ni DOM externo.
+const bootstrapSource = fs.readFileSync(new URL('./script.js', import.meta.url), 'utf8');
+const shellStart = bootstrapSource.indexOf('function renderBootstrapShell() {');
+const shellEnd = bootstrapSource.indexOf('function showBootstrapError(', shellStart);
+assert.ok(shellStart >= 0 && shellEnd > shellStart, 'bootstrap shell function must exist');
+const shellCode = bootstrapSource.slice(shellStart, shellEnd);
+const bootstrapEvents = {};
+const removedBootstrapEvents = [];
+const removeBootstrapEvent = (key, fn) => {
+  assert.equal(bootstrapEvents[key], fn, `cleanup must remove the registered ${key} handler`);
+  removedBootstrapEvents.push(key);
+  delete bootstrapEvents[key];
+};
+const bootstrapSidebarAttrs = {};
+const bootstrapMenuAttrs = {};
+let bootstrapTriggerFocus = 0;
+let bootstrapNavFocus = 0;
+const bootstrapFocusedNav = {
+  focus: () => { bootstrapNavFocus++; bootstrapDocument.activeElement = bootstrapFocusedNav; }
+};
+const bootstrapSidebar = {
+  innerHTML: '',
+  classList: makeClasses(),
+  inert: false,
+  setAttribute: (name, value) => { bootstrapSidebarAttrs[name] = value; },
+  querySelector: () => bootstrapFocusedNav
+};
+const bootstrapMenu = {
+  setAttribute: (name, value) => { bootstrapMenuAttrs[name] = value; },
+  addEventListener: (name, fn) => { bootstrapEvents['menu:' + name] = fn; },
+  removeEventListener: (name, fn) => removeBootstrapEvent('menu:' + name, fn),
+  focus: () => { bootstrapTriggerFocus++; bootstrapDocument.activeElement = bootstrapMenu; }
+};
+const bootstrapOverlay = {
+  classList: makeClasses(),
+  addEventListener: (name, fn) => { bootstrapEvents['overlay:' + name] = fn; },
+  removeEventListener: (name, fn) => removeBootstrapEvent('overlay:' + name, fn)
+};
+const bootstrapMedia = {
+  matches: true,
+  addEventListener: (name, fn) => { bootstrapEvents['media:' + name] = fn; },
+  removeEventListener: (name, fn) => removeBootstrapEvent('media:' + name, fn)
+};
+const bootstrapBody = { dataset: { page: 'inicio' }, classList: makeClasses() };
+const bootstrapDocument = {
+  body: bootstrapBody,
+  getElementById: id => ({
+    sidebar: bootstrapSidebar,
+    'mobile-bar': { innerHTML: '' },
+    overlay: bootstrapOverlay,
+    'menu-open': bootstrapMenu
+  })[id] || null,
+  querySelectorAll: () => [],
+  addEventListener: (name, fn) => { bootstrapEvents['document:' + name] = fn; },
+  removeEventListener: (name, fn) => removeBootstrapEvent('document:' + name, fn)
+};
+const bootstrapWindow = {
+  matchMedia: () => bootstrapMedia,
+  SEVEN_METROS_CONFIG: { seasonLabel: 'CLAUSURA 2026', links: { femebal: 'https://femebal.com/' } }
+};
+const renderFallbackShell = new Function('document', 'window', 'bootIcon',
+  shellCode + '\nreturn renderBootstrapShell;'
+)(bootstrapDocument, bootstrapWindow, () => '');
+const disposeFallbackShell = renderFallbackShell();
+assert.equal(bootstrapSidebar.inert, true, 'closed bootstrap drawer must be inert');
+assert.equal(bootstrapSidebarAttrs['aria-hidden'], 'true');
+assert.equal(bootstrapMenuAttrs['aria-expanded'], 'false');
+bootstrapEvents['menu:click']();
+assert.equal(bootstrapSidebar.classList.contains('open'), true, 'fallback menu must open');
+assert.equal(bootstrapMenuAttrs['aria-label'], 'Cerrar menú');
+assert.equal(bootstrapSidebar.inert, false);
+frameQueue.splice(0).forEach(callback => callback());
+assert.equal(bootstrapNavFocus, 1, 'fallback open must focus the current navigation link');
+assert.equal(bootstrapDocument.activeElement, bootstrapFocusedNav,
+  'keyboard focus must enter the fallback drawer even when modules fail');
+bootstrapEvents['menu:click']();
+assert.equal(bootstrapSidebar.classList.contains('open'), false, 'fallback menu must toggle closed');
+assert.equal(bootstrapMenuAttrs['aria-expanded'], 'false');
+assert.equal(bootstrapSidebar.inert, true);
+assert.equal(bootstrapTriggerFocus, 1, 'closing via button restores focus');
+bootstrapEvents['menu:click']();
+let escapePrevented = false;
+bootstrapEvents['document:keydown']({ key: 'Escape', preventDefault: () => { escapePrevented = true; } });
+assert.equal(escapePrevented, true, 'Escape should be handled when open');
+assert.equal(bootstrapSidebar.classList.contains('open'), false, 'Escape closes fallback menu');
+assert.equal(bootstrapTriggerFocus, 2);
+frameQueue.splice(0).forEach(callback => callback());
+assert.equal(bootstrapNavFocus, 1, 'closing before the next frame must not focus a hidden drawer');
+bootstrapEvents['menu:click']();
+bootstrapEvents['overlay:click']();
+assert.equal(bootstrapSidebar.classList.contains('open'), false, 'overlay closes fallback menu');
+assert.equal(bootstrapTriggerFocus, 3);
+bootstrapEvents['menu:click']();
+bootstrapMedia.matches = false;
+bootstrapEvents['media:change']();
+assert.equal(bootstrapSidebar.classList.contains('open'), false, 'resize closes fallback drawer');
+assert.equal(bootstrapSidebar.inert, false, 'desktop sidebar must remain keyboard accessible');
+assert.equal(bootstrapSidebarAttrs['aria-hidden'], 'false');
+bootstrapEvents['menu:click']();
+assert.equal(bootstrapSidebar.classList.contains('open'), false, 'desktop cannot open mobile drawer');
+bootstrapMedia.matches = true;
+bootstrapEvents['media:change']();
+assert.equal(bootstrapSidebar.inert, true, 'returning to mobile hides closed drawer');
+
+// The fallback shell must also rescue focus when scripts fail and viewport shrinks.
+const bootstrapNavLink = {};
+bootstrapSidebar.contains = node => node === bootstrapNavLink;
+bootstrapMedia.matches = false;
+bootstrapEvents['media:change']();
+bootstrapDocument.activeElement = bootstrapNavLink;
+bootstrapMedia.matches = true;
+bootstrapEvents['media:change']();
+assert.equal(bootstrapSidebar.inert, true);
+assert.equal(bootstrapDocument.activeElement, bootstrapMenu, 'fallback resize restores focus outside hidden drawer');
+
+// Tras renderShell(), los listeners del bootstrap no deben intervenir sobre el nuevo menú.
+assert.match(bootstrapSource, /ui\.renderShell\(\);\s*disposeBootstrapMenu\(\);/, 'module shell must dispose bootstrap listeners immediately after handoff');
+disposeFallbackShell();
+assert.deepEqual(removedBootstrapEvents.sort(), [
+  'document:keydown', 'media:change', 'menu:click', 'overlay:click'
+].sort(), 'bootstrap handoff must unregister every menu handler');
+assert.equal(Object.keys(bootstrapEvents).length, 0, 'no bootstrap menu listener may survive handoff');
+
+// Keyboard navigation regression: changing a competition select re-renders
+// all three controls. The browser drops focus when innerHTML detaches the old
+// <select>; the new matching control must receive focus instead.
+const { renderCompetitionBar } = await import('./ui.js');
+const { state: competitionState } = await import('./store.js');
+competitionState.loaded = true;
+competitionState.filters = { rama: 'M', categoria: 'Mayores', division: 'LHC Hipotecario Seguros' };
+competitionState.teams = [
+  { temporada_id: 3, rama: 'M', categoria: 'Mayores', division: 'LHC Hipotecario Seguros' },
+  { temporada_id: 3, rama: 'M', categoria: 'Juniors', division: 'LHC Hipotecario Seguros' }
+];
+const competitionIds = ['branch-select', 'category-select', 'division-select'];
+let competitionSelects = {};
+const competitionRoot = {
+  _html: '',
+  get innerHTML() { return this._html; },
+  set innerHTML(html) {
+    if (this.contains(globalThis.document.activeElement)) {
+      globalThis.document.activeElement = globalThis.document.body;
+    }
+    this._html = html;
+    competitionSelects = Object.fromEntries(competitionIds.map(id => [id, {
+      id,
+      listeners: {},
+      addEventListener(name, handler) { this.listeners[name] = handler; },
+      focus() { globalThis.document.activeElement = this; }
+    }]));
+  },
+  contains(node) { return Object.values(competitionSelects).includes(node); }
+};
+globalThis.document = {
+  body: { dataset: { page: 'partidos' } },
+  activeElement: null,
+  getElementById: id => id === 'competition-bar' ? competitionRoot : competitionSelects[id] || null,
+  querySelectorAll: () => [],
+  querySelector: () => null,
+  dispatchEvent: () => {}
+};
+globalThis.document.activeElement = globalThis.document.body;
+renderCompetitionBar();
+assert.equal(globalThis.document.activeElement, globalThis.document.body,
+  'initial competition bar render must not steal focus');
+for (const id of competitionIds) {
+  const oldSelect = competitionSelects[id];
+  oldSelect.focus();
+  renderCompetitionBar();
+  assert.notStrictEqual(competitionSelects[id], oldSelect, 're-render replaces the old select');
+  assert.equal(globalThis.document.activeElement, competitionSelects[id],
+    `keyboard focus must survive competition bar re-render: ${id}`);
+}
+competitionSelects['category-select'].focus();
+competitionSelects['category-select'].listeners.change({ target: { value: 'Juniors' } });
+assert.equal(competitionState.filters.categoria, 'Juniors', 'category change must still apply');
+assert.equal(globalThis.document.activeElement, competitionSelects['category-select'],
+  'changing category by keyboard must retain focus after options update');
+
+console.log('Mobile menu accessibility, fallback toggle, handoff and connection-state smoke tests passed.');

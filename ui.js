@@ -1,9 +1,10 @@
 import { CONFIG, SEASON_LABEL, STORAGE_KEYS } from './config.js';
 import {
   state, getCompetitionOptions, setFilters, getPlayers, getClubs, getMatches,
-  getStandings, clearStoredFilters, selectedCompetitionLabel
+  getStandings, clearStoredFilters, persistFilters, selectedCompetitionLabel
 } from './store.js';
 import { esc, initials, currentDateLabel, csvDownload, metric, normalizeText, safeHttpUrl } from './utils.js';
+import { readLocalPreference, writeLocalPreference, removeLocalPreference } from './storage-preferences.mjs';
 
 const ICONS = {
   home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/>',
@@ -82,15 +83,19 @@ export function renderShell() {
   ).join('');
 
   const sidebar = document.getElementById('sidebar');
+  const mobile = document.getElementById('mobile-bar');
+  // Replacing bootstrap links with innerHTML detaches the focused node.
+  // Capture focus ownership BEFORE either navigation subtree is replaced.
+  const previousFocus = document.activeElement;
+  const restoreShellFocus = Boolean(sidebar?.contains?.(previousFocus) || mobile?.contains?.(previousFocus));
   if (sidebar) {
     sidebar.innerHTML = `
       <div class="brand"><a href="index.html" aria-label="7Metros - Inicio"><div class="brand-logo"><span class="seven">7</span><span class="m">M</span></div><span class="brand-name">7<b>METROS</b></span><span class="brand-sub">HANDBALL APP</span></a></div>
       <button class="nav-search" id="global-search-open" type="button"><span class="nav-icon">${icon('search')}</span><span>Buscar</span><kbd>Ctrl K</kbd></button>
       <nav class="nav"><span class="nav-group-label">COMPETICIÓN</span>${links(primary)}<span class="nav-group-label">DATOS</span>${links(data)}<button class="nav-link disabled" type="button" title="Análisis de video e IA en desarrollo"><span class="nav-icon">${icon('ball')}</span><span>IA / VIDEO</span><em>LAB</em></button><div class="nav-sep"></div>${links(secondary)}</nav>
-      <div class="sidebar-foot"><span class="live-dot"></span><span>Datos conectados</span></div>`;
+      <div class="sidebar-foot" data-connection-state="loading"><span class="live-dot"></span><span class="connection-label">Conectando datos…</span></div>`;
   }
 
-  const mobile = document.getElementById('mobile-bar');
   if (mobile) {
     mobile.innerHTML = `<a class="mobile-brand" href="index.html">7<b>METROS</b></a><div class="mobile-actions"><button id="mobile-search" class="icon-btn" aria-label="Buscar">${icon('search')}</button><button id="menu-open" class="icon-btn" aria-label="Abrir menú" aria-controls="sidebar" aria-expanded="false">${icon('menu')}</button></div>`;
   }
@@ -102,7 +107,21 @@ export function renderShell() {
 
   const overlay = document.getElementById('overlay');
   const menuOpen = document.getElementById('menu-open');
-  const mobileMedia = window.matchMedia('(max-width: 980px)');
+  // Debe coincidir con el breakpoint que oculta .sidebar en style.css.
+  const mobileMedia = window.matchMedia('(max-width: 940px)');
+
+  // A responsive close must not leave keyboard focus inside an inert/aria-hidden drawer.
+  const rescueFocusFromClosingSidebar = () => {
+    if (!sidebar?.contains?.(document.activeElement)) return;
+    menuOpen?.focus();
+    if (sidebar.contains(document.activeElement)) {
+      const body = document.body;
+      const hadTabindex = body.hasAttribute('tabindex');
+      if (!hadTabindex) body.setAttribute('tabindex', '-1');
+      body.focus();
+      if (!hadTabindex) body.removeAttribute('tabindex');
+    }
+  };
 
   const syncMenuAccessibility = open => {
     const isMobile = mobileMedia.matches;
@@ -116,6 +135,7 @@ export function renderShell() {
 
   const setMenuState = open => {
     const shouldOpen = mobileMedia.matches && open;
+    if (mobileMedia.matches && !shouldOpen) rescueFocusFromClosingSidebar();
     sidebar?.classList.toggle('open', shouldOpen);
     overlay?.classList.toggle('show', shouldOpen);
     menuOpen?.setAttribute('aria-expanded', String(shouldOpen));
@@ -126,7 +146,10 @@ export function renderShell() {
   const openMenu = () => {
     setMenuState(true);
     requestAnimationFrame(() => {
-      sidebar?.querySelector('a[aria-current="page"], a.nav-link')?.focus();
+      // Evita devolver el foco al drawer si se cerró antes del siguiente frame.
+      if (sidebar?.classList.contains('open')) {
+        sidebar.querySelector('a[aria-current="page"], a.nav-link')?.focus();
+      }
     });
   };
   const closeMenu = ({ returnFocus = false } = {}) => {
@@ -134,7 +157,10 @@ export function renderShell() {
     if (returnFocus) menuOpen?.focus();
   };
 
-  menuOpen?.addEventListener('click', openMenu);
+  menuOpen?.addEventListener('click', () => {
+    if (sidebar?.classList.contains('open')) closeMenu({ returnFocus: true });
+    else openMenu();
+  });
   overlay?.addEventListener('click', () => closeMenu({ returnFocus: true }));
   sidebar?.querySelectorAll('a').forEach(a => a.addEventListener('click', () => closeMenu()));
   document.addEventListener('keydown', event => {
@@ -150,19 +176,43 @@ export function renderShell() {
       sidebar.setAttribute('aria-hidden', 'false');
     }
   });
-  syncMenuAccessibility(false);
+  // The bootstrap drawer may still be open while dynamic modules load.
+  // Reset its classes/overlay as well as aria/inert when replacing the shell.
+  setMenuState(false);
+  // Handoff must not strand keyboard users on <body> after the old shell is removed.
+  // On mobile the closed drawer is inert; on desktop its active page link is visible.
+  if (restoreShellFocus) {
+    if (mobileMedia.matches) menuOpen?.focus();
+    else sidebar?.querySelector('a[aria-current="page"], a.nav-link')?.focus();
+  }
 
   applySettings();
   initGlobalSearch();
 }
 
+export function setConnectionStatus(status) {
+  const labels = {
+    loading: 'Conectando datos…',
+    ready: 'Datos disponibles',
+    error: 'Datos no disponibles'
+  };
+  if (!Object.hasOwn(labels, status)) return;
+  const indicator = document.querySelector('.sidebar-foot');
+  if (!indicator) return;
+  indicator.dataset.connectionState = status;
+  const label = indicator.querySelector('.connection-label');
+  if (label) label.textContent = labels[status];
+}
+
 export function renderLoadingStatus() {
+  setConnectionStatus('loading');
   const root = document.getElementById('data-status');
   if (!root) return;
   root.innerHTML = `<div class="status-banner loading"><span class="spinner"></span><div><b>Cargando datos</b><small>Conectando con la base de 7Metros…</small></div></div>`;
 }
 
 export function renderSuccessStatus() {
+  setConnectionStatus('ready');
   const root = document.getElementById('data-status');
   if (!root) return;
   root.innerHTML = '';
@@ -170,6 +220,7 @@ export function renderSuccessStatus() {
 }
 
 export function renderErrorStatus(error) {
+  setConnectionStatus('error');
   const root = document.getElementById('data-status');
   if (!root) return;
   root.innerHTML = `<div class="status-banner error"><span>${icon('info')}</span><div><b>No pudimos cargar los datos</b><small>${esc(error?.message || 'Revisá la conexión e intentá nuevamente.')}</small></div><button class="btn light" id="retry-data">${icon('refresh')}Reintentar</button></div>`;
@@ -202,6 +253,12 @@ export function renderCompetitionBar() {
     return;
   }
   if (!root || !state.loaded) return;
+  // Rebuilding the selects detaches the focused element after a keyboard change.
+  // Restore focus to the corresponding control in the new DOM.
+  const activeSelect = document.activeElement;
+  const focusedSelectId = root.contains(activeSelect) &&
+    ['branch-select', 'category-select', 'division-select'].includes(activeSelect?.id)
+    ? activeSelect.id : null;
   const { categorias, divisiones, ramas, resolved } = getCompetitionOptions();
 
   const options = (values, selected, prefix, mapper = v => v) => values.map(value =>
@@ -230,6 +287,8 @@ export function renderCompetitionBar() {
     renderCompetitionBar(); emit();
   });
 
+  if (focusedSelectId) document.getElementById(focusedSelectId)?.focus({ preventScroll: true });
+
   document.querySelectorAll('[data-competition-label]').forEach(el => el.textContent = selectedCompetitionLabel().toUpperCase());
   const hero = document.querySelector('[data-hero-competition]');
   if (hero) hero.textContent = `${SEASON_LABEL} · ${branchLabel(state.filters.rama)}`;
@@ -240,13 +299,15 @@ function initGlobalSearch() {
   if (!root) return;
 
   const hint = 'Escribí un nombre para buscar en toda la temporada.';
-  root.innerHTML = `<div class="search-modal" id="global-search-modal" aria-hidden="true"><div class="search-dialog" role="dialog" aria-modal="true" aria-label="Buscar en 7Metros"><div class="search-dialog-head"><span>${icon('search')}</span><input id="global-search-input" type="search" placeholder="Buscar jugador o club…" autocomplete="off"><button id="global-search-close" class="icon-btn" aria-label="Cerrar">${icon('close')}</button></div><div id="global-search-results" class="search-results"><div class="search-hint">${hint}</div></div><div class="search-dialog-foot"><span>Enter para abrir</span><span>Esc para cerrar</span></div></div></div>`;
+  root.innerHTML = `<div class="search-modal" id="global-search-modal" aria-hidden="true"><div class="search-dialog" role="dialog" aria-modal="true" aria-label="Buscar en 7Metros"><div class="search-dialog-head"><span>${icon('search')}</span><input id="global-search-input" type="search" aria-label="Buscar jugador o club" placeholder="Buscar jugador o club…" autocomplete="off"><button id="global-search-close" class="icon-btn" aria-label="Cerrar">${icon('close')}</button></div><div id="global-search-results" class="search-results"><div class="search-hint">${hint}</div></div><div class="search-dialog-foot"><span>Enter para abrir</span><span>Esc para cerrar</span></div></div></div>`;
 
   const modal = document.getElementById('global-search-modal');
   const input = document.getElementById('global-search-input');
   const results = document.getElementById('global-search-results');
   let searchIndex = null;
   let searchTimer = null;
+  let focusTimer = null;
+  let previousFocus = null;
 
   const buildSearchIndex = () => {
     const clubs = state.clubs.map(club => ({
@@ -320,20 +381,50 @@ function initGlobalSearch() {
 
   const open = () => {
     if (!state.loaded) { showToast('Esperá a que terminen de cargar los datos.'); return; }
+    if (modal?.classList.contains('show')) { input?.focus(); return; }
+    previousFocus = document.activeElement;
     searchIndex ||= buildSearchIndex();
     modal?.classList.add('show');
     modal?.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
-    setTimeout(() => input?.focus(), 30);
+    clearTimeout(focusTimer);
+    focusTimer = setTimeout(() => {
+      // Evita enfocar un campo ya oculto si se cierra inmediatamente.
+      if (modal?.classList.contains('show')) input?.focus();
+    }, 30);
   };
 
   const close = () => {
-    modal?.classList.remove('show');
-    modal?.setAttribute('aria-hidden', 'true');
+    if (!modal?.classList.contains('show')) return;
+    clearTimeout(focusTimer);
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-open');
     clearTimeout(searchTimer);
     if (input) input.value = '';
     if (results) results.innerHTML = `<div class="search-hint">${hint}</div>`;
+    // An opener can remain connected but become hidden/inert after a viewport
+    // change. Trying to focus it is a no-op, leaving focus in aria-hidden UI.
+    const returnTargets = [
+      previousFocus,
+      document.getElementById('global-search-open'),
+      document.getElementById('mobile-search')
+    ];
+    previousFocus = null;
+    for (const target of new Set(returnTargets)) {
+      if (!target?.isConnected || typeof target.focus !== 'function') continue;
+      target.focus();
+      if (document.activeElement === target) break;
+    }
+    if (modal?.contains(document.activeElement)) {
+      // If the opener disappeared, never leave focus in an aria-hidden dialog.
+      // The body is a last resort when no visible search trigger survives.
+      const body = document.body;
+      const hadTabindex = body.hasAttribute('tabindex');
+      if (!hadTabindex) body.setAttribute('tabindex', '-1');
+      body.focus();
+      if (!hadTabindex) body.removeAttribute('tabindex');
+    }
   };
 
   document.getElementById('global-search-open')?.addEventListener('click', open);
@@ -342,8 +433,32 @@ function initGlobalSearch() {
   modal?.addEventListener('click', event => { if (event.target === modal) close(); });
 
   document.addEventListener('keydown', event => {
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); open(); }
-    if (event.key === 'Escape' && modal?.classList.contains('show')) close();
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      open();
+      return;
+    }
+    if (!modal?.classList.contains('show')) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      close();
+    }
+    if (event.key === 'Tab') {
+      // aria-modal requiere que el foco permanezca en el diálogo mientras está abierto.
+      // Se consulta en cada Tab porque los resultados de búsqueda cambian dinámicamente.
+      const focusable = [...modal.querySelectorAll('input:not([disabled]), button:not([disabled]), a[href]')]
+        .filter(element => element.getClientRects().length > 0);
+      if (!focusable.length) { event.preventDefault(); return; }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !modal.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
   });
 
   input?.addEventListener('input', () => {
@@ -361,8 +476,8 @@ function initGlobalSearch() {
 }
 
 export function applySettings() {
-  const compact = localStorage.getItem(STORAGE_KEYS.compact) === '1';
-  const motion = localStorage.getItem(STORAGE_KEYS.motion) === '1';
+  const compact = readLocalPreference(STORAGE_KEYS.compact) === '1';
+  const motion = readLocalPreference(STORAGE_KEYS.motion) === '1';
   document.body.classList.toggle('compact-tables', compact);
   document.body.classList.toggle('reduce-motion', motion);
 }
@@ -377,18 +492,42 @@ export function initSettingsPage() {
   document.querySelectorAll('[data-setting]').forEach(input => {
     const item = map[input.dataset.setting];
     if (!item) return;
-    const stored = localStorage.getItem(item.key);
+    const stored = readLocalPreference(item.key);
     input.checked = stored === null ? item.default : stored === '1';
     input.addEventListener('change', () => {
-      localStorage.setItem(item.key, input.checked ? '1' : '0');
-      if (input.dataset.setting === 'filters' && !input.checked) clearStoredFilters();
+      let saved = writeLocalPreference(item.key, input.checked ? '1' : '0');
+      if (input.dataset.setting === 'filters' && !input.checked) {
+        // Al dejar de recordar filtros también cambia la competición activa:
+        // sincronizar la barra y las vistas, no solo el almacenamiento.
+        clearStoredFilters();
+        renderCompetitionBar();
+        document.dispatchEvent(new CustomEvent('7m:filters-changed'));
+      } else if (input.dataset.setting === 'filters' && input.checked) {
+        // Al activar «Recordar filtros», guardar también la competición actual.
+        // Antes sólo se guardaba el interruptor y se perdían los filtros al recargar.
+        const filtersSaved = persistFilters();
+        saved = saved && filtersSaved;
+      }
       applySettings();
-      showToast('Preferencia guardada.');
+      showToast(saved ? 'Preferencia guardada.' : 'No se pudo guardar la preferencia en este navegador.');
     });
   });
 
   document.getElementById('reset-settings')?.addEventListener('click', () => {
-    Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
+    const cleared = Object.values(STORAGE_KEYS).map(key => removeLocalPreference(key)).every(Boolean);
+    if (!cleared) {
+      // Recargar descartaría el respaldo temporal y volvería a leer valores viejos.
+      clearStoredFilters();
+      document.querySelectorAll('[data-setting]').forEach(input => {
+        const item = map[input.dataset.setting];
+        if (item) input.checked = item.default;
+      });
+      applySettings();
+      renderCompetitionBar();
+      document.dispatchEvent(new CustomEvent('7m:filters-changed'));
+      showToast('No se pudo borrar el almacenamiento. Ajustes restablecidos solo durante esta visita.');
+      return;
+    }
     showToast('Preferencias restablecidas.');
     setTimeout(() => location.reload(), 350);
   });
