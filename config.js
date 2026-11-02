@@ -1,7 +1,13 @@
 const raw = window.SEVEN_METROS_CONFIG || {};
 
 export const CONFIG = raw;
-export const SEASON_ID = Number(raw.seasonId ?? 3);
+// Preserve numeric season IDs, but never coerce booleans, exponent notation
+// or ambiguous strings into a different competition. Invalid values become
+// NaN so loadPublicDataset() reports a controlled configuration error.
+const configuredSeason = raw.seasonId ?? 3;
+export const SEASON_ID = typeof configuredSeason === 'number'
+  || (typeof configuredSeason === 'string' && /^[1-9][0-9]*$/.test(configuredSeason))
+  ? Number(configuredSeason) : NaN;
 export const SEASON_LABEL = raw.seasonLabel || 'CLAUSURA 2026';
 export const LOCALE = raw.locale || 'es-AR';
 export const TIMEZONE = raw.timezone || 'America/Argentina/Buenos_Aires';
