@@ -151,3 +151,8 @@ jobs:
 
       - name: Validate backend/importer contract
         run: python validate_backend_contract.py
+
+      - name: Validate unapplied least-privilege draft (static + mutation regressions)
+        run: |
+          python -m py_compile validate_least_privilege_contract.py
+          python validate_least_privilege_contract.py --self-test
