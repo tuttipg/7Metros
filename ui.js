@@ -253,6 +253,12 @@ export function renderCompetitionBar() {
     return;
   }
   if (!root || !state.loaded) return;
+  // Rebuilding the selects detaches the focused element after a keyboard change.
+  // Restore focus to the corresponding control in the new DOM.
+  const activeSelect = document.activeElement;
+  const focusedSelectId = root.contains(activeSelect) &&
+    ['branch-select', 'category-select', 'division-select'].includes(activeSelect?.id)
+    ? activeSelect.id : null;
   const { categorias, divisiones, ramas, resolved } = getCompetitionOptions();
 
   const options = (values, selected, prefix, mapper = v => v) => values.map(value =>
@@ -280,6 +286,8 @@ export function renderCompetitionBar() {
     setFilters({ division: event.target.value });
     renderCompetitionBar(); emit();
   });
+
+  if (focusedSelectId) document.getElementById(focusedSelectId)?.focus({ preventScroll: true });
 
   document.querySelectorAll('[data-competition-label]').forEach(el => el.textContent = selectedCompetitionLabel().toUpperCase());
   const hero = document.querySelector('[data-hero-competition]');
