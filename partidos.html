@@ -13,7 +13,6 @@
   <link rel="stylesheet" href="v3.css">
   <link rel="stylesheet" href="identity.css">
   <link rel="stylesheet" href="features.css">
-  <script src="config.js"></script>
   <script type="module" src="script.js"></script>
 </head>
 <body data-page="partidos" class="">
@@ -38,9 +37,9 @@
       <div id="data-status" class="data-status" aria-live="polite"></div>
       
 <div class="toolbar sticky-toolbar">
-  <select id="match-status" class="filter-select"><option value="">Todos los partidos</option><option value="Programado">Próximos</option><option value="Finalizado">Finalizados</option></select>
+  <select id="match-status" class="filter-select"><option value="">Todos los partidos</option><option value="Programado">Programados</option><option value="Finalizado">Finalizados</option><option value="Sin resultado">Sin resultado</option></select>
   <select id="match-club" class="filter-select"><option value="">Todos los clubes</option></select>
-  <select id="match-order" class="filter-select"><option value="desc">Más recientes primero</option><option value="asc">Más próximos primero</option></select>
+  <select id="match-order" class="filter-select"><option value="desc">Más recientes primero</option><option value="asc">Más antiguos primero</option></select>
   <span class="result-count" id="match-count">—</span>
 </div>
 <section id="matches-list" class="match-list loading-block"></section>

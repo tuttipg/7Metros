@@ -1,6 +1,7 @@
 export function matchUiStatus(match, todayIso) {
   const status = String(match?.status || '');
   if (status === 'Finalizado') return { code: 'final', label: 'Finalizado' };
+  if (status === 'Sin resultado') return { code: 'unverified', label: 'Sin resultado' };
 
   const date = String(match?.date || '');
   const today = String(todayIso || '');

@@ -1,7 +1,6 @@
-function positiveId(value) {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-}
+import { canonicalPositiveId } from './route-id-core.mjs';
+
+const positiveId = canonicalPositiveId;
 
 /**
  * Resuelve el contexto competitivo de una ficha de jugador sin adivinar.
@@ -26,10 +25,11 @@ export function resolvePlayerRouteContext({
   const memberships = [...new Set((membershipTeamIds || []).map(positiveId).filter(Boolean))];
   const visibleMemberships = [...new Set((visibleMembershipTeamIds || []).map(positiveId).filter(Boolean))]
     .filter(teamId => memberships.includes(teamId));
-  const requested = positiveId(requestedTeamId);
+  const hasExplicitTeam = requestedTeamId !== null && requestedTeamId !== undefined;
+  const requested = hasExplicitTeam ? positiveId(requestedTeamId) : null;
 
-  if (requested) {
-    return memberships.includes(requested)
+  if (hasExplicitTeam) {
+    return requested !== null && memberships.includes(requested)
       ? { status: 'team', playerId: targetPlayerId, teamId: requested }
       : { status: 'invalid-team', playerId: targetPlayerId, teamId: null };
   }
