@@ -31,7 +31,12 @@ function element() {
     hasAttribute(name) { return Object.hasOwn(this.attrs, name); },
     removeAttribute(name) { delete this.attrs[name]; },
     addEventListener(name, fn) { events[name] = fn; },
-    focus() { document.activeElement = this; this.focusCount = (this.focusCount || 0) + 1; },
+    canFocus: true,
+    focus() {
+      if (!this.canFocus) return; // Simulate display:none/inert after responsive resize.
+      document.activeElement = this;
+      this.focusCount = (this.focusCount || 0) + 1;
+    },
     getClientRects() { return [{}]; },
     isConnected: true,
     innerHTML: '',
@@ -150,6 +155,16 @@ assert.equal(key('Escape'), true);
 assert.equal(document.activeElement, mobileTrigger);
 assert.equal(document.body.classList.contains('modal-open'), false);
 assert.equal(modal.attrs['aria-hidden'], 'true');
+
+// A still-connected opener can become hidden/inert after a responsive resize.
+// Focusing it is a no-op; the dialog must try another surviving trigger.
+document.activeElement = mobileTrigger;
+assert.equal(key('k', { ctrlKey: true }), true);
+flushTimers();
+mobileTrigger.canFocus = false;
+assert.equal(key('Escape'), true);
+assert.equal(document.activeElement, desktopTrigger, 'hidden connected opener falls back to a focusable trigger');
+mobileTrigger.canFocus = true;
 
 // If the opener was removed from DOM, move focus to a surviving trigger.
 // Leaving it on the input would trap focus inside an aria-hidden dialog.

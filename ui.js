@@ -369,15 +369,20 @@ function initGlobalSearch() {
     clearTimeout(searchTimer);
     if (input) input.value = '';
     if (results) results.innerHTML = `<div class="search-hint">${hint}</div>`;
-    const returnTo = [
+    // An opener can remain connected but become hidden/inert after a viewport
+    // change. Trying to focus it is a no-op, leaving focus in aria-hidden UI.
+    const returnTargets = [
       previousFocus,
       document.getElementById('global-search-open'),
       document.getElementById('mobile-search')
-    ].find(element => element?.isConnected && typeof element.focus === 'function');
+    ];
     previousFocus = null;
-    if (returnTo) {
-      returnTo.focus();
-    } else if (modal?.contains(document.activeElement)) {
+    for (const target of new Set(returnTargets)) {
+      if (!target?.isConnected || typeof target.focus !== 'function') continue;
+      target.focus();
+      if (document.activeElement === target) break;
+    }
+    if (modal?.contains(document.activeElement)) {
       // If the opener disappeared, never leave focus in an aria-hidden dialog.
       // The body is a last resort when no visible search trigger survives.
       const body = document.body;
