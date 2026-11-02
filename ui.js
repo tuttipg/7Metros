@@ -172,7 +172,9 @@ export function renderShell() {
       sidebar.setAttribute('aria-hidden', 'false');
     }
   });
-  syncMenuAccessibility(false);
+  // The bootstrap drawer may still be open while dynamic modules load.
+  // Reset its classes/overlay as well as aria/inert when replacing the shell.
+  setMenuState(false);
 
   applySettings();
   initGlobalSearch();
