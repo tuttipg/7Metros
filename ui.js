@@ -106,6 +106,19 @@ export function renderShell() {
   // Debe coincidir con el breakpoint que oculta .sidebar en style.css.
   const mobileMedia = window.matchMedia('(max-width: 940px)');
 
+  // A responsive close must not leave keyboard focus inside an inert/aria-hidden drawer.
+  const rescueFocusFromClosingSidebar = () => {
+    if (!sidebar?.contains?.(document.activeElement)) return;
+    menuOpen?.focus();
+    if (sidebar.contains(document.activeElement)) {
+      const body = document.body;
+      const hadTabindex = body.hasAttribute('tabindex');
+      if (!hadTabindex) body.setAttribute('tabindex', '-1');
+      body.focus();
+      if (!hadTabindex) body.removeAttribute('tabindex');
+    }
+  };
+
   const syncMenuAccessibility = open => {
     const isMobile = mobileMedia.matches;
     const hidden = isMobile && !open;
@@ -118,6 +131,7 @@ export function renderShell() {
 
   const setMenuState = open => {
     const shouldOpen = mobileMedia.matches && open;
+    if (mobileMedia.matches && !shouldOpen) rescueFocusFromClosingSidebar();
     sidebar?.classList.toggle('open', shouldOpen);
     overlay?.classList.toggle('show', shouldOpen);
     menuOpen?.setAttribute('aria-expanded', String(shouldOpen));

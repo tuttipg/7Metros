@@ -98,11 +98,12 @@ const trigger = {
   attributes: { 'aria-expanded': 'false' },
   addEventListener: (name, handler) => { listeners[name] = handler; },
   setAttribute(name, value) { this.attributes[name] = value; },
-  focus: () => { triggerFocus++; }
+  focus: () => { triggerFocus++; globalThis.document.activeElement = trigger; }
 };
 const overlay = { classList: makeClasses(), addEventListener: () => {} };
 const mobile = { innerHTML: '' };
-const media = { matches: true, addEventListener: () => {} };
+const mediaEvents = {};
+const media = { matches: true, addEventListener: (name, fn) => { mediaEvents[name] = fn; } };
 globalThis.matchMedia = () => media;
 globalThis.requestAnimationFrame = callback => { frameQueue.push(callback); };
 globalThis.document = {
@@ -138,6 +139,18 @@ listeners.click();
 frameQueue.splice(0).forEach(callback => callback());
 assert.equal(drawerFocus, 1, 'opening the drawer should focus its navigation');
 
+// Desktop -> mobile hides the sidebar. Move focus out BEFORE it becomes inert.
+const navLink = {};
+sidebar.contains = node => node === navLink;
+media.matches = false;
+mediaEvents.change();
+assert.equal(sidebar.inert, false, 'desktop sidebar remains accessible');
+globalThis.document.activeElement = navLink;
+media.matches = true;
+mediaEvents.change();
+assert.equal(sidebar.inert, true, 'mobile sidebar closes on breakpoint change');
+assert.equal(globalThis.document.activeElement, trigger, 'responsive close restores focus outside hidden sidebar');
+
 // El shell inicial es el único menú disponible si falla import('./ui.js').
 // Ejercitar el código real de renderBootstrapShell, sin acceso a red ni DOM externo.
 const bootstrapSource = fs.readFileSync(new URL('./script.js', import.meta.url), 'utf8');
@@ -165,7 +178,7 @@ const bootstrapMenu = {
   setAttribute: (name, value) => { bootstrapMenuAttrs[name] = value; },
   addEventListener: (name, fn) => { bootstrapEvents['menu:' + name] = fn; },
   removeEventListener: (name, fn) => removeBootstrapEvent('menu:' + name, fn),
-  focus: () => { bootstrapTriggerFocus++; }
+  focus: () => { bootstrapTriggerFocus++; bootstrapDocument.activeElement = bootstrapMenu; }
 };
 const bootstrapOverlay = {
   classList: makeClasses(),
@@ -231,6 +244,17 @@ assert.equal(bootstrapSidebar.classList.contains('open'), false, 'desktop cannot
 bootstrapMedia.matches = true;
 bootstrapEvents['media:change']();
 assert.equal(bootstrapSidebar.inert, true, 'returning to mobile hides closed drawer');
+
+// The fallback shell must also rescue focus when scripts fail and viewport shrinks.
+const bootstrapNavLink = {};
+bootstrapSidebar.contains = node => node === bootstrapNavLink;
+bootstrapMedia.matches = false;
+bootstrapEvents['media:change']();
+bootstrapDocument.activeElement = bootstrapNavLink;
+bootstrapMedia.matches = true;
+bootstrapEvents['media:change']();
+assert.equal(bootstrapSidebar.inert, true);
+assert.equal(bootstrapDocument.activeElement, bootstrapMenu, 'fallback resize restores focus outside hidden drawer');
 
 // Tras renderShell(), los listeners del bootstrap no deben intervenir sobre el nuevo menú.
 assert.match(bootstrapSource, /ui\.renderShell\(\);\s*disposeBootstrapMenu\(\);/, 'module shell must dispose bootstrap listeners immediately after handoff');
