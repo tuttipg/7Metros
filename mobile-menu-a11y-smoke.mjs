@@ -188,11 +188,16 @@ const removeBootstrapEvent = (key, fn) => {
 const bootstrapSidebarAttrs = {};
 const bootstrapMenuAttrs = {};
 let bootstrapTriggerFocus = 0;
+let bootstrapNavFocus = 0;
+const bootstrapFocusedNav = {
+  focus: () => { bootstrapNavFocus++; bootstrapDocument.activeElement = bootstrapFocusedNav; }
+};
 const bootstrapSidebar = {
   innerHTML: '',
   classList: makeClasses(),
   inert: false,
-  setAttribute: (name, value) => { bootstrapSidebarAttrs[name] = value; }
+  setAttribute: (name, value) => { bootstrapSidebarAttrs[name] = value; },
+  querySelector: () => bootstrapFocusedNav
 };
 const bootstrapMenu = {
   setAttribute: (name, value) => { bootstrapMenuAttrs[name] = value; },
@@ -238,6 +243,10 @@ bootstrapEvents['menu:click']();
 assert.equal(bootstrapSidebar.classList.contains('open'), true, 'fallback menu must open');
 assert.equal(bootstrapMenuAttrs['aria-label'], 'Cerrar menú');
 assert.equal(bootstrapSidebar.inert, false);
+frameQueue.splice(0).forEach(callback => callback());
+assert.equal(bootstrapNavFocus, 1, 'fallback open must focus the current navigation link');
+assert.equal(bootstrapDocument.activeElement, bootstrapFocusedNav,
+  'keyboard focus must enter the fallback drawer even when modules fail');
 bootstrapEvents['menu:click']();
 assert.equal(bootstrapSidebar.classList.contains('open'), false, 'fallback menu must toggle closed');
 assert.equal(bootstrapMenuAttrs['aria-expanded'], 'false');
@@ -249,6 +258,8 @@ bootstrapEvents['document:keydown']({ key: 'Escape', preventDefault: () => { esc
 assert.equal(escapePrevented, true, 'Escape should be handled when open');
 assert.equal(bootstrapSidebar.classList.contains('open'), false, 'Escape closes fallback menu');
 assert.equal(bootstrapTriggerFocus, 2);
+frameQueue.splice(0).forEach(callback => callback());
+assert.equal(bootstrapNavFocus, 1, 'closing before the next frame must not focus a hidden drawer');
 bootstrapEvents['menu:click']();
 bootstrapEvents['overlay:click']();
 assert.equal(bootstrapSidebar.classList.contains('open'), false, 'overlay closes fallback menu');
