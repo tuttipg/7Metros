@@ -232,6 +232,15 @@ export async function supabaseCount(table) {
   });
 }
 
+// IDs públicos: aceptar sólo enteros decimales positivos y seguros.
+// Number(null), Number(''), Number(true) y Number('1e3') NO son IDs válidos.
+function positiveId(value) {
+  if (typeof value === 'number') return Number.isSafeInteger(value) && value > 0 ? value : null;
+  if (typeof value !== 'string' || !/^[1-9][0-9]*$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
 export async function supabaseGetByIds(
   table,
   field,
@@ -241,16 +250,7 @@ export async function supabaseGetByIds(
 ) {
   // IDs externos pueden contener null, strings vacíos o enteros fuera de rango.
   // Number(...) los convierte silenciosamente en 0 o redondea valores grandes.
-  const values = [...new Set((ids || []).map(value => {
-    if (typeof value === 'number') {
-      return Number.isSafeInteger(value) && value > 0 ? value : null;
-    }
-    if (typeof value === 'string' && /^[1-9][0-9]*$/.test(value)) {
-      const parsed = Number(value);
-      return Number.isSafeInteger(parsed) ? parsed : null;
-    }
-    return null;
-  }).filter(value => value !== null))];
+  const values = [...new Set((ids || []).map(positiveId).filter(value => value !== null))];
   if (!values.length) return [];
   if (!Number.isInteger(chunkSize) || chunkSize <= 0 || chunkSize > 500) {
     throw new DataError('El tamaño de bloque para IDs no es válido.');
@@ -354,15 +354,15 @@ export function loadGlobalSummaryFast() {
 }
 
 export function filterMatchesToTeamIds(matches, teamIds) {
-  const allowed = teamIds instanceof Set
-    ? teamIds
-    : new Set((teamIds || []).map(Number).filter(Number.isFinite));
+  const allowed = new Set((teamIds instanceof Set ? [...teamIds] : (teamIds || []))
+    .map(positiveId).filter(value => value !== null));
 
   return (matches || []).filter(row => {
-    const homeTeamId = Number(row?.local_equipo_id ?? row?.local_id);
-    const awayTeamId = Number(row?.visitante_equipo_id ?? row?.visitante_id);
-    return Number.isFinite(homeTeamId)
-      && Number.isFinite(awayTeamId)
+    const homeTeamId = positiveId(row?.local_equipo_id ?? row?.local_id);
+    const awayTeamId = positiveId(row?.visitante_equipo_id ?? row?.visitante_id);
+    return positiveId(row?.id) !== null
+      && homeTeamId !== null
+      && awayTeamId !== null
       && allowed.has(homeTeamId)
       && allowed.has(awayTeamId);
   });
@@ -371,19 +371,19 @@ export function filterMatchesToTeamIds(matches, teamIds) {
 export function filterParticipationsToMatches(participations, matches) {
   const teamsByMatch = new Map();
   for (const row of matches || []) {
-    const matchId = Number(row?.id);
-    const homeTeamId = Number(row?.local_equipo_id ?? row?.local_id);
-    const awayTeamId = Number(row?.visitante_equipo_id ?? row?.visitante_id);
-    if (!Number.isFinite(matchId) || !Number.isFinite(homeTeamId) || !Number.isFinite(awayTeamId)) continue;
+    const matchId = positiveId(row?.id);
+    const homeTeamId = positiveId(row?.local_equipo_id ?? row?.local_id);
+    const awayTeamId = positiveId(row?.visitante_equipo_id ?? row?.visitante_id);
+    if (matchId === null || homeTeamId === null || awayTeamId === null) continue;
     teamsByMatch.set(matchId, new Set([homeTeamId, awayTeamId]));
   }
 
   return (participations || []).filter(row => {
-    const matchId = Number(row?.partido_id);
-    const teamId = Number(row?.equipo_id);
+    const matchId = positiveId(row?.partido_id);
+    const teamId = positiveId(row?.equipo_id);
     const matchTeams = teamsByMatch.get(matchId);
-    return Number.isFinite(matchId)
-      && Number.isFinite(teamId)
+    return matchId !== null
+      && teamId !== null
       && Boolean(matchTeams?.has(teamId));
   });
 }
@@ -452,12 +452,11 @@ async function loadPublicDatasetUncached(season) {
   );
 
   const scopedEquipos = rawEquipos.filter(row =>
-    Number.isFinite(Number(row.id)) &&
-    Number.isFinite(Number(row.club_id)) &&
-    Number.isFinite(Number(row.temporada_id)) &&
-    Number(row.temporada_id) === season
+    positiveId(row.id) !== null &&
+    positiveId(row.club_id) !== null &&
+    positiveId(row.temporada_id) === season
   );
-  const requestedClubIds = scopedEquipos.map(row => Number(row.club_id));
+  const requestedClubIds = scopedEquipos.map(row => positiveId(row.club_id));
 
   const [clubes, summaryOutcome] = await Promise.all([
     supabaseGetByIds('clubes', 'id', requestedClubIds, 'id,nombre,abreviatura,ciudad,logo_url'),
@@ -466,9 +465,9 @@ async function loadPublicDatasetUncached(season) {
   if (summaryOutcome.error) throw summaryOutcome.error;
   const summaryView = summaryOutcome.value;
 
-  const validClubIds = new Set(clubes.map(row => Number(row.id)).filter(Number.isFinite));
-  const equipos = scopedEquipos.filter(row => validClubIds.has(Number(row.club_id)));
-  const teamIds = equipos.map(row => Number(row.id));
+  const validClubIds = new Set(clubes.map(row => positiveId(row.id)).filter(value => value !== null));
+  const equipos = scopedEquipos.filter(row => validClubIds.has(positiveId(row.club_id)));
+  const teamIds = equipos.map(row => positiveId(row.id));
 
   const [planteles, partidos, rawParticipaciones] = await Promise.all([
     supabaseGetByIds(
@@ -480,7 +479,7 @@ async function loadPublicDatasetUncached(season) {
     loadSeasonMatches(season, teamIds),
     supabaseGetByIds('participaciones', 'equipo_id', teamIds, '*')
   ]);
-  const playerIds = planteles.map(row => Number(row.jugador_id)).filter(Number.isFinite);
+  const playerIds = planteles.map(row => positiveId(row.jugador_id)).filter(value => value !== null);
   const jugadores = await supabaseGetByIds(
     'jugadores',
     'id',
