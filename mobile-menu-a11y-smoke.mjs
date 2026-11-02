@@ -85,8 +85,18 @@ const attributes = {};
 let triggerFocus = 0;
 let drawerFocus = 0;
 const frameQueue = [];
+const bootstrapFocusedLink = {};
 const sidebar = {
-  innerHTML: '',
+  _html: '',
+  get innerHTML() { return this._html; },
+  set innerHTML(value) {
+    this._html = value;
+    // Simulate the browser dropping focus when the old bootstrap link is removed.
+    if (globalThis.document?.activeElement === bootstrapFocusedLink) {
+      globalThis.document.activeElement = globalThis.document.body;
+    }
+  },
+  contains: node => node === bootstrapFocusedLink,
   classList: makeClasses(),
   inert: false,
   setAttribute: (name, value) => { attributes[name] = value; },
@@ -120,7 +130,9 @@ const { renderShell } = await import('./ui.js');
 sidebar.classList.add('open');
 overlay.classList.add('show');
 globalThis.document.body.classList.add('nav-open');
+globalThis.document.activeElement = bootstrapFocusedLink;
 renderShell();
+assert.equal(globalThis.document.activeElement, trigger, 'handoff must restore focus after replacing a focused bootstrap link');
 assert.equal(sidebar.classList.contains('open'), false, 'shell handoff must close old bootstrap drawer');
 assert.equal(overlay.classList.contains('show'), false, 'shell handoff must remove stale bootstrap overlay');
 assert.equal(globalThis.document.body.classList.contains('nav-open'), false, 'shell handoff must unlock scrolling');
@@ -139,7 +151,7 @@ assert.equal(sidebar.classList.contains('open'), false, 'second click closes the
 assert.equal(trigger.attributes['aria-expanded'], 'false');
 assert.equal(trigger.attributes['aria-label'], 'Abrir menú');
 assert.equal(sidebar.inert, true);
-assert.equal(triggerFocus, 1, 'closing via trigger restores focus');
+assert.equal(triggerFocus, 2, 'handoff and closing via trigger both restore focus');
 frameQueue.splice(0).forEach(callback => callback());
 assert.equal(drawerFocus, 0, 'late animation frame must not focus closed drawer');
 
