@@ -146,9 +146,19 @@ function renderBootstrapShell() {
     setBootstrapMenu(false);
     if (returnFocus) menuOpen?.focus();
   };
+  const openBootstrapMenu = () => {
+    setBootstrapMenu(true);
+    // If module imports fail, keyboard users still need to reach the fallback
+    // drawer. Only focus it if it remains open on the next animation frame.
+    requestAnimationFrame(() => {
+      if (sidebar?.classList.contains('open')) {
+        sidebar.querySelector('a[aria-current="page"], a.nav-link')?.focus();
+      }
+    });
+  };
   const onMenuClick = () => {
     if (sidebar?.classList.contains('open')) closeBootstrapMenu(true);
-    else setBootstrapMenu(true);
+    else openBootstrapMenu();
   };
   const onOverlayClick = () => closeBootstrapMenu(true);
   const onEscape = event => {
