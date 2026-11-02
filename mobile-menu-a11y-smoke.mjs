@@ -284,4 +284,60 @@ assert.deepEqual(removedBootstrapEvents.sort(), [
 ].sort(), 'bootstrap handoff must unregister every menu handler');
 assert.equal(Object.keys(bootstrapEvents).length, 0, 'no bootstrap menu listener may survive handoff');
 
+// Keyboard navigation regression: changing a competition select re-renders
+// all three controls. The browser drops focus when innerHTML detaches the old
+// <select>; the new matching control must receive focus instead.
+const { renderCompetitionBar } = await import('./ui.js');
+const { state: competitionState } = await import('./store.js');
+competitionState.loaded = true;
+competitionState.filters = { rama: 'M', categoria: 'Mayores', division: 'LHC Hipotecario Seguros' };
+competitionState.teams = [
+  { temporada_id: 3, rama: 'M', categoria: 'Mayores', division: 'LHC Hipotecario Seguros' },
+  { temporada_id: 3, rama: 'M', categoria: 'Juniors', division: 'LHC Hipotecario Seguros' }
+];
+const competitionIds = ['branch-select', 'category-select', 'division-select'];
+let competitionSelects = {};
+const competitionRoot = {
+  _html: '',
+  get innerHTML() { return this._html; },
+  set innerHTML(html) {
+    if (this.contains(globalThis.document.activeElement)) {
+      globalThis.document.activeElement = globalThis.document.body;
+    }
+    this._html = html;
+    competitionSelects = Object.fromEntries(competitionIds.map(id => [id, {
+      id,
+      listeners: {},
+      addEventListener(name, handler) { this.listeners[name] = handler; },
+      focus() { globalThis.document.activeElement = this; }
+    }]));
+  },
+  contains(node) { return Object.values(competitionSelects).includes(node); }
+};
+globalThis.document = {
+  body: { dataset: { page: 'partidos' } },
+  activeElement: null,
+  getElementById: id => id === 'competition-bar' ? competitionRoot : competitionSelects[id] || null,
+  querySelectorAll: () => [],
+  querySelector: () => null,
+  dispatchEvent: () => {}
+};
+globalThis.document.activeElement = globalThis.document.body;
+renderCompetitionBar();
+assert.equal(globalThis.document.activeElement, globalThis.document.body,
+  'initial competition bar render must not steal focus');
+for (const id of competitionIds) {
+  const oldSelect = competitionSelects[id];
+  oldSelect.focus();
+  renderCompetitionBar();
+  assert.notStrictEqual(competitionSelects[id], oldSelect, 're-render replaces the old select');
+  assert.equal(globalThis.document.activeElement, competitionSelects[id],
+    `keyboard focus must survive competition bar re-render: ${id}`);
+}
+competitionSelects['category-select'].focus();
+competitionSelects['category-select'].listeners.change({ target: { value: 'Juniors' } });
+assert.equal(competitionState.filters.categoria, 'Juniors', 'category change must still apply');
+assert.equal(globalThis.document.activeElement, competitionSelects['category-select'],
+  'changing category by keyboard must retain focus after options update');
+
 console.log('Mobile menu accessibility, fallback toggle, handoff and connection-state smoke tests passed.');
