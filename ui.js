@@ -83,6 +83,11 @@ export function renderShell() {
   ).join('');
 
   const sidebar = document.getElementById('sidebar');
+  const mobile = document.getElementById('mobile-bar');
+  // Replacing bootstrap links with innerHTML detaches the focused node.
+  // Capture focus ownership BEFORE either navigation subtree is replaced.
+  const previousFocus = document.activeElement;
+  const restoreShellFocus = Boolean(sidebar?.contains?.(previousFocus) || mobile?.contains?.(previousFocus));
   if (sidebar) {
     sidebar.innerHTML = `
       <div class="brand"><a href="index.html" aria-label="7Metros - Inicio"><div class="brand-logo"><span class="seven">7</span><span class="m">M</span></div><span class="brand-name">7<b>METROS</b></span><span class="brand-sub">HANDBALL APP</span></a></div>
@@ -91,7 +96,6 @@ export function renderShell() {
       <div class="sidebar-foot" data-connection-state="loading"><span class="live-dot"></span><span class="connection-label">Conectando datos…</span></div>`;
   }
 
-  const mobile = document.getElementById('mobile-bar');
   if (mobile) {
     mobile.innerHTML = `<a class="mobile-brand" href="index.html">7<b>METROS</b></a><div class="mobile-actions"><button id="mobile-search" class="icon-btn" aria-label="Buscar">${icon('search')}</button><button id="menu-open" class="icon-btn" aria-label="Abrir menú" aria-controls="sidebar" aria-expanded="false">${icon('menu')}</button></div>`;
   }
@@ -175,6 +179,12 @@ export function renderShell() {
   // The bootstrap drawer may still be open while dynamic modules load.
   // Reset its classes/overlay as well as aria/inert when replacing the shell.
   setMenuState(false);
+  // Handoff must not strand keyboard users on <body> after the old shell is removed.
+  // On mobile the closed drawer is inert; on desktop its active page link is visible.
+  if (restoreShellFocus) {
+    if (mobileMedia.matches) menuOpen?.focus();
+    else sidebar?.querySelector('a[aria-current="page"], a.nav-link')?.focus();
+  }
 
   applySettings();
   initGlobalSearch();
