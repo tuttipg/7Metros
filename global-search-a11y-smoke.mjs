@@ -27,6 +27,9 @@ function element() {
       contains: value => classes.has(value)
     },
     setAttribute(name, value) { this.attrs[name] = value; },
+    getAttribute(name) { return this.attrs[name] ?? null; },
+    hasAttribute(name) { return Object.hasOwn(this.attrs, name); },
+    removeAttribute(name) { delete this.attrs[name]; },
     addEventListener(name, fn) { events[name] = fn; },
     focus() { document.activeElement = this; this.focusCount = (this.focusCount || 0) + 1; },
     getClientRects() { return [{}]; },
@@ -148,14 +151,26 @@ assert.equal(document.activeElement, mobileTrigger);
 assert.equal(document.body.classList.contains('modal-open'), false);
 assert.equal(modal.attrs['aria-hidden'], 'true');
 
-// If the opener was removed from DOM, do not try to focus it.
+// If the opener was removed from DOM, move focus to a surviving trigger.
+// Leaving it on the input would trap focus inside an aria-hidden dialog.
 desktopTrigger.isConnected = false;
 document.activeElement = desktopTrigger;
 desktopTrigger.events.click();
 flushTimers();
 input.focus();
 assert.equal(key('Escape'), true);
-assert.equal(document.activeElement, input, 'removed opener is not focused');
+assert.equal(document.activeElement, mobileTrigger, 'removed opener falls back to the connected search trigger');
+
+// If no search trigger survives, focus the document body temporarily without
+// permanently changing its tab order.
+mobileTrigger.isConnected = false;
+document.activeElement = mobileTrigger;
+desktopTrigger.events.click();
+flushTimers();
+input.focus();
+assert.equal(key('Escape'), true);
+assert.equal(document.activeElement, document.body, 'hidden dialog must not retain focus');
+assert.equal(document.body.hasAttribute('tabindex'), false, 'body tabindex must be restored');
 
 // No data: do not open search, show a clear message instead.
 state.loaded = false;

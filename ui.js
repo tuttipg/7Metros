@@ -369,9 +369,23 @@ function initGlobalSearch() {
     clearTimeout(searchTimer);
     if (input) input.value = '';
     if (results) results.innerHTML = `<div class="search-hint">${hint}</div>`;
-    const returnTo = previousFocus;
+    const returnTo = [
+      previousFocus,
+      document.getElementById('global-search-open'),
+      document.getElementById('mobile-search')
+    ].find(element => element?.isConnected && typeof element.focus === 'function');
     previousFocus = null;
-    if (returnTo?.isConnected && typeof returnTo.focus === 'function') returnTo.focus();
+    if (returnTo) {
+      returnTo.focus();
+    } else if (modal?.contains(document.activeElement)) {
+      // If the opener disappeared, never leave focus in an aria-hidden dialog.
+      // The body is a last resort when no visible search trigger survives.
+      const body = document.body;
+      const hadTabindex = body.hasAttribute('tabindex');
+      if (!hadTabindex) body.setAttribute('tabindex', '-1');
+      body.focus();
+      if (!hadTabindex) body.removeAttribute('tabindex');
+    }
   };
 
   document.getElementById('global-search-open')?.addEventListener('click', open);
