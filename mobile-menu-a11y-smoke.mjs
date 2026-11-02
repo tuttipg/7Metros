@@ -115,7 +115,15 @@ globalThis.document = {
   addEventListener: () => {}
 };
 const { renderShell } = await import('./ui.js');
+// Bootstrap can leave its drawer and overlay open before modules finish loading.
+// The replacement shell must close both, not just set aria-hidden/inert.
+sidebar.classList.add('open');
+overlay.classList.add('show');
+globalThis.document.body.classList.add('nav-open');
 renderShell();
+assert.equal(sidebar.classList.contains('open'), false, 'shell handoff must close old bootstrap drawer');
+assert.equal(overlay.classList.contains('show'), false, 'shell handoff must remove stale bootstrap overlay');
+assert.equal(globalThis.document.body.classList.contains('nav-open'), false, 'shell handoff must unlock scrolling');
 assert.equal(sidebar.inert, true, 'closed mobile drawer must be inert');
 assert.equal(trigger.attributes['aria-expanded'], 'false');
 assert.equal(typeof listeners.click, 'function', 'menu trigger must have a click handler');
