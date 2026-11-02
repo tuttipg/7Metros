@@ -25,7 +25,15 @@ const rowsByTable = {
     {id:102,club_id:999,temporada_id:3,categoria:'Mayores',division:'LHC',rama:'M'},
     {id:103,club_id:1,temporada_id:4,categoria:'Mayores',division:'LHC',rama:'M'},
     {id:'bad',club_id:1,temporada_id:3,categoria:'Mayores',division:'LHC',rama:'M'},
-    {id:104,club_id:'bad',temporada_id:3,categoria:'Mayores',division:'LHC',rama:'M'}
+    {id:104,club_id:'bad',temporada_id:3,categoria:'Mayores',division:'LHC',rama:'M'},
+    {id:0,club_id:1,temporada_id:3,categoria:'Mayores',division:'LHC',rama:'M'},
+    {id:105,club_id:null,temporada_id:3,categoria:'Mayores',division:'LHC',rama:'M'},
+    {id:106,club_id:1,temporada_id:null,categoria:'Mayores',division:'LHC',rama:'M'},
+    {id:107,club_id:1,temporada_id:'3e0',categoria:'Mayores',division:'LHC',rama:'M'},
+    {id:108,club_id:1,temporada_id:true,categoria:'Mayores',division:'LHC',rama:'M'},
+    {id:'9007199254740993',club_id:1,temporada_id:3,categoria:'Mayores',division:'LHC',rama:'M'},
+    {id:109,club_id:'1e0',temporada_id:3,categoria:'Mayores',division:'LHC',rama:'M'},
+    {id:110,club_id:0,temporada_id:3,categoria:'Mayores',division:'LHC',rama:'M'}
   ],
   clubes: [{id:1,nombre:'Ferro Carril Oeste'}],
   planteles: [{id:1,jugador_id:11,equipo_id:101,dorsal:7,posicion:'Lateral'}],
