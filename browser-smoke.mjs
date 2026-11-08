@@ -125,9 +125,9 @@ async function createTab() {
   return cdp;
 }
 
-async function loadPage(pathname, readyExpression, probeExpression = 'null') {
-  const cdp = await createTab();
-  try {
+async function loadPage(cdp, pathname, readyExpression, probeExpression = 'null') {
+  cdp.exceptions = [];
+  {
     await cdp.send('Page.navigate', { url: `http://127.0.0.1:${PORT}${pathname}` });
     const expression = `(async () => {
       const deadline = Date.now() + 30000;
@@ -156,15 +156,14 @@ async function loadPage(pathname, readyExpression, probeExpression = 'null') {
     assert.equal(value.busy, '', `${pathname}: la página quedó marcada como cargando`);
     assert.deepEqual(cdp.exceptions, [], `${pathname}: no debe lanzar excepciones JS`);
     return value;
-  } finally {
-    cdp.close();
   }
 }
 
 try {
   await waitForDebugger();
+  const cdp = await createTab();
 
-  const matchesResult = await loadPage('/partidos.html',
+  const matchesResult = await loadPage(cdp, '/partidos.html',
     `document.querySelector('#match-count')?.textContent?.trim() !== '—' && document.querySelector('.match-row')`);
   const matches = matchesResult.html;
   assert.match(matches, /<strong class="vs">VS<\/strong>/,
@@ -174,19 +173,20 @@ try {
   assert.doesNotMatch(matches, /<strong>\s*0<span>–<\/span>0\s*<\/strong>/,
     'No debe aparecer un 0–0 inventado');
 
-  const standingsResult = await loadPage('/posiciones.html',
+  const standingsResult = await loadPage(cdp, '/posiciones.html',
     `document.querySelector('#standings-body')?.textContent?.trim().length > 0`);
   const standings = standingsResult.html;
   assert.match(standings, /Sin posiciones/,
     'La temporada sin resultados verificados no debe producir una tabla deportiva de ceros');
 
-  const statsResult = await loadPage('/estadisticas.html',
+  const statsResult = await loadPage(cdp, '/estadisticas.html',
     `document.querySelector('#goals-list')?.textContent?.trim().length > 0`);
   const stats = statsResult.html;
   assert.match(stats, /Sin datos|Todavía no hay registros|Sin balance/i,
     'Sin participaciones verificadas de la temporada, los rankings deben quedar vacíos');
 
   const clubsResult = await loadPage(
+    cdp,
     '/clubes.html',
     `document.querySelector('#club-count')?.textContent?.trim() !== '—' && document.querySelector('.club-card')`,
     `(() => {
@@ -201,7 +201,8 @@ try {
         imageLoaded: Boolean(img?.classList.contains('is-loaded')),
         imageOpacity: img ? getComputedStyle(img).opacity : null,
         fallbackVisibility: getComputedStyle(fallback).visibility,
-        fallbackOpacity: getComputedStyle(fallback).opacity
+        fallbackOpacity: getComputedStyle(fallback).opacity,
+        href: card?.getAttribute('href') || ''
       };
     })()`
   );
@@ -220,21 +221,33 @@ try {
       'el fallback no debe desaparecer por una imagen rota');
   }
 
-  const clubProfileResult = await loadPage('/club.html?id=14&team=9',
-    `document.querySelector('#club-detail .pro-club-hero')`);
+  assert.ok(clubsResult.probe?.href, 'Clubes debe generar un enlace navegable para N. S. de Luján');
+  const generatedClubUrl = new URL(clubsResult.probe.href, `http://127.0.0.1:${PORT}/clubes.html`);
+  const clubProfilePath = generatedClubUrl.pathname + generatedClubUrl.search;
+  const clubProfileResult = await loadPage(cdp, clubProfilePath,
+    `document.querySelector('#club-detail .pro-club-hero') || document.querySelector('#club-detail .empty-state')`,
+    `({
+      hasProfile: Boolean(document.querySelector('#club-detail .pro-club-hero')),
+      text: document.querySelector('#club-detail')?.textContent || '',
+      href: location.pathname + location.search
+    })`
+  );
+  assert.equal(clubProfileResult.probe?.hasProfile, true,
+    `El enlace generado por Clubes debe abrir la ficha enriquecida; quedó en ${clubProfileResult.probe?.href}: ${clubProfileResult.probe?.text}`);
   const clubProfile = clubProfileResult.html;
   assert.match(clubProfile, /Estadísticas pendientes/,
     'La ficha enriquecida del club no debe convertir ausencia de planillas verificadas en ceros');
   assert.doesNotMatch(clubProfile, /null goles|null PJ|undefined goles|undefined PJ/,
     'Las capas enriquecidas no deben imprimir valores nulos como estadísticas');
 
-  const homeResult = await loadPage('/index.html',
+  const homeResult = await loadPage(cdp, '/index.html',
     `document.querySelector('[data-kpi="clubs"]')?.textContent?.trim() !== '—' && document.querySelector('#dashboard-highlights')?.textContent?.trim().length > 0`);
   const home = homeResult.html;
   assert.match(home, /Sin estadísticas verificadas de Liga de Honor/,
     'La portada no debe elegir líderes desde planteles sin participaciones oficiales');
 
   console.log('Browser smoke: Chrome Android viewport + Supabase read-only OK');
+  cdp.close();
 } finally {
   chrome.kill('SIGTERM');
   await new Promise(resolve => server.close(resolve));
