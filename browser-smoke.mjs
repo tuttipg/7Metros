@@ -125,7 +125,7 @@ async function createTab() {
   return cdp;
 }
 
-async function loadPage(pathname, readyExpression) {
+async function loadPage(pathname, readyExpression, probeExpression = 'null') {
   const cdp = await createTab();
   try {
     await cdp.send('Page.navigate', { url: `http://127.0.0.1:${PORT}${pathname}` });
@@ -142,7 +142,8 @@ async function loadPage(pathname, readyExpression) {
         ready: (() => { try { return Boolean(${readyExpression}); } catch { return false; } })(),
         html: document.documentElement.outerHTML,
         title: document.title,
-        busy: document.body?.getAttribute('aria-busy') || ''
+        busy: document.body?.getAttribute('aria-busy') || '',
+        probe: (() => { try { return (${probeExpression}); } catch { return null; } })()
       };
     })()`;
     const result = await cdp.send('Runtime.evaluate', {
@@ -154,7 +155,7 @@ async function loadPage(pathname, readyExpression) {
     assert.ok(value?.ready, `${pathname}: la UI dinámica no llegó al estado esperado`);
     assert.equal(value.busy, '', `${pathname}: la página quedó marcada como cargando`);
     assert.deepEqual(cdp.exceptions, [], `${pathname}: no debe lanzar excepciones JS`);
-    return value.html;
+    return value;
   } finally {
     cdp.close();
   }
@@ -163,8 +164,9 @@ async function loadPage(pathname, readyExpression) {
 try {
   await waitForDebugger();
 
-  const matches = await loadPage('/partidos.html',
+  const matchesResult = await loadPage('/partidos.html',
     `document.querySelector('#match-count')?.textContent?.trim() !== '—' && document.querySelector('.match-row')`);
+  const matches = matchesResult.html;
   assert.match(matches, /<strong class="vs">VS<\/strong>/,
     'Partidos actuales sin marcador deben renderizar VS');
   assert.match(matches, /RESULTADO PENDIENTE|Resultado pendiente/i,
@@ -172,34 +174,63 @@ try {
   assert.doesNotMatch(matches, /<strong>\s*0<span>–<\/span>0\s*<\/strong>/,
     'No debe aparecer un 0–0 inventado');
 
-  const standings = await loadPage('/posiciones.html',
+  const standingsResult = await loadPage('/posiciones.html',
     `document.querySelector('#standings-body')?.textContent?.trim().length > 0`);
+  const standings = standingsResult.html;
   assert.match(standings, /Sin posiciones/,
     'La temporada sin resultados verificados no debe producir una tabla deportiva de ceros');
 
-  const stats = await loadPage('/estadisticas.html',
+  const statsResult = await loadPage('/estadisticas.html',
     `document.querySelector('#goals-list')?.textContent?.trim().length > 0`);
+  const stats = statsResult.html;
   assert.match(stats, /Sin datos|Todavía no hay registros|Sin balance/i,
     'Sin participaciones verificadas de la temporada, los rankings deben quedar vacíos');
 
-  const clubs = await loadPage('/clubes.html',
-    `document.querySelector('#club-count')?.textContent?.trim() !== '—' && document.querySelector('.club-card')`);
+  const clubsResult = await loadPage(
+    '/clubes.html',
+    `document.querySelector('#club-count')?.textContent?.trim() !== '—' && document.querySelector('.club-card')`,
+    `(() => {
+      const card = [...document.querySelectorAll('.club-card')]
+        .find(node => node.textContent.includes('Nuestra Señora de Luján'));
+      const badge = card?.querySelector('.club-badge');
+      const img = badge?.querySelector('img');
+      const fallback = badge?.querySelector(':scope > span');
+      return {
+        found: Boolean(card && badge && fallback),
+        imagePresent: Boolean(img),
+        imageLoaded: Boolean(img?.classList.contains('is-loaded')),
+        imageOpacity: img ? getComputedStyle(img).opacity : null,
+        fallbackVisibility: getComputedStyle(fallback).visibility,
+        fallbackOpacity: getComputedStyle(fallback).opacity
+      };
+    })()`
+  );
+  const clubs = clubsResult.html;
   assert.match(clubs, /Sin resultados verificados/,
     'Clubes sin resultados verificados deben comunicarlo en lugar de mostrar 0-0 derivados');
   assert.match(clubs, /Nuestra Señora de Luján/,
     'El club con logo legacy debe seguir visible aunque la imagen remota falle');
-  assert.doesNotMatch(clubs, /images\/clubes\/sm\/64\.jpg/,
-    'El navegador debe retirar del DOM el logo legacy roto y conservar el fallback');
+  assert.equal(clubsResult.probe?.found, true, 'el club con logo legacy debe conservar un badge/fallback');
+  if (clubsResult.probe?.imagePresent && !clubsResult.probe?.imageLoaded) {
+    assert.equal(clubsResult.probe.imageOpacity, '0',
+      'un escudo remoto que todavía no cargó debe ser invisible');
+    assert.notEqual(clubsResult.probe.fallbackVisibility, 'hidden',
+      'las iniciales deben seguir visibles mientras el escudo no cargue');
+    assert.notEqual(clubsResult.probe.fallbackOpacity, '0',
+      'el fallback no debe desaparecer por una imagen rota');
+  }
 
-  const clubProfile = await loadPage('/club.html?id=14&team=9',
+  const clubProfileResult = await loadPage('/club.html?id=14&team=9',
     `document.querySelector('#club-detail .pro-club-hero')`);
+  const clubProfile = clubProfileResult.html;
   assert.match(clubProfile, /Estadísticas pendientes/,
     'La ficha enriquecida del club no debe convertir ausencia de planillas verificadas en ceros');
   assert.doesNotMatch(clubProfile, /null goles|null PJ|undefined goles|undefined PJ/,
     'Las capas enriquecidas no deben imprimir valores nulos como estadísticas');
 
-  const home = await loadPage('/index.html',
+  const homeResult = await loadPage('/index.html',
     `document.querySelector('[data-kpi="clubs"]')?.textContent?.trim() !== '—' && document.querySelector('#dashboard-highlights')?.textContent?.trim().length > 0`);
+  const home = homeResult.html;
   assert.match(home, /Sin estadísticas verificadas de Liga de Honor/,
     'La portada no debe elegir líderes desde planteles sin participaciones oficiales');
 
