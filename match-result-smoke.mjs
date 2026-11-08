@@ -56,7 +56,7 @@ assert.match(pages, /m\.status === statusValue/,
 globalThis.window = globalThis;
 globalThis.localStorage = { getItem: () => null };
 globalThis.SEVEN_METROS_CONFIG = { seasonId: 3 };
-const { prepareDataset, state } = await import('./store.js');
+const { prepareDataset, state, getPlayers, getMatchParticipations, getStandings } = await import('./store.js');
 const matchRow = { local_equipo_id: 10, visitante_equipo_id: 11, estado: 'finalizado', goles_local: 2, goles_visitante: 3 };
 prepareDataset({
   clubes: [{ id: 1, nombre: 'Local' }, { id: 2, nombre: 'Visitante' }],
@@ -150,14 +150,14 @@ prepareDataset({
     exclusiones_2min: 1
   }]
 });
-const pendingPlayer = store.getPlayers().find(player => player.id === 20);
+const pendingPlayer = getPlayers().find(player => player.id === 20);
 assert.equal(state.matches[0].status, 'Programado');
 assert.equal(pendingPlayer.hasOfficialStats, false);
 assert.equal(pendingPlayer.matchesPlayed, null, 'una participación sin resultado verificado no acredita PJ');
 assert.equal(pendingPlayer.goals, null, 'una participación sin resultado verificado no acredita goles');
-assert.equal(store.getMatchParticipations(501, 10).length, 0,
+assert.equal(getMatchParticipations(501, 10).length, 0,
   'el detalle no debe publicar estadísticas del partido hasta validar el resultado');
-assert.deepEqual(store.getStandings(), [],
+assert.deepEqual(getStandings(), [],
   'sin resultados verificados no debe publicarse una tabla de posiciones llena de ceros');
 
 console.log('Match result evidence smoke test: OK');
