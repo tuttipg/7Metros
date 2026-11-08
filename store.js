@@ -556,7 +556,7 @@ export function getStandingsForTeamIds(teamIds) {
 }
 
 export function getStandings() {
-  return sortStandings(getClubs());
+  return getStandingsForTeamIds(filteredTeamIds());
 }
 
 export function getTopDivisionStandings(branch = null) {
