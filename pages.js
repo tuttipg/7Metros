@@ -130,20 +130,20 @@ function renderDashboard() {
 
   const high = document.getElementById('dashboard-highlights');
   if (high) {
-    const players = getTopDivisionPlayers();
-    if (!players.length) high.innerHTML = emptyState('Sin estadísticas de Liga de Honor', 'Los líderes de LHC y LHD aparecerán al cargar participaciones.');
+    const players = getTopDivisionPlayers().filter(player => player.hasOfficialStats);
+    if (!players.length) high.innerHTML = emptyState('Sin estadísticas verificadas de Liga de Honor', 'Los líderes de LHC y LHD aparecerán cuando existan participaciones asociadas a resultados finales verificados.');
     else {
-      const goals = players.slice().sort((a, b) => b.goals - a.goals)[0];
-      const rate = players.filter(p => p.matchesPlayed > 0).slice().sort((a, b) => (b.goalsPerMatch || 0) - (a.goalsPerMatch || 0))[0] || goals;
-      const played = players.slice().sort((a, b) => b.matchesPlayed - a.matchesPlayed)[0];
-      const discipline = players.slice().sort((a, b) => b.sanctions - a.sanctions)[0];
+      const goals = players.slice().sort((a, b) => Number(b.goals ?? -1) - Number(a.goals ?? -1))[0];
+      const rate = players.filter(p => Number(p.matchesPlayed) > 0).slice().sort((a, b) => Number(b.goalsPerMatch ?? -1) - Number(a.goalsPerMatch ?? -1))[0] || goals;
+      const played = players.slice().sort((a, b) => Number(b.matchesPlayed ?? -1) - Number(a.matchesPlayed ?? -1))[0];
+      const discipline = players.slice().sort((a, b) => Number(b.sanctions ?? -1) - Number(a.sanctions ?? -1))[0];
       const cards = [
-        [goals, 'GOLEADOR LIGA DE HONOR', goals?.goals ?? 0, 'goles'],
-        [rate, 'GOLES / PARTIDO', rate?.goalsPerMatch ?? 0, 'promedio'],
-        [played, 'MÁS PARTIDOS', played?.matchesPlayed ?? 0, 'partidos'],
-        [discipline, 'SANCIONES', discipline?.sanctions ?? 0, 'totales']
+        [goals, 'GOLEADOR LIGA DE HONOR', goals?.goals, 'goles'],
+        [rate, 'GOLES / PARTIDO', rate?.goalsPerMatch, 'promedio'],
+        [played, 'MÁS PARTIDOS', played?.matchesPlayed, 'partidos'],
+        [discipline, 'SANCIONES', discipline?.sanctions, 'totales']
       ];
-      high.innerHTML = cards.map(([p, label, value, unit]) => `<a class="highlight-item" href="jugador.html?id=${p.id}"><span class="highlight-kicker">${label}</span><span class="avatar large">${esc(initials(p.name))}</span><b class="highlight-name">${esc(p.name)}</b><span class="highlight-club">${esc(p.club)} · ${p.branch === 'F' ? 'LHD' : 'LHC'}</span><strong class="highlight-number">${typeof value === 'number' && !Number.isInteger(value) ? metric(value, 1) : metric(value)}</strong><span class="highlight-unit">${unit}</span></a>`).join('');
+      high.innerHTML = cards.map(([p, label, value, unit]) => `<a class="highlight-item" href="jugador.html?id=${p.id}"><span class="highlight-kicker">${label}</span><span class="avatar large">${esc(initials(p.name))}</span><b class="highlight-name">${esc(p.name)}</b><span class="highlight-club">${esc(p.club)} · ${p.branch === 'F' ? 'LHD' : 'LHC'}</span><strong class="highlight-number">${value === null || value === undefined ? '—' : (typeof value === 'number' && !Number.isInteger(value) ? metric(value, 1) : metric(value))}</strong><span class="highlight-unit">${unit}</span></a>`).join('');
     }
   }
 }
