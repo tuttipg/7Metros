@@ -3,7 +3,7 @@ import { hasVerifiedMatchResult } from './match-result-core.mjs';
 
 const PAGE_SIZE = 1000;
 const REQUEST_TIMEOUT = 15000;
-const SESSION_CACHE_VERSION = 'public-v1';
+const SESSION_CACHE_VERSION = 'public-v2-verified-results';
 const SESSION_CACHE_TTL = 2 * 60 * 1000;
 const SESSION_CACHE_MAX_CHARS = 3_500_000;
 
