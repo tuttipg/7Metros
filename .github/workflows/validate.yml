@@ -73,6 +73,7 @@ jobs:
           node --check responsive-table-smoke.mjs
           node --check mobile-menu-a11y-smoke.mjs
           node --check global-search-a11y-smoke.mjs
+          node --check browser-smoke.mjs
           node --check n8n/importer-core.mjs
           node --check n8n/importer-core-smoke.mjs
           node --check n8n/planilla-core.mjs
@@ -165,6 +166,9 @@ jobs:
 
       - name: Global search dialog accessibility smoke test
         run: node global-search-a11y-smoke.mjs
+
+      - name: Real Chrome mobile smoke test
+        run: node browser-smoke.mjs
 
       - name: FEMEBAL importer core smoke test
         run: node n8n/importer-core-smoke.mjs
