@@ -1,0 +1,193 @@
+const FEMEBAL_HOSTS = new Set(['femebal.com', 'www.femebal.com']);
+const PUBLIC_INDEX_HOSTS = new Set(['google.com', 'www.google.com', 'bing.com', 'www.bing.com']);
+const MAX_ROUTE_TOKEN_LENGTH = 256;
+const INDEXED_ROUTE_PREFIX = '/tournament-tracker/';
+const PUBLIC_EVIDENCE_KINDS = new Set(['public_index', 'explicit_public_link']);
+const SENSITIVE_QUERY_NAMES = new Set(['auth', 'authorization', 'bearer', 'cookie', 'credential', 'credentials', 'csrf', 'jwt', 'key', 'password', 'secret', 'session', 'token', 'xsrf']);
+const SENSITIVE_QUERY_NAME_PARTS = ['accesskey', 'accesskeyid', 'accesstoken', 'apikey', 'auth', 'authkey', 'authorization', 'authtoken', 'bearer', 'clientkey', 'clientsecret', 'cookie', 'credential', 'credentials', 'csrf', 'jwt', 'passphrase', 'password', 'privatekey', 'secret', 'secretkey', 'session', 'sessionid', 'signature', 'signingkey', 'token', 'xsrf'];
+
+function rejectAmbiguousRawUrl(value, label) {
+  const raw = String(value ?? '');
+  if (raw.includes('\\') || /\s/.test(raw) || /[\u0000-\u001F\u007F]/.test(raw)) {
+    throw new Error(label + ' contiene backslash, whitespace o caracteres de control ambiguos');
+  }
+  return raw;
+}
+
+function rejectRawTraversalSegments(rawUrl, label) {
+  const raw = String(rawUrl ?? '');
+  const schemeIndex = raw.indexOf('://');
+  if (schemeIndex < 0) return raw;
+  const authorityEnd = raw.indexOf('/', schemeIndex + 3);
+  if (authorityEnd < 0) return raw;
+  const pathAndSuffix = raw.slice(authorityEnd);
+  const suffixIndex = pathAndSuffix.search(/[?#]/);
+  const rawPath = suffixIndex >= 0 ? pathAndSuffix.slice(0, suffixIndex) : pathAndSuffix;
+  for (const segment of rawPath.split('/')) {
+    if (!segment) continue;
+    let decoded;
+    try { decoded = decodeURIComponent(segment); } catch { continue; }
+    if (decoded === '.' || decoded === '..') {
+      throw new Error(`${label} no admite segmentos raw . o .. antes de normalizar la URL`);
+    }
+  }
+  return raw;
+}
+
+function normalizeQueryName(name) {
+  return String(name ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function rejectSensitiveQueryNames(url, label) {
+  for (const name of url.searchParams.keys()) {
+    const normalized = normalizeQueryName(name);
+    if (!normalized) continue;
+    const containsSensitivePart = SENSITIVE_QUERY_NAME_PARTS.some((part) => (
+      normalized.includes(part) && (part !== 'auth' || !normalized.startsWith('author'))
+    ));
+    if (SENSITIVE_QUERY_NAMES.has(normalized) || containsSensitivePart) {
+      throw new Error(`${label} no admite nombres de query sensibles`);
+    }
+  }
+}
+
+function decodeSinglePathSegment(rawSegment) {
+  const raw = String(rawSegment ?? '');
+  if (!raw || raw.length > MAX_ROUTE_TOKEN_LENGTH * 3) throw new Error('Token TournamentTracker vacío o demasiado largo');
+  // The official fixture link percent-encodes the trailing "=" padding as %3D.
+  // Do not accept percent-encoded token characters: they create alternate raw spellings
+  // for an opaque route and make evidence comparison less strict.
+  const literalToken = /^[A-Za-z0-9_-]+={0,2}$/.test(raw);
+  const encodedPaddingToken = /^[A-Za-z0-9_-]+(?:%3[dD]){1,2}$/.test(raw);
+  if (!literalToken && !encodedPaddingToken) {
+    throw new Error('Token TournamentTracker contiene percent-encoding no permitido');
+  }
+  let decoded;
+  try { decoded = decodeURIComponent(raw); } catch { throw new Error('Token TournamentTracker con percent-encoding inválido'); }
+  if (!decoded || decoded.length > MAX_ROUTE_TOKEN_LENGTH) throw new Error('Token TournamentTracker vacío o demasiado largo');
+  if (decoded.includes('/') || decoded.includes('\\') || decoded.includes('.') || decoded.includes('%')) throw new Error('Token TournamentTracker contiene separadores o caracteres ambiguos');
+  if (!/^[A-Za-z0-9_-]+={0,2}$/.test(decoded)) throw new Error('Formato de token TournamentTracker no permitido');
+  return decoded;
+}
+
+function validatePublicIndexSource(sourceUrl, targetCanonicalUrl, evidence) {
+  if (sourceUrl.pathname !== '/search') throw new Error('La evidencia public_index requiere una página de búsqueda explícita');
+  const queries = sourceUrl.searchParams.getAll('q');
+  if (queries.length !== 1 || !queries[0]) throw new Error('La evidencia public_index requiere exactamente una consulta de búsqueda explícita');
+  const query = queries[0];
+  const normalizedQuery = query.toLowerCase();
+  if (!normalizedQuery.includes('femebal') || !normalizedQuery.includes('tournament-tracker')) throw new Error('La consulta public_index debe referenciar FEMEBAL TournamentTracker');
+  const target = new URL(targetCanonicalUrl);
+  // Hostnames are case-insensitive, but the opaque TournamentTracker path token is case-sensitive.
+  // Normalize only the source host/prefix; never lowercase the token-bearing path.
+  const normalizedQueryForRoute = query.replace(/(?:site:)?(?:https?:\/\/)?(?:www\.)?femebal\.com/gi, (host) => host.toLowerCase());
+  const exactRoute = target.pathname;
+  // Match the exact FEMEBAL host + case-sensitive route, not a route that is merely a prefix of a longer token.
+  const exactRoutePattern = new RegExp("(?:^|[\\s\\\"'(])(?:site:)?(?:https?://)?(?:www\\.)?femebal\\.com" + exactRoute + "(?=$|[\\s\\\"'&),])");
+  if (!exactRoutePattern.test(normalizedQueryForRoute)) {
+    throw new Error('La consulta public_index debe vincular la ruta TournamentTracker exacta observada');
+  }
+  if (!evidence.resultUrl) throw new Error('La evidencia public_index requiere la URL de resultado público observada');
+  const resultUrl = canonicalizeIndexedTournamentTrackerRoute(evidence.resultUrl);
+  if (resultUrl !== targetCanonicalUrl) throw new Error('El resultado public_index observado no corresponde a la ruta solicitada');
+  return resultUrl;
+}
+
+function decodeEvidenceSourcePath(pathname) {
+  const rawPath = String(pathname ?? '');
+  let decoded;
+  try { decoded = decodeURIComponent(rawPath); } catch { throw new Error('La fuente explicit_public_link contiene percent-encoding inválido en path'); }
+  if (decoded.includes('%')) throw new Error('La fuente explicit_public_link contiene percent-encoding ambiguo en path');
+  return decoded;
+}
+
+function validateExplicitPublicLinkSource(sourceUrl, targetCanonicalUrl, evidence) {
+  const decodedPath = decodeEvidenceSourcePath(sourceUrl.pathname);
+  if (decodedPath.toLowerCase().startsWith(INDEXED_ROUTE_PREFIX)) throw new Error('La evidencia explicit_public_link no puede usar TournamentTracker como fuente circular');
+  if (sourceUrl.toString() === targetCanonicalUrl) throw new Error('La evidencia explicit_public_link no puede ser la propia ruta objetivo');
+  if (typeof evidence.linkedUrl !== 'string' || !evidence.linkedUrl) {
+    throw new Error('La evidencia explicit_public_link requiere el href público observado');
+  }
+  const linkedUrl = canonicalizeIndexedTournamentTrackerRoute(evidence.linkedUrl);
+  if (linkedUrl !== targetCanonicalUrl) {
+    throw new Error('El href público observado no corresponde a la ruta TournamentTracker solicitada');
+  }
+  return linkedUrl;
+}
+
+function validatePublicEvidence(targetCanonicalUrl, evidence) {
+  if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) throw new Error('La evidencia pública debe ser un objeto estructurado');
+  const kind = String(evidence.kind ?? '');
+  if (!PUBLIC_EVIDENCE_KINDS.has(kind)) throw new Error('Tipo de evidencia pública no permitido');
+  const observedUrl = canonicalizeIndexedTournamentTrackerRoute(evidence.observedUrl);
+  if (observedUrl !== targetCanonicalUrl) throw new Error('La evidencia pública no corresponde a la ruta solicitada');
+
+  const rawSourceUrl = rejectAmbiguousRawUrl(evidence.sourceUrl, 'La fuente de evidencia pública');
+  // WHATWG URL exposes an empty hash/search for trailing raw delimiters ("#" / "?").
+  // Reject those spellings before parsing so evidence cannot bypass the strict URL contract.
+  if (rawSourceUrl.includes('#')) throw new Error('La fuente de evidencia pública no admite delimitadores de fragmento, ni siquiera vacíos');
+  const sourceUrl = new URL(rawSourceUrl);
+  if (rawSourceUrl.includes('?') && !sourceUrl.search) throw new Error('La fuente de evidencia pública no admite delimitadores de query vacíos');
+  if (sourceUrl.protocol !== 'https:') throw new Error('La fuente de evidencia pública requiere HTTPS');
+  if (sourceUrl.port && sourceUrl.port !== '443') throw new Error('La fuente de evidencia pública no admite puertos HTTPS no estándar');
+  if (sourceUrl.username || sourceUrl.password) throw new Error('La fuente de evidencia pública no admite credenciales en URL');
+  if (sourceUrl.hash) throw new Error('La fuente de evidencia pública no admite fragments');
+  rejectSensitiveQueryNames(sourceUrl, 'La fuente de evidencia pública');
+
+  const sourceHost = sourceUrl.hostname.toLowerCase();
+  let resultUrl = null;
+  let linkedUrl = null;
+  if (kind === 'public_index') {
+    if (!PUBLIC_INDEX_HOSTS.has(sourceHost)) throw new Error('La evidencia public_index requiere una fuente de índice público permitida');
+    resultUrl = validatePublicIndexSource(sourceUrl, targetCanonicalUrl, evidence);
+  }
+  if (kind === 'explicit_public_link') {
+    if (!FEMEBAL_HOSTS.has(sourceHost)) throw new Error('La evidencia explicit_public_link requiere una fuente oficial FEMEBAL');
+    linkedUrl = validateExplicitPublicLinkSource(sourceUrl, targetCanonicalUrl, evidence);
+  }
+  return { kind, observedUrl, sourceUrl: sourceUrl.toString(), ...(resultUrl ? { resultUrl } : {}), ...(linkedUrl ? { linkedUrl } : {}) };
+}
+
+export function canonicalizeIndexedTournamentTrackerRoute(value) {
+  const rawUrl = rejectRawTraversalSegments(rejectAmbiguousRawUrl(value, 'Ruta TournamentTracker'), 'Ruta TournamentTracker');
+  // URL.search / URL.hash can be empty for a raw trailing '?' / '#'. Reject delimiters
+  // in the original spelling so empty query/fragment markers cannot be canonicalized away.
+  if (rawUrl.includes('?') || rawUrl.includes('#')) {
+    throw new Error('Ruta TournamentTracker no admite delimitadores de query o fragment, ni siquiera vacíos');
+  }
+  const url = new URL(rawUrl);
+  if (url.protocol !== 'https:') throw new Error('Ruta indexada TournamentTracker requiere HTTPS');
+  if (url.port && url.port !== '443') throw new Error('Ruta TournamentTracker no admite puertos HTTPS no estándar');
+  if (!FEMEBAL_HOSTS.has(url.hostname.toLowerCase())) throw new Error('Host TournamentTracker no permitido');
+  if (url.username || url.password) throw new Error('Ruta TournamentTracker no admite credenciales');
+  if (url.hash) throw new Error('Ruta TournamentTracker no admite fragments');
+  if (url.search) throw new Error('Ruta indexada TournamentTracker no admite query strings');
+  if (!url.pathname.startsWith(INDEXED_ROUTE_PREFIX)) throw new Error('Prefijo TournamentTracker no permitido');
+  const rawTail = url.pathname.slice(INDEXED_ROUTE_PREFIX.length);
+  if (!rawTail || rawTail.includes('/')) throw new Error('Ruta TournamentTracker debe tener un único token');
+  const token = decodeSinglePathSegment(rawTail);
+  url.hostname = 'www.femebal.com';
+  url.port = '';
+  url.pathname = `${INDEXED_ROUTE_PREFIX}${token}`;
+  url.search = '';
+  url.hash = '';
+  return url.toString();
+}
+
+export function classifyIndexedTournamentTrackerRoute(value) {
+  try {
+    const url = canonicalizeIndexedTournamentTrackerRoute(value);
+    return { safe: true, dry_run: true, state: 'public_indexed_route_reviewable', url, methodIfReviewed: 'GET', authAllowed: false, writesAllowed: false, automaticProbeAllowed: false, sourceRequirement: 'public_index_or_explicit_public_link' };
+  } catch (error) {
+    return { safe: true, dry_run: true, state: 'rejected_indexed_route', reason: error instanceof Error ? error.message : String(error), authAllowed: false, writesAllowed: false, automaticProbeAllowed: false };
+  }
+}
+
+export function buildReviewedIndexedTournamentTrackerGet(value, { publicEvidence = null } = {}) {
+  const classified = classifyIndexedTournamentTrackerRoute(value);
+  if (classified.state !== 'public_indexed_route_reviewable') return { safe: true, dry_run: true, state: 'probe_not_authorized', probe: null, reason: classified.reason, automaticProbeAllowed: false, writesAllowed: false, authAllowed: false };
+  let evidence;
+  try { evidence = validatePublicEvidence(classified.url, publicEvidence); }
+  catch (error) { return { safe: true, dry_run: true, state: 'probe_not_authorized', probe: null, reason: error instanceof Error ? error.message : String(error), automaticProbeAllowed: false, writesAllowed: false, authAllowed: false }; }
+  return { safe: true, dry_run: true, state: 'reviewed_anonymous_get_only', evidence, probe: { method: 'GET', url: classified.url, headers: { Accept: 'text/html,application/xhtml+xml' }, auth: false, writes: false }, automaticProbeAllowed: false, writesAllowed: false, authAllowed: false };
+}

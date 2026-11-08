@@ -50,11 +50,16 @@ export function classifyCommunityResponse({ statusCode, body }) {
   const authMessage = /unauthori|forbidden|missing authorization|missing token|authentication required|access token|invalid token|jwt/i.test(sample);
   const notFoundMessage = /cannot get|not found/i.test(sample);
 
+  // El status HTTP manda sobre palabras accidentales del payload. Un 2xx público puede
+  // contener términos como "token" o "JWT" en noticias/configuración y no debe
+  // reclasificarse como protegido. Sólo 401/403 (o un 400 explícitamente de auth)
+  // se consideran evidencia suficiente para marcar la ruta fuera de alcance.
   let state = 'transport_or_server_error';
-  if (status === 401 || status === 403 || authMessage) state = 'auth_required';
-  else if (status === 404 || notFoundMessage) state = 'not_found';
+  if (status === 401 || status === 403) state = 'auth_required';
+  else if (status === 404 || (status == null && notFoundMessage)) state = 'not_found';
   else if (status != null && status >= 200 && status < 300 && json !== null) state = 'public_json';
   else if (status != null && status >= 200 && status < 300) state = 'public_non_json';
+  else if (status === 400 && authMessage) state = 'auth_required';
 
   return {
     state,
@@ -79,10 +84,10 @@ export function summarizeCommunityDiscovery(results) {
   const publicJson = normalized.filter(item => item.state === 'public_json');
   const authRequired = normalized.filter(item => item.state === 'auth_required');
 
-  let nextStep = 'discover_routes';
-  if (matches?.state === 'auth_required') nextStep = 'reverse_engineer_app_auth_flow';
+  let nextStep = 'discover_public_routes';
+  if (matches?.state === 'auth_required') nextStep = 'skip_protected_matches_expand_public_routes';
   else if (matches?.state === 'public_json') nextStep = 'extract_match_filters_and_ids';
-  else if (authRequired.length) nextStep = 'map_protected_routes_and_auth_flow';
+  else if (authRequired.length) nextStep = 'skip_protected_routes_expand_public_routes';
   else if (publicJson.length) nextStep = 'expand_public_route_discovery';
 
   return {
@@ -92,6 +97,8 @@ export function summarizeCommunityDiscovery(results) {
     nextStep,
     constraints: {
       publicEndpointDoesNotImplyMatchesArePublic: Boolean(publicJson.length && matches?.state === 'auth_required'),
+      protectedRoutesOutOfScope: authRequired.map(item => item.path),
+      authDiscoveryEnabled: false,
       firebaseAuthValidated: false
     },
     results: normalized.map(({ json, ...item }) => item)
