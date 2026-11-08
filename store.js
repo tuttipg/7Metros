@@ -360,18 +360,17 @@ function participationStats(playerId, allowedTeamIds = filteredTeamIds()) {
 
   const hasOfficialStats = rows.length > 0;
   const matchIds = new Set(rows.map(row => Number(row.partido_id)).filter(Number.isFinite));
-  const goals = hasOfficialStats
-    ? rows.reduce((sum, row) => sum + (numericField(row, ['goles']) ?? 0), 0)
-    : null;
-  const twoMin = hasOfficialStats
-    ? rows.reduce((sum, row) => sum + (numericField(row, ['exclusiones_2min', 'dos_minutos']) ?? 0), 0)
-    : null;
-  const yellow = hasOfficialStats
-    ? rows.reduce((sum, row) => sum + (numericField(row, ['tarjeta_amarilla', 'amarillas']) ?? 0), 0)
-    : null;
-  const red = hasOfficialStats
-    ? rows.reduce((sum, row) => sum + (numericField(row, ['tarjeta_roja', 'rojas']) ?? 0), 0)
-    : null;
+  const completeSum = candidates => {
+    if (!hasOfficialStats) return null;
+    const values = rows.map(row => numericField(row, candidates));
+    return values.every(value => value !== null)
+      ? values.reduce((sum, value) => sum + value, 0)
+      : null;
+  };
+  const goals = completeSum(['goles']);
+  const twoMin = completeSum(['exclusiones_2min', 'dos_minutos']);
+  const yellow = completeSum(['tarjeta_amarilla', 'amarillas']);
+  const red = completeSum(['tarjeta_roja', 'rojas']);
 
   const assistValues = rows.map(row => numericField(row, ['asistencias', 'assists'])).filter(v => v !== null);
   const shotValues = rows.map(row => numericField(row, ['lanzamientos', 'tiros', 'shots'])).filter(v => v !== null);
@@ -387,11 +386,13 @@ function participationStats(playerId, allowedTeamIds = filteredTeamIds()) {
     hasOfficialStats,
     matchesPlayed: hasOfficialStats ? matchIds.size : null,
     goals,
-    goalsPerMatch: hasOfficialStats ? ratio(goals, matchIds.size, 1) : null,
+    goalsPerMatch: hasOfficialStats && goals !== null ? ratio(goals, matchIds.size, 1) : null,
     twoMin,
     yellow,
     red,
-    sanctions: hasOfficialStats ? twoMin + yellow + red : null,
+    sanctions: hasOfficialStats && [twoMin, yellow, red].every(value => value !== null)
+      ? twoMin + yellow + red
+      : null,
     assists,
     shots,
     efficiency: shots ? Number(((goals / shots) * 100).toFixed(1)) : null,
@@ -511,9 +512,12 @@ export function getClubsForTeamIds(teamIds) {
       ga,
       gd: gf - ga,
       points: won * 3 + drawn * 2 + lost,
-      goals: teamPlayers.some(player => player.hasOfficialStats)
-        ? teamPlayers.reduce((sum, player) => sum + Number(player.goals || 0), 0)
-        : null,
+      goals: (() => {
+        const officialPlayers = teamPlayers.filter(player => player.hasOfficialStats);
+        return officialPlayers.length && officialPlayers.every(player => player.goals !== null)
+          ? officialPlayers.reduce((sum, player) => sum + player.goals, 0)
+          : null;
+      })(),
       form
     };
   });
