@@ -274,7 +274,7 @@ function renderClubProfile() {
   const { teamIds: competitionTeamIds, matches: scopedMatches } = clubProfileCompetitionScope(selectedTeam);
   const teamStats = getClubsForTeamIds(competitionTeamIds)
     .find(row => Number(row.teamId) === Number(selectedTeam.id)) || teamRow(selectedTeam);
-  const players = getPlayersForTeamIds(selectedSet).sort((a, b) => b.goals - a.goals || bySpanishName(a.name, b.name));
+  const players = getPlayersForTeamIds(selectedSet).sort((a, b) => Number(b.goals ?? -1) - Number(a.goals ?? -1) || bySpanishName(a.name, b.name));
   const matches = scopedMatches.slice().sort((a, b) => matchSortKey(b).localeCompare(matchSortKey(a)));
   const finished = matches.filter(match => match.status === 'Finalizado');
   const today = localISODate();
@@ -282,6 +282,11 @@ function renderClubProfile() {
   const planillas = matches.filter(match => safeHttpUrl(match.planillaUrl)).length;
   const programaciones = matches.filter(match => safeHttpUrl(match.raw?.programacion_pdf_url || match.raw?.programacion_url)).length;
   const form = finished.slice(0, 5).reverse().map(match => resultForTeam(match, selectedTeam.id));
+  const hasVerifiedResults = finished.length > 0;
+  const sportValue = value => hasVerifiedResults && value !== null && value !== undefined ? value : '—';
+  const playerStatLabel = player => player.hasOfficialStats
+    ? `${player.goals ?? '—'} goles · ${player.matchesPlayed ?? '—'} PJ`
+    : 'Estadísticas pendientes';
   const selectedName = teamDisplayName(selectedTeam, baseClub);
   const positionsHref = competitionHref(selectedTeam, 'posiciones.html');
   const matchesHref = competitionHref(selectedTeam, 'partidos.html');
@@ -295,7 +300,7 @@ function renderClubProfile() {
   root.innerHTML = `
     <section class="card pro-club-hero">
       <div class="pro-club-identity">${clubBadge(baseClub)}<div><span class="section-kicker">${esc(baseClub.city || 'CLUB FEMEBAL')}</span><h2>${esc(baseClub.name)}</h2><p>${teamCode(selectedTeam) === 'A' ? 'Equipo A' : `Equipo ${esc(teamCode(selectedTeam))}`} · ${categoryLabel(selectedTeam.categoria)} · ${esc(selectedTeam.division)} · ${branchLabel(selectedTeam.rama)}</p><div class="pro-club-actions"><a class="btn gold" href="${positionsHref}">Ver posiciones</a><a class="btn light" href="${matchesHref}">Ver competencia</a></div></div></div>
-      <div class="pro-club-scoreboard"><div><small>PTS</small><b>${teamStats.points ?? 0}</b></div><div><small>PJ</small><b>${teamStats.played ?? 0}</b></div><div><small>PG</small><b>${teamStats.won ?? 0}</b></div><div><small>PE</small><b>${teamStats.drawn ?? 0}</b></div><div><small>PP</small><b>${teamStats.lost ?? 0}</b></div><div><small>DIF</small><b>${(teamStats.gd ?? 0) > 0 ? '+' : ''}${teamStats.gd ?? 0}</b></div></div>
+      <div class="pro-club-scoreboard"><div><small>PTS</small><b>${sportValue(teamStats.points)}</b></div><div><small>PJ</small><b>${sportValue(teamStats.played)}</b></div><div><small>PG</small><b>${sportValue(teamStats.won)}</b></div><div><small>PE</small><b>${sportValue(teamStats.drawn)}</b></div><div><small>PP</small><b>${sportValue(teamStats.lost)}</b></div><div><small>DIF</small><b>${hasVerifiedResults && teamStats.gd !== null && teamStats.gd !== undefined ? `${teamStats.gd > 0 ? '+' : ''}${teamStats.gd}` : '—'}</b></div></div>
     </section>
 
     <section class="feature-grid two-thirds">
@@ -305,16 +310,18 @@ function renderClubProfile() {
 
     <section class="feature-grid team-and-roster">
       <article class="card feature-panel"><div class="feature-panel-head"><div><span class="section-kicker">TODOS LOS EQUIPOS</span><h2>${allTeams.length} equipos / categorías 2026</h2></div></div>${teamSwitcher(allTeams, selectedTeam)}</article>
-      <article class="card feature-panel"><div class="feature-panel-head"><div><span class="section-kicker">PLANTEL</span><h2>${players.length ? plural(players.length, 'jugador', 'jugadores') : 'Pendiente de planilla digital'}</h2></div></div>${players.length ? `<div class="feature-roster-list">${players.slice(0, 18).map(player => `<a href="jugador.html?id=${player.id}"><span class="dorsal">${esc(player.number)}</span><div><b>${esc(player.name)}</b><small>${esc(player.position)} · ${player.goals} goles · ${player.matchesPlayed} PJ</small></div><strong>›</strong></a>`).join('')}</div>` : `<div class="data-pending"><span>${icon('clipboard')}</span><div><b>Plantel todavía no importado</b><p>Los partidos y la identidad del equipo ya están cargados. Los jugadores se incorporarán desde las planillas digitales oficiales cuando podamos acceder a esa fuente de forma verificable.</p></div></div>`}</article>
+      <article class="card feature-panel"><div class="feature-panel-head"><div><span class="section-kicker">PLANTEL</span><h2>${players.length ? plural(players.length, 'jugador', 'jugadores') : 'Pendiente de planilla digital'}</h2></div></div>${players.length ? `<div class="feature-roster-list">${players.slice(0, 18).map(player => `<a href="jugador.html?id=${player.id}"><span class="dorsal">${esc(player.number)}</span><div><b>${esc(player.name)}</b><small>${esc(player.position)} · ${playerStatLabel(player)}</small></div><strong>›</strong></a>`).join('')}</div>` : `<div class="data-pending"><span>${icon('clipboard')}</span><div><b>Plantel todavía no importado</b><p>Los partidos y la identidad del equipo ya están cargados. Los jugadores se incorporarán desde las planillas digitales oficiales cuando podamos acceder a esa fuente de forma verificable.</p></div></div>`}</article>
     </section>
 
     ${future.length ? `<section class="card feature-panel"><div class="feature-panel-head"><div><span class="section-kicker">PRÓXIMO</span><h2>Próximo partido</h2></div></div>${matchMini(future[0])}</section>` : ''}`;
 }
 
 function participationPanel(rows, title, club, teamName) {
-  if (!rows.length) return `<article class="card feature-panel participation-panel"><div class="feature-panel-head"><div>${clubBadge(club, true)}<div><span class="section-kicker">${esc(title)}</span><h2>${esc(teamName)}</h2></div></div></div><div class="data-pending compact"><span>${icon('clipboard')}</span><div><b>Planilla digital todavía no importada</b><p>No mostramos jugadores ni goleadores hasta contar con la fuente oficial de este partido.</p></div></div></article>`;
-  const goals = rows.reduce((sum, row) => sum + Number(row.goals || 0), 0);
-  return `<article class="card feature-panel participation-panel"><div class="feature-panel-head"><div>${clubBadge(club, true)}<div><span class="section-kicker">${esc(title)}</span><h2>${esc(teamName)}</h2></div></div><strong>${goals} goles</strong></div><div class="table-scroll"><table class="data-table compact"><thead><tr><th>#</th><th>JUGADOR</th><th>POS.</th><th>G</th><th>2MIN</th><th>TA</th><th>TR</th></tr></thead><tbody>${rows.map(row => `<tr><td><span class="dorsal">${esc(row.number)}</span></td><td><a href="jugador.html?id=${row.playerId}"><b>${esc(row.playerName)}</b></a></td><td>${esc(row.position)}</td><td><b>${row.goals}</b></td><td>${row.twoMin}</td><td>${row.yellow}</td><td>${row.red}</td></tr>`).join('')}</tbody></table></div></article>`;
+  if (!rows.length) return `<article class="card feature-panel participation-panel"><div class="feature-panel-head"><div>${clubBadge(club, true)}<div><span class="section-kicker">${esc(title)}</span><h2>${esc(teamName)}</h2></div></div></div><div class="data-pending compact"><span>${icon('clipboard')}</span><div><b>Estadísticas pendientes</b><p>No mostramos jugadores, goles ni sanciones hasta contar con participaciones de un partido con resultado final verificado.</p></div></div></article>`;
+  const goalValues = rows.map(row => row.goals).filter(Number.isFinite);
+  const goals = goalValues.length === rows.length ? goalValues.reduce((sum, value) => sum + value, 0) : null;
+  const stat = value => value === null || value === undefined ? '—' : value;
+  return `<article class="card feature-panel participation-panel"><div class="feature-panel-head"><div>${clubBadge(club, true)}<div><span class="section-kicker">${esc(title)}</span><h2>${esc(teamName)}</h2></div></div><strong>${goals === null ? 'Goles pendientes' : `${goals} goles`}</strong></div><div class="table-scroll"><table class="data-table compact"><thead><tr><th>#</th><th>JUGADOR</th><th>POS.</th><th>G</th><th>2MIN</th><th>TA</th><th>TR</th></tr></thead><tbody>${rows.map(row => `<tr><td><span class="dorsal">${esc(row.number)}</span></td><td><a href="jugador.html?id=${row.playerId}"><b>${esc(row.playerName)}</b></a></td><td>${esc(row.position)}</td><td><b>${stat(row.goals)}</b></td><td>${stat(row.twoMin)}</td><td>${stat(row.yellow)}</td><td>${stat(row.red)}</td></tr>`).join('')}</tbody></table></div></article>`;
 }
 
 function renderMatchProfile() {
@@ -356,7 +363,7 @@ function renderMatchProfile() {
     <section class="card pro-match-hero">
       <div class="pro-match-context"><span>${competition ? `${categoryLabel(competition.categoria)} · ${esc(competition.division)} · ${branchLabel(competition.rama)}` : 'Competencia FEMEBAL'}</span><b>${esc(match.roundLabel)}</b><small>${formatDateISO(match.date)}${match.time ? ` · ${esc(match.time)}` : ''}</small></div>
       <div class="pro-match-team home">${clubBadge(homeClub)}<a href="${clubHref(homeRow)}">${esc(homeName)}</a>${homeTeam && teamCode(homeTeam) !== 'A' ? `<span class="team-code">${esc(teamCode(homeTeam))}</span>` : ''}</div>
-      <div class="pro-match-score"><strong>${match.status === 'Finalizado' ? `${match.homeScore}<i>–</i>${match.awayScore}` : 'VS'}</strong><span class="status-pill ${match.status === 'Finalizado' ? '' : 'gold'}">${esc(match.status.toUpperCase())}</span></div>
+      <div class="pro-match-score"><strong>${match.status === 'Finalizado' ? `${match.homeScore}<i>–</i>${match.awayScore}` : 'VS'}</strong><span class="status-pill ${match.status === 'Finalizado' ? '' : 'gold'}" data-match-status data-status="${match.status}">${esc(match.status === 'Finalizado' ? 'FINALIZADO' : 'RESULTADO PENDIENTE')}</span></div>
       <div class="pro-match-team away">${clubBadge(awayClub)}<a href="${clubHref(awayRow)}">${esc(awayName)}</a>${awayTeam && teamCode(awayTeam) !== 'A' ? `<span class="team-code">${esc(teamCode(awayTeam))}</span>` : ''}</div>
     </section>
     <section class="source-grid">${sources}</section>
