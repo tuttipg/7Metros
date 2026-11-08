@@ -9,7 +9,7 @@ globalThis.SEVEN_METROS_CONFIG = {
   defaults: { categoria: 'Mayores', division: 'LHC Hipotecario Seguros', rama: 'M' }
 };
 
-const cacheKey = '7m:dataset:public-v1:3';
+const cacheKey = '7m:dataset:public-v2-verified-results:3';
 const entries = new Map();
 globalThis.sessionStorage = {
   getItem(key) { return entries.get(key) ?? null; },
