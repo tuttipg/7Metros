@@ -1,0 +1,125 @@
+{
+  "contractVersion": "femebal-community-1.1.3-match-status-v1",
+  "scope": "partidos/fixture only",
+  "safety": {
+    "readOnly": true,
+    "supabaseWrites": false,
+    "bulkImport": false,
+    "tokensPersisted": false
+  },
+  "sources": {
+    "primaryRuntime": "GET /matches and GET /matches/{matchId} using legitimate guest flow",
+    "officialPublic": [
+      "FEMEBAL TournamentTracker",
+      "FEMEBAL programming/reprogramming publications and PDFs"
+    ]
+  },
+  "api": {
+    "list": "/matches",
+    "detail": "/matches/{matchId}",
+    "filters": ["tournamentId", "teamId", "status", "date", "sortBy", "limit", "skip"],
+    "collectionStatusValuesConfirmedInClient": ["scheduled", "live", "finalized"]
+  },
+  "rawMatchStatusValuesRecognizedByClient": [
+    "programado",
+    "reprogramado",
+    "suspendido",
+    "iniciado",
+    "live",
+    "finalizado",
+    "finalized",
+    "cancelado",
+    "sin equipo asignado",
+    "disponible",
+    "pend. confirmacion resultado final",
+    "pend confirmacion resultado final",
+    "pendiente confirmacion resultado final"
+  ],
+  "matchSheetStatusValuesRecognizedByClient": [
+    "iniciada",
+    "en juego",
+    "pend. confirmacion",
+    "suspendida pend. confirmacion",
+    "suspendido pend. confirmacion",
+    "suspendida pend confirmacion",
+    "suspendido pend confirmacion",
+    "finalizada",
+    "finalizado",
+    "finalizada suspendida",
+    "finalizado suspendido"
+  ],
+  "clientLifecycleClasses": {
+    "ScheduledMatch": {
+      "isLive": false,
+      "hasStarted": false,
+      "hasFinished": false,
+      "note": "Catch-all for non-live/non-terminal statuses. It is not semantically identical to raw status 'programado'."
+    },
+    "LiveMatch": {
+      "isLive": true,
+      "hasStarted": true,
+      "hasFinished": false,
+      "rawClassifier": ["live", "iniciado"]
+    },
+    "FinalizedMatch": {
+      "isLive": false,
+      "hasStarted": true,
+      "hasFinished": true,
+      "rawClassifier": ["finalized", "finalizado", "cancelado"],
+      "warning": "Because 'cancelado' is terminal in the client classifier, hasStarted must not be reused as proof that a cancelled match was actually played."
+    }
+  },
+  "separateDimensions": {
+    "matchLifecycle": "Use raw match status plus client lifecycle classification.",
+    "sheetLifecycle": "Keep matchSheetStatus separately; it tracks the digital match sheet workflow.",
+    "resultAvailability": "Determine separately from the presence/validity of result fields. Never infer from date alone.",
+    "history": "Reprogrammed/suspended are transitions that may later become finalized; preserve evidence/history instead of forcing one permanent label."
+  },
+  "recommendedDerivedModel": {
+    "estadoActual": [
+      "programado",
+      "reprogramado",
+      "suspendido",
+      "en_curso",
+      "finalizado",
+      "cancelado",
+      "pendiente_confirmacion",
+      "desconocido"
+    ],
+    "resultadoOficial": [
+      "disponible",
+      "pendiente_confirmacion",
+      "no_disponible",
+      "no_aplica",
+      "desconocido"
+    ],
+    "disputadoConfirmado": "boolean/tri-state derived from positive play evidence; not a raw LarrySport status"
+  },
+  "safeRules": [
+    "fecha < hoy never implies finalizado",
+    "null score never implies suspendido or no-show",
+    "programming PDF proves scheduling, not that the match was played",
+    "reprogramming publication proves a schedule revision, not the current terminal state",
+    "status finalizado/finalized may mark the match as finished, but score availability still depends on result",
+    "cancelado is terminal but is not proof of having been played",
+    "suspendido alone does not prove whether play had already started",
+    "unknown raw status or ambiguous identity => no automatic update"
+  ],
+  "idRelations": {
+    "matchId": "match.id; canonical match key for detail and subresources",
+    "tournamentId": "top-level match field and /matches filter",
+    "teamId": "nested home/away team id and /matches filter",
+    "matchSheetId": "observed in RefereeByMatch and CoachingStaffByMatch alongside matchId; not proven to be PDF/planilla document id",
+    "multidivisionId": "competition-level relation; not confirmed as direct top-level match field"
+  },
+  "dryRunGate": {
+    "identityRequired": [
+      "unique native matchId when available",
+      "otherwise unique, non-ambiguous reconciliation scoped by tournament/team/date only for preview"
+    ],
+    "stateRequired": "recognized raw status or explicit official public evidence",
+    "scoreRequiredForResultAvailable": "result object with both team scores, or an independently official match-sheet/result source",
+    "onConflict": "no-op + manual review",
+    "onUnknown": "no-op + preserve current data"
+  }
+}
