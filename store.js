@@ -352,13 +352,26 @@ export function getTopDivisionMatches(branch = null) {
 
 function participationStats(playerId, allowedTeamIds = filteredTeamIds()) {
   const rows = (state.index.participationsByPlayer.get(Number(playerId)) || [])
-    .filter(row => allowedTeamIds.has(Number(row.equipo_id)));
+    .filter(row => {
+      if (!allowedTeamIds.has(Number(row.equipo_id))) return false;
+      const match = state.index.matchById.get(Number(row.partido_id));
+      return match?.status === 'Finalizado';
+    });
 
+  const hasOfficialStats = rows.length > 0;
   const matchIds = new Set(rows.map(row => Number(row.partido_id)).filter(Number.isFinite));
-  const goals = rows.reduce((sum, row) => sum + toNumber(field(row, ['goles'], 0)), 0);
-  const twoMin = rows.reduce((sum, row) => sum + toNumber(field(row, ['exclusiones_2min', 'dos_minutos'], 0)), 0);
-  const yellow = rows.reduce((sum, row) => sum + toNumber(field(row, ['tarjeta_amarilla', 'amarillas'], 0)), 0);
-  const red = rows.reduce((sum, row) => sum + toNumber(field(row, ['tarjeta_roja', 'rojas'], 0)), 0);
+  const goals = hasOfficialStats
+    ? rows.reduce((sum, row) => sum + (numericField(row, ['goles']) ?? 0), 0)
+    : null;
+  const twoMin = hasOfficialStats
+    ? rows.reduce((sum, row) => sum + (numericField(row, ['exclusiones_2min', 'dos_minutos']) ?? 0), 0)
+    : null;
+  const yellow = hasOfficialStats
+    ? rows.reduce((sum, row) => sum + (numericField(row, ['tarjeta_amarilla', 'amarillas']) ?? 0), 0)
+    : null;
+  const red = hasOfficialStats
+    ? rows.reduce((sum, row) => sum + (numericField(row, ['tarjeta_roja', 'rojas']) ?? 0), 0)
+    : null;
 
   const assistValues = rows.map(row => numericField(row, ['asistencias', 'assists'])).filter(v => v !== null);
   const shotValues = rows.map(row => numericField(row, ['lanzamientos', 'tiros', 'shots'])).filter(v => v !== null);
@@ -371,13 +384,14 @@ function participationStats(playerId, allowedTeamIds = filteredTeamIds()) {
   return {
     rows,
     matchIds,
-    matchesPlayed: matchIds.size,
+    hasOfficialStats,
+    matchesPlayed: hasOfficialStats ? matchIds.size : null,
     goals,
-    goalsPerMatch: ratio(goals, matchIds.size, 1),
+    goalsPerMatch: hasOfficialStats ? ratio(goals, matchIds.size, 1) : null,
     twoMin,
     yellow,
     red,
-    sanctions: twoMin + yellow + red,
+    sanctions: hasOfficialStats ? twoMin + yellow + red : null,
     assists,
     shots,
     efficiency: shots ? Number(((goals / shots) * 100).toFixed(1)) : null,
@@ -497,7 +511,9 @@ export function getClubsForTeamIds(teamIds) {
       ga,
       gd: gf - ga,
       points: won * 3 + drawn * 2 + lost,
-      goals: teamPlayers.reduce((sum, player) => sum + player.goals, 0),
+      goals: teamPlayers.some(player => player.hasOfficialStats)
+        ? teamPlayers.reduce((sum, player) => sum + Number(player.goals || 0), 0)
+        : null,
       form
     };
   });
@@ -533,7 +549,10 @@ function sortStandings(clubs) {
 }
 
 export function getStandingsForTeamIds(teamIds) {
-  return sortStandings(getClubsForTeamIds(teamIds));
+  const allowed = teamIds instanceof Set ? teamIds : new Set((teamIds || []).map(Number));
+  const hasVerifiedResult = getMatchesForTeamIds(allowed).some(match => match.status === 'Finalizado');
+  if (!hasVerifiedResult) return [];
+  return sortStandings(getClubsForTeamIds(allowed));
 }
 
 export function getStandings() {
@@ -549,6 +568,9 @@ export function getMatch(matchId) {
 }
 
 export function getMatchParticipations(matchId, teamId = null) {
+  const match = state.index.matchById.get(Number(matchId));
+  if (match?.status !== 'Finalizado') return [];
+
   const rows = state.index.participationsByMatch.get(Number(matchId)) || [];
   const filtered = teamId ? rows.filter(row => Number(row.equipo_id) === Number(teamId)) : rows;
 
@@ -562,12 +584,15 @@ export function getMatchParticipations(matchId, teamId = null) {
       playerName: player?.name || 'Jugador',
       number: field(row, ['dorsal_utilizado'], roster?.dorsal ?? '—'),
       position: roster?.posicion || '—',
-      goals: toNumber(field(row, ['goles'], 0)),
-      twoMin: toNumber(field(row, ['exclusiones_2min', 'dos_minutos'], 0)),
-      yellow: toNumber(field(row, ['tarjeta_amarilla', 'amarillas'], 0)),
-      red: toNumber(field(row, ['tarjeta_roja', 'rojas'], 0))
+      goals: numericField(row, ['goles']),
+      twoMin: numericField(row, ['exclusiones_2min', 'dos_minutos']),
+      yellow: numericField(row, ['tarjeta_amarilla', 'amarillas']),
+      red: numericField(row, ['tarjeta_roja', 'rojas'])
     };
-  }).sort((a, b) => b.goals - a.goals || Number(a.number || 999) - Number(b.number || 999));
+  }).sort((a, b) =>
+    Number(b.goals ?? -1) - Number(a.goals ?? -1) ||
+    Number(a.number || 999) - Number(b.number || 999)
+  );
 }
 
 export function getPlayerMatchRows(playerId) {
@@ -578,16 +603,16 @@ export function getPlayerMatchRows(playerId) {
   const result = [];
   for (const row of rows) {
     const match = state.index.matchById.get(Number(row.partido_id));
-    if (!match || seen.has(match.id)) continue;
+    if (!match || match.status !== 'Finalizado' || seen.has(match.id)) continue;
     if (!getMatches().some(m => m.id === match.id)) continue;
     seen.add(match.id);
     result.push({
       match,
       participation: row,
-      goals: toNumber(field(row, ['goles'], 0)),
-      twoMin: toNumber(field(row, ['exclusiones_2min', 'dos_minutos'], 0)),
-      yellow: toNumber(field(row, ['tarjeta_amarilla', 'amarillas'], 0)),
-      red: toNumber(field(row, ['tarjeta_roja', 'rojas'], 0))
+      goals: numericField(row, ['goles']),
+      twoMin: numericField(row, ['exclusiones_2min', 'dos_minutos']),
+      yellow: numericField(row, ['tarjeta_amarilla', 'amarillas']),
+      red: numericField(row, ['tarjeta_roja', 'rojas'])
     });
   }
   return result.sort((a, b) => `${b.match.date}${b.match.time}`.localeCompare(`${a.match.date}${a.match.time}`));
