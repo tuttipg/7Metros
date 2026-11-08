@@ -28,6 +28,16 @@ function playerLink(player) {
   return `<a class="player-cell-link" href="jugador.html?id=${player.id}"><span class="avatar">${esc(initials(player.name))}</span><span><b>${esc(player.name)}</b><small>${esc(player.position || '')}</small></span></a>`;
 }
 
+function statMetric(value, digits = 0) {
+  return value === null || value === undefined ? '—' : metric(value, digits);
+}
+
+function playerStatsLabel(player) {
+  return player?.hasOfficialStats
+    ? `${statMetric(player.goals)} goles · ${statMetric(player.matchesPlayed)} PJ`
+    : 'Estadísticas pendientes';
+}
+
 function matchCard(match) {
   const homeClub = getBaseClub(match.homeClubId) || { id: match.homeClubId, name: match.home, abbr: initials(match.home) };
   const awayClub = getBaseClub(match.awayClubId) || { id: match.awayClubId, name: match.away, abbr: initials(match.away) };
@@ -151,12 +161,22 @@ function renderClubes() {
   const term = normalizeText(search?.value || '');
   let clubs = getClubs().filter(c => normalizeText(c.name).includes(term));
   const mode = sort?.value || 'points';
-  clubs.sort((a, b) => mode === 'name' ? bySpanishName(a.name, b.name) : mode === 'goals' ? b.gf - a.gf : b.points - a.points || b.gd - a.gd || bySpanishName(a.name, b.name));
+  clubs.sort((a, b) => mode === 'name'
+    ? bySpanishName(a.name, b.name)
+    : mode === 'goals'
+      ? Number(b.gf ?? -1) - Number(a.gf ?? -1)
+      : Number(b.points ?? -1) - Number(a.points ?? -1) || Number(b.gd ?? -1) - Number(a.gd ?? -1) || bySpanishName(a.name, b.name));
 
   if (count) count.textContent = plural(clubs.length, 'club', 'clubes');
   if (!clubs.length) { grid.innerHTML = emptyState('No encontramos clubes', term ? 'Probá con otra búsqueda.' : 'No hay clubes para estos filtros.'); return; }
 
-  grid.innerHTML = clubs.map(club => `<a class="card club-card" href="club.html?id=${club.id}"><div class="club-card-head">${clubBadge(club)}<div><span class="mini-label">CLUB</span><h3>${esc(club.name)}</h3><p>${club.played} partidos · ${club.gf} GF · ${club.ga} GC</p></div></div><div class="club-card-stats"><span><b>${club.points}</b>Puntos</span><span><b>${club.players}</b>Jugadores</span><span><b>${club.gd >= 0 ? '+' : ''}${club.gd}</b>Diferencia</span></div><div class="club-card-form"><span>Forma</span><div>${club.form.length ? club.form.map(resultPill).join('') : '<small>Sin resultados</small>'}</div><strong>Ver club →</strong></div></a>`).join('');
+  grid.innerHTML = clubs.map(club => {
+    const hasResults = club.played > 0;
+    const summary = hasResults ? `${club.played} partidos · ${club.gf} GF · ${club.ga} GC` : 'Sin resultados verificados';
+    const points = hasResults ? club.points : '—';
+    const gd = hasResults ? `${club.gd >= 0 ? '+' : ''}${club.gd}` : '—';
+    return `<a class="card club-card" href="club.html?id=${club.id}"><div class="club-card-head">${clubBadge(club)}<div><span class="mini-label">CLUB</span><h3>${esc(club.name)}</h3><p>${summary}</p></div></div><div class="club-card-stats"><span><b>${points}</b>Puntos</span><span><b>${club.players}</b>Jugadores</span><span><b>${gd}</b>Diferencia</span></div><div class="club-card-form"><span>Forma</span><div>${club.form.length ? club.form.map(resultPill).join('') : '<small>Sin resultados</small>'}</div><strong>Ver club →</strong></div></a>`;
+  }).join('');
 }
 
 // Los enlaces internos generan IDs decimales canónicos. Number(...) solo
@@ -178,23 +198,26 @@ function renderClubDetail() {
   const header = document.querySelector('.page-header h1');
   const sub = document.querySelector('.page-header p');
   if (header) header.textContent = club.name;
-  if (sub) sub.textContent = `Ficha del club · ${club.played} partidos finalizados`;
+  if (sub) sub.textContent = club.played
+    ? `Ficha del club · ${club.played} partidos con resultado verificado`
+    : 'Ficha del club · sin resultados verificados cargados';
   document.title = `${club.name} — 7Metros`;
 
-  const players = getPlayers().filter(p => p.clubId === club.id).sort((a, b) => b.goals - a.goals || bySpanishName(a.name, b.name));
+  const players = getPlayers().filter(p => p.clubId === club.id).sort((a, b) => Number(b.goals ?? -1) - Number(a.goals ?? -1) || bySpanishName(a.name, b.name));
+  const statPlayers = players.filter(player => player.hasOfficialStats);
   const matches = getMatches().filter(m => m.homeClubId === club.id || m.awayClubId === club.id).sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
   const positions = ['Arquero', 'Extremo', 'Lateral', 'Central', 'Pivote', 'Sin posición'];
 
   root.innerHTML = `
     <section class="card club-hero">
       <div class="club-hero-main">${clubBadge(club)}<div><span class="section-kicker">CLUB</span><h2>${esc(club.name)}</h2><div class="form-line"><span>Últimos resultados</span>${club.form.length ? club.form.map(resultPill).join('') : '<small>Sin resultados</small>'}</div></div></div>
-      <div class="hero-stat-grid"><div><small>PTS</small><b>${club.points}</b></div><div><small>PJ</small><b>${club.played}</b></div><div><small>PG</small><b>${club.won}</b></div><div><small>GF</small><b>${club.gf}</b></div><div><small>GC</small><b>${club.ga}</b></div><div><small>DIF</small><b>${club.gd >= 0 ? '+' : ''}${club.gd}</b></div></div>
+      <div class="hero-stat-grid"><div><small>PTS</small><b>${club.played ? club.points : '—'}</b></div><div><small>PJ</small><b>${club.played || '—'}</b></div><div><small>PG</small><b>${club.played ? club.won : '—'}</b></div><div><small>GF</small><b>${club.played ? club.gf : '—'}</b></div><div><small>GC</small><b>${club.played ? club.ga : '—'}</b></div><div><small>DIF</small><b>${club.played ? `${club.gd >= 0 ? '+' : ''}${club.gd}` : '—'}</b></div></div>
     </section>
     <section class="club-detail-grid">
-      <article class="card section-card"><div class="section-head"><div><span class="section-kicker">RENDIMIENTO</span><h2>Goleadores del club</h2></div><a href="estadisticas.html">Estadísticas</a></div><div class="leader-list">${players.slice(0, 5).map((p, i) => `<a class="leader-row" href="jugador.html?id=${p.id}"><span class="rank">${i + 1}</span><span class="leader-name">${esc(p.name)}<small>#${esc(p.number)} · ${esc(p.position)}</small></span><span class="leader-value">${p.goals}<small>goles</small></span></a>`).join('') || emptyState('Sin participaciones', 'Todavía no hay estadísticas de jugadores para este club.')}</div></article>
+      <article class="card section-card"><div class="section-head"><div><span class="section-kicker">RENDIMIENTO</span><h2>Goleadores del club</h2></div><a href="estadisticas.html">Estadísticas</a></div><div class="leader-list">${statPlayers.slice(0, 5).map((p, i) => `<a class="leader-row" href="jugador.html?id=${p.id}"><span class="rank">${i + 1}</span><span class="leader-name">${esc(p.name)}<small>#${esc(p.number)} · ${esc(p.position)}</small></span><span class="leader-value">${statMetric(p.goals)}<small>goles</small></span></a>`).join('') || emptyState('Sin estadísticas oficiales', 'Todavía no hay participaciones de partidos con resultado verificado para este club.')}</div></article>
       <article class="card section-card"><div class="section-head"><div><span class="section-kicker">CALENDARIO</span><h2>Últimos partidos</h2></div><a href="partidos.html">Ver todos</a></div><div>${matches.slice(0, 5).map(compactMatch).join('') || emptyState('Sin partidos', 'No hay encuentros para este club.')}</div></article>
     </section>
-    <section class="card section-card roster-section"><div class="section-head"><div><span class="section-kicker">PLANTEL</span><h2>${players.length} jugadores</h2></div><a href="planteles.html">Ver planteles</a></div><div class="roster-grid compact-roster">${positions.map(pos => { const list = players.filter(p => p.position === pos); if (!list.length) return ''; return `<section class="position-column"><h3>${esc(pos.toUpperCase())}<span>${list.length}</span></h3>${list.map(p => `<a class="roster-player" href="jugador.html?id=${p.id}"><span class="avatar number">${esc(p.number)}</span><div><b>${esc(p.name)}</b><small>${p.goals} goles · ${p.matchesPlayed} PJ</small></div></a>`).join('')}</section>`; }).join('')}</div></section>`;
+    <section class="card section-card roster-section"><div class="section-head"><div><span class="section-kicker">PLANTEL</span><h2>${players.length} jugadores</h2></div><a href="planteles.html">Ver planteles</a></div><div class="roster-grid compact-roster">${positions.map(pos => { const list = players.filter(p => p.position === pos); if (!list.length) return ''; return `<section class="position-column"><h3>${esc(pos.toUpperCase())}<span>${list.length}</span></h3>${list.map(p => `<a class="roster-player" href="jugador.html?id=${p.id}"><span class="avatar number">${esc(p.number)}</span><div><b>${esc(p.name)}</b><small>${playerStatsLabel(p)}</small></div></a>`).join('')}</section>`; }).join('')}</div></section>`;
 }
 
 function renderJugadores() {
@@ -220,10 +243,14 @@ function renderJugadores() {
   const pos = positionSelect?.value || '';
   const mode = sortSelect?.value || 'goals';
   let players = getPlayers().filter(p => (!term || normalizeText(`${p.name} ${p.club}`).includes(term)) && (!clubId || p.clubId === clubId) && (!pos || p.position === pos));
-  players.sort((a, b) => mode === 'name' ? bySpanishName(a.name, b.name) : mode === 'matches' ? b.matchesPlayed - a.matchesPlayed || b.goals - a.goals : b.goals - a.goals || b.matchesPlayed - a.matchesPlayed);
+  players.sort((a, b) => mode === 'name'
+    ? bySpanishName(a.name, b.name)
+    : mode === 'matches'
+      ? Number(b.matchesPlayed ?? -1) - Number(a.matchesPlayed ?? -1) || Number(b.goals ?? -1) - Number(a.goals ?? -1)
+      : Number(b.goals ?? -1) - Number(a.goals ?? -1) || Number(b.matchesPlayed ?? -1) - Number(a.matchesPlayed ?? -1));
   if (count) count.textContent = plural(players.length, 'jugador', 'jugadores');
 
-  tbody.innerHTML = players.map(p => `<tr><td>${playerLink(p)}</td><td><a href="club.html?id=${p.clubId}">${esc(p.club)}</a></td><td><span class="dorsal">${esc(p.number)}</span></td><td><span class="tag">${esc(p.position)}</span></td><td>${p.matchesPlayed}</td><td><b>${p.goals}</b></td><td>${p.goalsPerMatch === null ? '—' : metric(p.goalsPerMatch, 1)}</td><td>${p.sanctions}</td><td><a class="row-action" href="jugador.html?id=${p.id}">Ver →</a></td></tr>`).join('') || `<tr><td colspan="9">${emptyState('No encontramos jugadores', term ? 'Probá con otros filtros.' : 'No hay planteles cargados para esta selección.')}</td></tr>`;
+  tbody.innerHTML = players.map(p => `<tr><td>${playerLink(p)}</td><td><a href="club.html?id=${p.clubId}">${esc(p.club)}</a></td><td><span class="dorsal">${esc(p.number)}</span></td><td><span class="tag">${esc(p.position)}</span></td><td>${statMetric(p.matchesPlayed)}</td><td><b>${statMetric(p.goals)}</b></td><td>${statMetric(p.goalsPerMatch, 1)}</td><td>${statMetric(p.sanctions)}</td><td><a class="row-action" href="jugador.html?id=${p.id}">Ver →</a></td></tr>`).join('') || `<tr><td colspan="9">${emptyState('No encontramos jugadores', term ? 'Probá con otros filtros.' : 'No hay planteles cargados para esta selección.')}</td></tr>`;
 }
 
 function renderPlayerDetail() {
@@ -242,23 +269,24 @@ function renderPlayerDetail() {
   document.title = `${player.name} — 7Metros`;
 
   const recent = rows.slice(0, 8);
-  const maxGoals = Math.max(1, ...recent.map(r => r.goals));
+  const recentGoals = recent.filter(row => Number.isFinite(row.goals));
+  const maxGoals = Math.max(1, ...recentGoals.map(r => r.goals));
   root.innerHTML = `
     <section class="card player-hero">
       <div class="player-identity"><span class="player-avatar-xl">${esc(initials(player.name))}</span><div><span class="section-kicker">JUGADOR</span><h2>${esc(player.name)}</h2><a class="player-club-link" href="club.html?id=${club.id}">${clubBadge(club, true)}${esc(player.club)}</a><div class="player-tags"><span>#${esc(player.number)}</span><span>${esc(player.position)}</span>${player.dominantArm ? `<span>Brazo ${esc(player.dominantArm)}</span>` : ''}</div></div></div>
       <div class="player-bio">${age !== null ? `<div><small>EDAD</small><b>${age}</b></div>` : ''}${player.height ? `<div><small>ALTURA</small><b>${player.height} cm</b></div>` : ''}${player.weight ? `<div><small>PESO</small><b>${player.weight} kg</b></div>` : ''}</div>
     </section>
     <section class="player-kpi-grid">
-      <article class="card player-kpi"><span>PJ</span><b>${player.matchesPlayed}</b><small>partidos registrados</small></article>
-      <article class="card player-kpi featured"><span>GOLES</span><b>${player.goals}</b><small>total temporada</small></article>
-      <article class="card player-kpi"><span>G / PARTIDO</span><b>${player.goalsPerMatch === null ? '—' : metric(player.goalsPerMatch, 1)}</b><small>promedio</small></article>
-      <article class="card player-kpi"><span>SANCIONES</span><b>${player.sanctions}</b><small>${player.twoMin}×2min · ${player.red} rojas</small></article>
+      <article class="card player-kpi"><span>PJ</span><b>${statMetric(player.matchesPlayed)}</b><small>con participación oficial</small></article>
+      <article class="card player-kpi featured"><span>GOLES</span><b>${statMetric(player.goals)}</b><small>en planillas verificadas</small></article>
+      <article class="card player-kpi"><span>G / PARTIDO</span><b>${statMetric(player.goalsPerMatch, 1)}</b><small>promedio verificado</small></article>
+      <article class="card player-kpi"><span>SANCIONES</span><b>${statMetric(player.sanctions)}</b><small>${player.hasOfficialStats ? `${statMetric(player.twoMin)}×2min · ${statMetric(player.red)} rojas` : 'sin datos oficiales'}</small></article>
     </section>
     <section class="player-detail-grid">
-      <article class="card section-card"><div class="section-head"><div><span class="section-kicker">FORMA RECIENTE</span><h2>Goles por partido</h2></div></div>${recent.length ? `<div class="spark-bars">${recent.slice().reverse().map(r => `<a href="partido.html?id=${r.match.id}" class="spark-item" title="${esc(r.match.home)} vs ${esc(r.match.away)}: ${r.goals} goles"><div class="spark-track"><span style="--h:${Math.max(8, Math.round((r.goals / maxGoals) * 100))}%"></span></div><b>${r.goals}</b><small>${formatDayMonthISO(r.match.date)}</small></a>`).join('')}</div>` : emptyState('Sin partidos', 'No hay participaciones recientes para graficar.')}</article>
-      <article class="card section-card"><div class="section-head"><div><span class="section-kicker">DISCIPLINA</span><h2>Sanciones</h2></div></div><div class="discipline-grid"><div><span class="tag gold">2 MIN</span><b>${player.twoMin}</b></div><div><span class="tag yellow">AMARILLAS</span><b>${player.yellow}</b></div><div><span class="tag red">ROJAS</span><b>${player.red}</b></div></div></article>
+      <article class="card section-card"><div class="section-head"><div><span class="section-kicker">FORMA RECIENTE</span><h2>Goles por partido</h2></div></div>${recentGoals.length ? `<div class="spark-bars">${recentGoals.slice().reverse().map(r => `<a href="partido.html?id=${r.match.id}" class="spark-item" title="${esc(r.match.home)} vs ${esc(r.match.away)}: ${r.goals} goles"><div class="spark-track"><span style="--h:${Math.max(8, Math.round((r.goals / maxGoals) * 100))}%"></span></div><b>${r.goals}</b><small>${formatDayMonthISO(r.match.date)}</small></a>`).join('')}</div>` : emptyState('Sin goles verificados', 'No hay participaciones oficiales con goles disponibles para graficar.')}</article>
+      <article class="card section-card"><div class="section-head"><div><span class="section-kicker">DISCIPLINA</span><h2>Sanciones</h2></div></div><div class="discipline-grid"><div><span class="tag gold">2 MIN</span><b>${statMetric(player.twoMin)}</b></div><div><span class="tag yellow">AMARILLAS</span><b>${statMetric(player.yellow)}</b></div><div><span class="tag red">ROJAS</span><b>${statMetric(player.red)}</b></div></div></article>
     </section>
-    <section class="card section-card"><div class="section-head"><div><span class="section-kicker">PARTIDOS</span><h2>Rendimiento reciente</h2></div></div><div class="table-scroll"><table class="data-table"><thead><tr><th>FECHA</th><th>PARTIDO</th><th>RESULTADO</th><th>GOLES</th><th>2MIN</th><th></th></tr></thead><tbody>${recent.map(r => { const m = r.match; const score = m.status === 'Finalizado' ? `${m.homeScore}–${m.awayScore}` : esc(m.status); return `<tr><td>${formatDateISO(m.date)}</td><td><b>${esc(m.home)}</b> vs ${esc(m.away)}</td><td>${score}</td><td><b>${r.goals}</b></td><td>${r.twoMin}</td><td><a class="row-action" href="partido.html?id=${m.id}">Ver partido →</a></td></tr>`; }).join('') || `<tr><td colspan="6">${emptyState('Sin participaciones', 'Todavía no hay partidos asociados a este jugador.')}</td></tr>`}</tbody></table></div></section>
+    <section class="card section-card"><div class="section-head"><div><span class="section-kicker">PARTIDOS</span><h2>Rendimiento reciente</h2></div></div><div class="table-scroll"><table class="data-table"><thead><tr><th>FECHA</th><th>PARTIDO</th><th>RESULTADO</th><th>GOLES</th><th>2MIN</th><th></th></tr></thead><tbody>${recent.map(r => { const m = r.match; const score = m.status === 'Finalizado' ? `${m.homeScore}–${m.awayScore}` : esc(m.status); return `<tr><td>${formatDateISO(m.date)}</td><td><b>${esc(m.home)}</b> vs ${esc(m.away)}</td><td>${score}</td><td><b>${statMetric(r.goals)}</b></td><td>${statMetric(r.twoMin)}</td><td><a class="row-action" href="partido.html?id=${m.id}">Ver partido →</a></td></tr>`; }).join('') || `<tr><td colspan="6">${emptyState('Sin participaciones', 'Todavía no hay partidos asociados a este jugador.')}</td></tr>`}</tbody></table></div></section>
     <section class="card advanced-player-teaser"><div class="teaser-target">${icon('goal')}</div><div><span class="section-kicker">PRÓXIMAMENTE CON VIDEO</span><h2>Mapa de lanzamiento, zonas y clips</h2><p>La ficha está preparada para incorporar tiros, efectividad, ubicación en cancha y acceso al timestamp del video cuando el pipeline de IA genere esos eventos.</p></div></section>`;
 }
 
@@ -279,7 +307,7 @@ function renderPlanteles() {
   const positions = ['Arquero', 'Extremo', 'Lateral', 'Central', 'Pivote', 'Sin posición'];
   document.getElementById('roster-title').textContent = `Plantel — ${club.name}`;
   document.getElementById('roster-count').textContent = plural(players.length, 'jugador', 'jugadores');
-  root.innerHTML = positions.map(pos => { const list = players.filter(p => p.position === pos); if (!list.length) return ''; return `<section class="card position-column"><h3>${esc(pos.toUpperCase())}<span>${list.length}</span></h3>${list.map(p => `<a class="roster-player" href="jugador.html?id=${p.id}"><span class="avatar number">${esc(p.number)}</span><div><b>${esc(p.name)}</b><small>${p.goals} goles · ${p.matchesPlayed} PJ</small></div><span class="row-chevron">›</span></a>`).join('')}</section>`; }).join('') || emptyState('Plantel vacío', 'No hay jugadores cargados para este club.');
+  root.innerHTML = positions.map(pos => { const list = players.filter(p => p.position === pos); if (!list.length) return ''; return `<section class="card position-column"><h3>${esc(pos.toUpperCase())}<span>${list.length}</span></h3>${list.map(p => `<a class="roster-player" href="jugador.html?id=${p.id}"><span class="avatar number">${esc(p.number)}</span><div><b>${esc(p.name)}</b><small>${playerStatsLabel(p)}</small></div><span class="row-chevron">›</span></a>`).join('')}</section>`; }).join('') || emptyState('Plantel vacío', 'No hay jugadores cargados para este club.');
 }
 
 function renderPartidos() {
@@ -304,8 +332,12 @@ function renderPartidos() {
 }
 
 function participationTable(rows, title, club) {
-  const total = rows.reduce((sum, r) => sum + r.goals, 0);
-  return `<article class="card section-card match-team-stats"><div class="section-head"><div>${clubBadge(club, true)}<div><span class="section-kicker">${esc(title)}</span><h2>${esc(club.name)}</h2></div></div><span>${total} goles en planilla</span></div><div class="table-scroll"><table class="data-table compact"><thead><tr><th>#</th><th>JUGADOR</th><th>POS.</th><th>G</th><th>2MIN</th><th>TA</th><th>TR</th></tr></thead><tbody>${rows.map(r => `<tr><td><span class="dorsal">${esc(r.number)}</span></td><td><a href="jugador.html?id=${r.playerId}"><b>${esc(r.playerName)}</b></a></td><td>${esc(r.position)}</td><td><b>${r.goals}</b></td><td>${r.twoMin}</td><td>${r.yellow}</td><td>${r.red}</td></tr>`).join('') || `<tr><td colspan="7">${emptyState('Sin detalle de jugadores', 'No hay participaciones asociadas a este equipo en el partido.')}</td></tr>`}</tbody></table></div></article>`;
+  const goalValues = rows.map(row => row.goals).filter(value => Number.isFinite(value));
+  const total = rows.length && goalValues.length === rows.length
+    ? goalValues.reduce((sum, value) => sum + value, 0)
+    : null;
+  const summary = total === null ? 'Goles sin consolidar' : `${total} goles en planilla`;
+  return `<article class="card section-card match-team-stats"><div class="section-head"><div>${clubBadge(club, true)}<div><span class="section-kicker">${esc(title)}</span><h2>${esc(club.name)}</h2></div></div><span>${summary}</span></div><div class="table-scroll"><table class="data-table compact"><thead><tr><th>#</th><th>JUGADOR</th><th>POS.</th><th>G</th><th>2MIN</th><th>TA</th><th>TR</th></tr></thead><tbody>${rows.map(r => `<tr><td><span class="dorsal">${esc(r.number)}</span></td><td><a href="jugador.html?id=${r.playerId}"><b>${esc(r.playerName)}</b></a></td><td>${esc(r.position)}</td><td><b>${statMetric(r.goals)}</b></td><td>${statMetric(r.twoMin)}</td><td>${statMetric(r.yellow)}</td><td>${statMetric(r.red)}</td></tr>`).join('') || `<tr><td colspan="7">${emptyState('Sin detalle de jugadores', 'No hay participaciones oficiales disponibles para este equipo en el partido.')}</td></tr>`}</tbody></table></div></article>`;
 }
 
 function renderMatchDetail() {
@@ -339,7 +371,9 @@ function renderMatchDetail() {
       <div class="match-hero-team away">${clubBadge(away)}<a href="club.html?id=${away.id}">${esc(match.away)}</a></div>
     </section>
     ${(sourceActions || match.notes) ? `<section class="match-source-row">${sourceActions}<div class="source-note"><span>${icon('info')}</span><p>${match.notes ? esc(match.notes) : 'Las fuentes vinculadas permiten volver al documento o video original del partido.'}</p></div></section>` : ''}
-    <section class="match-stats-grid">${participationTable(homeRows, 'LOCAL', home)}${participationTable(awayRows, 'VISITANTE', away)}</section>
+    ${match.status === 'Finalizado'
+      ? `<section class="match-stats-grid">${participationTable(homeRows, 'LOCAL', home)}${participationTable(awayRows, 'VISITANTE', away)}</section>`
+      : `<section class="card info-callout"><span>${icon('info')}</span><div><b>Estadísticas pendientes</b><p>7Metros no publica goles, sanciones ni rendimiento individual hasta que el partido tenga un marcador final verificado.</p></div></section>`}
     <section class="card section-card traceability-card"><div class="trace-icon">${icon('database')}</div><div><span class="section-kicker">TRAZABILIDAD 7METROS</span><h2>Partido → participación → fuente</h2><p>Esta ficha conserva la relación entre el resultado, los jugadores registrados y las fuentes disponibles. El mismo principio se usará para enlazar eventos de IA con timestamps de video.</p></div></section>`;
 }
 
@@ -357,9 +391,12 @@ function renderParticipaciones() {
   const count = document.getElementById('participation-count');
   if (search && !search.dataset.bound) { search.dataset.bound = '1'; search.addEventListener('input', renderParticipaciones); }
   const term = normalizeText(search?.value || '');
-  const players = getPlayers().filter(p => !term || normalizeText(`${p.name} ${p.club}`).includes(term)).sort((a,b) => b.goals - a.goals || b.matchesPlayed - a.matchesPlayed);
+  const players = getPlayers()
+    .filter(p => p.hasOfficialStats)
+    .filter(p => !term || normalizeText(`${p.name} ${p.club}`).includes(term))
+    .sort((a,b) => Number(b.goals ?? -1) - Number(a.goals ?? -1) || Number(b.matchesPlayed ?? -1) - Number(a.matchesPlayed ?? -1));
   if (count) count.textContent = plural(players.length, 'jugador', 'jugadores');
-  tbody.innerHTML = players.map((p,i) => `<tr><td>${i+1}</td><td>${playerLink(p)}</td><td><a href="club.html?id=${p.clubId}">${esc(p.club)}</a></td><td>${p.matchesPlayed}</td><td><b>${p.goals}</b></td><td>${p.goalsPerMatch === null ? '—' : metric(p.goalsPerMatch,1)}</td><td>${p.twoMin}</td><td>${p.yellow}</td><td>${p.red}</td></tr>`).join('') || `<tr><td colspan="9">${emptyState('Sin participaciones', 'No hay registros disponibles para estos filtros.')}</td></tr>`;
+  tbody.innerHTML = players.map((p,i) => `<tr><td>${i+1}</td><td>${playerLink(p)}</td><td><a href="club.html?id=${p.clubId}">${esc(p.club)}</a></td><td>${statMetric(p.matchesPlayed)}</td><td><b>${statMetric(p.goals)}</b></td><td>${statMetric(p.goalsPerMatch,1)}</td><td>${statMetric(p.twoMin)}</td><td>${statMetric(p.yellow)}</td><td>${statMetric(p.red)}</td></tr>`).join('') || `<tr><td colspan="9">${emptyState('Sin participaciones', 'No hay registros disponibles para estos filtros.')}</td></tr>`;
 }
 
 function leaderRows(players, getter, formatter = value => metric(value), sub = p => p.club) {
@@ -367,11 +404,11 @@ function leaderRows(players, getter, formatter = value => metric(value), sub = p
 }
 
 function renderStats() {
-  const players = getPlayers();
-  const goals = players.slice().sort((a,b)=>b.goals-a.goals);
-  const rate = players.filter(p=>p.matchesPlayed>0).slice().sort((a,b)=>(b.goalsPerMatch||0)-(a.goalsPerMatch||0)||b.goals-a.goals);
-  const played = players.slice().sort((a,b)=>b.matchesPlayed-a.matchesPlayed||b.goals-a.goals);
-  const sanctions = players.slice().sort((a,b)=>b.sanctions-a.sanctions||b.twoMin-a.twoMin);
+  const players = getPlayers().filter(player => player.hasOfficialStats);
+  const goals = players.slice().sort((a,b)=>Number(b.goals ?? -1)-Number(a.goals ?? -1));
+  const rate = players.filter(p=>Number(p.matchesPlayed)>0).slice().sort((a,b)=>Number(b.goalsPerMatch ?? -1)-Number(a.goalsPerMatch ?? -1)||Number(b.goals ?? -1)-Number(a.goals ?? -1));
+  const played = players.slice().sort((a,b)=>Number(b.matchesPlayed ?? -1)-Number(a.matchesPlayed ?? -1)||Number(b.goals ?? -1)-Number(a.goals ?? -1));
+  const sanctions = players.slice().sort((a,b)=>Number(b.sanctions ?? -1)-Number(a.sanctions ?? -1)||Number(b.twoMin ?? -1)-Number(a.twoMin ?? -1));
   const map = {
     'goals-list': leaderRows(goals,p=>p.goals,v=>`${metric(v)} <small>G</small>`),
     'rate-list': leaderRows(rate,p=>p.goalsPerMatch,v=>`${v===null?'—':metric(v,1)} <small>G/P</small>`),
@@ -380,7 +417,7 @@ function renderStats() {
   };
   Object.entries(map).forEach(([id,html])=>{const el=document.getElementById(id);if(el)el.innerHTML=html;});
 
-  const clubs = getClubs().slice().sort((a,b)=>b.gf-a.gf);
+  const clubs = getClubs().filter(club => club.played > 0).slice().sort((a,b)=>b.gf-a.gf);
   const goalsChart = document.getElementById('club-goals-chart');
   if (goalsChart) {
     const max = Math.max(1,...clubs.map(c=>c.gf));
