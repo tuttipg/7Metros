@@ -99,6 +99,16 @@ try {
   assert.doesNotMatch(clubs, /images\/clubes\/sm\/64\.jpg/,
     'El navegador debe retirar del DOM el logo legacy roto y conservar el fallback');
 
+  const clubProfile = dumpDom('/club.html?id=14&team=9');
+  assert.match(clubProfile, /Estadísticas pendientes/,
+    'La ficha enriquecida del club no debe convertir ausencia de planillas verificadas en ceros');
+  assert.doesNotMatch(clubProfile, /null goles|null PJ|undefined goles|undefined PJ/,
+    'Las capas enriquecidas no deben imprimir valores nulos como estadísticas');
+
+  const home = dumpDom('/index.html');
+  assert.match(home, /Sin estadísticas verificadas de Liga de Honor/,
+    'La portada no debe elegir líderes desde planteles sin participaciones oficiales');
+
   console.log('Browser smoke: Chrome Android viewport + Supabase read-only OK');
 } finally {
   await new Promise(resolve => server.close(resolve));
