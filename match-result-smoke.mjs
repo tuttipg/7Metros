@@ -160,4 +160,32 @@ assert.equal(getMatchParticipations(501, 10).length, 0,
 assert.deepEqual(getStandings(), [],
   'sin resultados verificados no debe publicarse una tabla de posiciones llena de ceros');
 
+
+// Una participación de un partido verificado no autoriza a inventar campos
+// individuales ausentes como cero.
+prepareDataset({
+  globalSummary: { clubs: 2, players: 1, matches: 1, finished: 1, goals: 20, avgGoals: 20 },
+  clubes: [{ id: 1, nombre: 'A' }, { id: 2, nombre: 'B' }],
+  equipos: [
+    { id: 10, club_id: 1, temporada_id: 3, categoria: 'Mayores', division: 'LHC Hipotecario Seguros', rama: 'M' },
+    { id: 11, club_id: 2, temporada_id: 3, categoria: 'Mayores', division: 'LHC Hipotecario Seguros', rama: 'M' }
+  ],
+  jugadores: [{ id: 20, nombre: 'Dato', apellido: 'Parcial' }],
+  planteles: [{ id: 1, jugador_id: 20, equipo_id: 10, dorsal: 8, posicion: 'Central' }],
+  partidos: [{
+    id: 502, fecha: '2026-11-01', local_equipo_id: 10, visitante_equipo_id: 11,
+    estado: 'finalizado', goles_local: 10, goles_visitante: 10
+  }],
+  participaciones: [{
+    id: 2, partido_id: 502, jugador_id: 20, equipo_id: 10,
+    goles: null, exclusiones_2min: null, tarjeta_amarilla: null, tarjeta_roja: null
+  }]
+});
+const partialPlayer = getPlayers().find(player => player.id === 20);
+assert.equal(partialPlayer.hasOfficialStats, true);
+assert.equal(partialPlayer.matchesPlayed, 1, 'la participación verificada sí acredita PJ');
+assert.equal(partialPlayer.goals, null, 'goles NULL deben seguir siendo desconocidos');
+assert.equal(partialPlayer.goalsPerMatch, null);
+assert.equal(partialPlayer.sanctions, null, 'sanciones NULL no deben sumarse como cero');
+
 console.log('Match result evidence smoke test: OK');
