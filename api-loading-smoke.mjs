@@ -84,6 +84,7 @@ try {
   let mode = 'paused';
   let scopedReads = 0;
   let globalReads = 0;
+  let verifiedSummaryReads = 0;
   globalThis.fetch = async input => {
     const url = new URL(input);
     const table = url.pathname.split('/').at(-1);
@@ -99,6 +100,11 @@ try {
     }
     if (table === 'clubes') return mockJson([{ id: 1, nombre: 'Club de prueba' }]);
     if (table === 'partidos') {
+      if (url.searchParams.get('goles_local') === 'not.is.null' &&
+          url.searchParams.get('goles_visitante') === 'not.is.null') {
+        verifiedSummaryReads++;
+        return mockJson([]);
+      }
       if (url.searchParams.has('temporada_id')) {
         scopedReads++;
         if (mode === 'paused') {
@@ -134,6 +140,7 @@ try {
   const legacy = await loadPublicDataset(3);
   assert.equal(scopedReads, 3);
   assert.equal(globalReads, 1, 'sólo la ausencia comprobada de temporada_id habilita fallback');
+  assert.equal(verifiedSummaryReads, 1, 'el resumen deportivo verificado debe consultar sólo filas con ambos marcadores');
   assert.deepEqual(legacy.partidos.map(row => row.id), [401],
     'el fallback legacy debe mantener el scope de ambos equipos');
 
