@@ -235,10 +235,12 @@ try {
   assert.equal(clubProfileResult.probe?.hasProfile, true,
     `El enlace generado por Clubes debe abrir la ficha enriquecida; quedó en ${clubProfileResult.probe?.href}: ${clubProfileResult.probe?.text}`);
   const clubProfile = clubProfileResult.html;
-  assert.match(clubProfile, /Estadísticas pendientes/,
-    'La ficha enriquecida del club no debe convertir ausencia de planillas verificadas en ceros');
+  assert.match(clubProfile, /Estadísticas pendientes|Pendiente de planilla digital/,
+    'La ficha enriquecida del club debe expresar que faltan datos deportivos oficiales');
   assert.doesNotMatch(clubProfile, /null goles|null PJ|undefined goles|undefined PJ/,
     'Las capas enriquecidas no deben imprimir valores nulos como estadísticas');
+  assert.doesNotMatch(clubProfile, /<small>PTS<\/small><b>0<\/b>|<small>PJ<\/small><b>0<\/b>/,
+    'Sin resultados verificados, el marcador del club debe usar guiones y no ceros');
 
   const homeResult = await loadPage(cdp, '/index.html',
     `document.querySelector('[data-kpi="clubs"]')?.textContent?.trim() !== '—' && document.querySelector('#dashboard-highlights')?.textContent?.trim().length > 0`);
