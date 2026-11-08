@@ -117,4 +117,47 @@ assert.deepEqual(state.teams.map(row => row.id), [10, 11],
 assert.deepEqual(state.players.map(row => row.id), [20],
   'Player links require positive safe integer IDs');
 
+
+// Regression: a scheduled match carrying an accidental 0-0 and participation
+// rows must not create standings or player statistics.
+prepareDataset({
+  globalSummary: { clubs: 2, players: 1, matches: 1, finished: 0, goals: 0, avgGoals: null },
+  clubes: [
+    { id: 1, nombre: 'Local' },
+    { id: 2, nombre: 'Visitante' }
+  ],
+  equipos: [
+    { id: 10, club_id: 1, temporada_id: 3, categoria: 'Mayores', division: 'LHC Hipotecario Seguros', rama: 'M' },
+    { id: 11, club_id: 2, temporada_id: 3, categoria: 'Mayores', division: 'LHC Hipotecario Seguros', rama: 'M' }
+  ],
+  jugadores: [{ id: 20, nombre: 'Jugador', apellido: 'Prueba' }],
+  planteles: [{ id: 1, jugador_id: 20, equipo_id: 10, dorsal: 7, posicion: 'Lateral' }],
+  partidos: [{
+    id: 501,
+    fecha: '2026-11-08',
+    local_equipo_id: 10,
+    visitante_equipo_id: 11,
+    estado: 'programado',
+    goles_local: 0,
+    goles_visitante: 0
+  }],
+  participaciones: [{
+    id: 1,
+    partido_id: 501,
+    jugador_id: 20,
+    equipo_id: 10,
+    goles: 7,
+    exclusiones_2min: 1
+  }]
+});
+const pendingPlayer = store.getPlayers().find(player => player.id === 20);
+assert.equal(state.matches[0].status, 'Programado');
+assert.equal(pendingPlayer.hasOfficialStats, false);
+assert.equal(pendingPlayer.matchesPlayed, null, 'una participación sin resultado verificado no acredita PJ');
+assert.equal(pendingPlayer.goals, null, 'una participación sin resultado verificado no acredita goles');
+assert.equal(store.getMatchParticipations(501, 10).length, 0,
+  'el detalle no debe publicar estadísticas del partido hasta validar el resultado');
+assert.deepEqual(store.getStandings(), [],
+  'sin resultados verificados no debe publicarse una tabla de posiciones llena de ceros');
+
 console.log('Match result evidence smoke test: OK');
