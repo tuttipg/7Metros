@@ -304,19 +304,29 @@ async function loadGlobalSummaryView() {
   try {
     const rows = await supabaseGetAll(
       'v_global_summary',
-      '?select=clubes,jugadores,partidos,partidos_con_resultado,goles,promedio_goles'
+      '?select=clubes,jugadores,partidos'
     );
     const row = rows[0];
     // An empty but existing view is not proof that the view is absent.
     // Fail closed rather than scanning every match through the legacy fallback.
     if (!row) throw new DataError('La vista de resumen global no devolvió filas.');
+
+    // La vista histórica considera "con resultado" cualquier marcador no nulo.
+    // Para el producto público, un marcador sólo es deportivo si además cumple
+    // el mismo contrato de resultado verificado usado por el resto de la web.
+    const scoredMatches = await supabaseGetAll(
+      'partidos',
+      '?select=id,estado,goles_local,goles_visitante&goles_local=not.is.null&goles_visitante=not.is.null'
+    );
+    const sport = summaryFromMatches(scoredMatches, 0, 0);
+
     const summary = {
       clubs: readSummaryCount(row.clubes),
       players: readSummaryCount(row.jugadores),
       matches: readSummaryCount(row.partidos),
-      finished: readSummaryCount(row.partidos_con_resultado),
-      goals: readSummaryCount(row.goles),
-      avgGoals: readSummaryAverage(row.promedio_goles)
+      finished: sport.finished,
+      goals: sport.goals,
+      avgGoals: sport.avgGoals
     };
     if (!isValidGlobalSummary(summary)) {
       throw new DataError('La vista de resumen global devolvió estadísticas inválidas.');
