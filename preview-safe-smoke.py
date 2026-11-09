@@ -30,7 +30,7 @@ class PreviewSafetyTests(unittest.TestCase):
             return error.code, error.read(), error.headers
 
     def test_home_and_assets(self):
-        for path in ("/", "/index.html", "/style.css", "/script.js", "/favicon.svg"):
+        for path in ("/", "/index.html", "/style.css", "/script.js", "/favicon.svg", "/match-result-core.mjs", "/match-freshness-core.mjs"):
             with self.subTest(path=path):
                 status, body, headers = self.request(path)
                 self.assertEqual(status, 200)
