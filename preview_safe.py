@@ -5,7 +5,7 @@ from urllib.parse import urlsplit, unquote
 import argparse
 
 ROOT = Path(__file__).resolve().parent
-ALLOWED = {'.html', '.css', '.js', '.svg', '.png', '.jpg', '.jpeg', '.webp', '.ico', '.woff', '.woff2'}
+ALLOWED = {'.html', '.css', '.js', '.mjs', '.svg', '.png', '.jpg', '.jpeg', '.webp', '.ico', '.woff', '.woff2'}
 
 class Handler(SimpleHTTPRequestHandler):
     def translate_path(self, path):
