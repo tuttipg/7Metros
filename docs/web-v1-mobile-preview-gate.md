@@ -35,12 +35,12 @@ Esta alternativa **no crea una URL pública** ni prueba un deploy remoto. Requie
    ```bash
    git clone https://github.com/tuttipg/7Metros.git 7metros-preview
    cd 7metros-preview
-   git checkout --detach bf53c1c66494f3b57c6a9dd90863e053d7e346e3
+   git checkout --detach 748bc8e0d9390c930542e0f6bb9c25485aead7f7
    git rev-parse HEAD
    python -m http.server 8765 --bind 0.0.0.0
    ```
 
-   **Importante:** el SHA anterior es una referencia histórica; antes de ejecutar, reemplazarlo por el HEAD vigente del PR #82 y comprobar que `git rev-parse HEAD` devuelve ese mismo SHA. No se necesita iniciar sesión ni configurar secretos. El servidor HTTP expone los archivos de esa carpeta a dispositivos de la red local: usar una red confiable y detenerlo con Ctrl+C al terminar.
+   **Importante:** el SHA indicado corresponde al HEAD de #82 verificado el 2026-11-08 a las 23:34 (Argentina). Antes de probar, consultar el HEAD actual de #82; si cambió, reemplazar el SHA del comando y comprobar que `git rev-parse HEAD` devuelve exactamente el commit elegido. No ejecutar el servidor si la comprobación falla. No se necesita iniciar sesión ni configurar secretos. El servidor HTTP expone los archivos de esa carpeta a dispositivos de la red local: usar una red confiable y detenerlo con Ctrl+C al terminar.
 
 2. Identificar la IP privada de la computadora (Windows: `ipconfig`, campo IPv4 de Wi-Fi; Linux/macOS: consultar configuración de red). Desde Chrome Android abrir `http://IP_PRIVADA_DE_LA_PC:8765/` sustituyendo el marcador por la IP real. **No es una URL verificada previamente**: registrar la URL exacta y comprobar que abre la portada. Si no conecta, verificar firewall local, aislamiento entre dispositivos y que ambos estén en la misma Wi-Fi; no configurar port forwarding.
 3. Ejecutar los siete casos manuales de esta guía y anotar resultado, SHA y capturas de fallos. Si se necesita una URL accesible desde cualquier lugar, sigue siendo necesario un despliegue de preview aislado expresamente autorizado.
