@@ -84,6 +84,9 @@ jobs:
       - name: Check Python syntax
         run: python -m py_compile validate_site.py validate_backend_contract.py
 
+      - name: Safe local preview HTTP smoke test
+        run: python preview-safe-smoke.py
+
       - name: Storage unavailable smoke test
         run: node storage-unavailable-smoke.mjs
 
