@@ -30,17 +30,18 @@ Estado de referencia: 2026-11-08. La cadena de revisión es `main → #75 → #8
 
 Esta alternativa **no crea una URL pública** ni prueba un deploy remoto. Requiere una computadora con Git/Python y un Android conectado a la **misma red Wi-Fi privada**. No usar Wi-Fi pública ni abrir puertos del router. La web puede realizar consultas GET a los servicios públicos configurados; si se necesita aislamiento de datos absoluto, no ejecutar esta alternativa hasta configurar fixtures.
 
-1. En la computadora, descargar exactamente el commit verificado (sin modificar `main`):
+1. En la computadora, obtener la versión **actual** del PR #82 sin tocar `main` ni depender de un SHA copiado de una guía antigua:
 
    ```bash
    git clone https://github.com/tuttipg/7Metros.git 7metros-preview
    cd 7metros-preview
-   git checkout --detach 748bc8e0d9390c930542e0f6bb9c25485aead7f7
+   git fetch origin pull/82/head
+   git checkout --detach FETCH_HEAD
    git rev-parse HEAD
    python -m http.server 8765 --bind 0.0.0.0
    ```
 
-   **Importante:** el SHA indicado corresponde al HEAD de #82 verificado el 2026-11-08 a las 23:34 (Argentina). Antes de probar, consultar el HEAD actual de #82; si cambió, reemplazar el SHA del comando y comprobar que `git rev-parse HEAD` devuelve exactamente el commit elegido. No ejecutar el servidor si la comprobación falla. No se necesita iniciar sesión ni configurar secretos. El servidor HTTP expone los archivos de esa carpeta a dispositivos de la red local: usar una red confiable y detenerlo con Ctrl+C al terminar.
+   **Importante:** antes de iniciar el servidor, comparar el SHA impreso por `git rev-parse HEAD` con el **HEAD mostrado en el PR #82** en GitHub. Si difieren, detenerse y volver a obtener el PR; no probar una versión distinta de la revisada. `pull/82/head` es la referencia Git del PR y evita fijar en esta guía un commit que quedaría obsoleto al siguiente cambio. No se necesita iniciar sesión ni configurar secretos. El servidor HTTP expone los archivos de esa carpeta a dispositivos de la red local: usar una red confiable y detenerlo con Ctrl+C al terminar.
 
 2. Identificar la IP privada de la computadora (Windows: `ipconfig`, campo IPv4 de Wi-Fi; Linux/macOS: consultar configuración de red). Desde Chrome Android abrir `http://IP_PRIVADA_DE_LA_PC:8765/` sustituyendo el marcador por la IP real. **No es una URL verificada previamente**: registrar la URL exacta y comprobar que abre la portada. Si no conecta, verificar firewall local, aislamiento entre dispositivos y que ambos estén en la misma Wi-Fi; no configurar port forwarding.
 3. Ejecutar los siete casos manuales de esta guía y anotar resultado, SHA y capturas de fallos. Si se necesita una URL accesible desde cualquier lugar, sigue siendo necesario un despliegue de preview aislado expresamente autorizado.
