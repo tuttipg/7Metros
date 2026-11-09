@@ -26,11 +26,11 @@ Estado de referencia: 2026-11-08. La cadena de revisión es `main → #75 → #8
 - Mantener #35 (contratos SQL) separado, en Draft, con staging y revisión de DDL independiente. #34 FEMEBAL SAFE/DRY RUN y #43 IA/GT tampoco se cierran por limpieza del backlog.
 - Registrar fallos reproducibles en #82 y corregirlos en la rama existente con regresión automatizada cuando sea posible.
 
-## Alternativa ejecutable sin deploy remoto: preview por Wi-Fi local
+## Alternativa segura sin deploy remoto: Chrome Android por USB (ADB)
 
-Esta alternativa **no crea una URL pública** ni prueba un deploy remoto. Requiere una computadora con Git/Python y un Android conectado a la **misma red Wi-Fi privada**. No usar Wi-Fi pública ni abrir puertos del router. La web puede realizar consultas GET a los servicios públicos configurados; si se necesita aislamiento de datos absoluto, no ejecutar esta alternativa hasta configurar fixtures.
+**No servir el checkout del repositorio en la Wi-Fi.** Un servidor HTTP sobre el checkout puede exponer `.git`, documentación y archivos internos. Esta opción usa un puerto enlazado exclusivamente a `127.0.0.1` en la computadora y el túnel USB de Android Debug Bridge (ADB); no abre un puerto LAN ni cambia producción. Requiere Git, Python, Android Platform Tools (`adb`), cable USB y habilitar temporalmente depuración USB en un dispositivo propio. La aplicación puede efectuar GET a fuentes públicas según su configuración: esto no es un entorno de datos aislado.
 
-1. En la computadora, obtener la versión **actual** del PR #82 sin tocar `main` ni depender de un SHA copiado de una guía antigua:
+1. En una terminal de la computadora, descargar el HEAD actual de #82 en una carpeta independiente y comprobar el SHA con el mostrado en GitHub:
 
    ```bash
    git clone https://github.com/tuttipg/7Metros.git 7metros-preview
@@ -38,10 +38,10 @@ Esta alternativa **no crea una URL pública** ni prueba un deploy remoto. Requie
    git fetch origin pull/82/head
    git checkout --detach FETCH_HEAD
    git rev-parse HEAD
-   python -m http.server 8765 --bind 0.0.0.0
    ```
 
-   **Importante:** antes de iniciar el servidor, comparar el SHA impreso por `git rev-parse HEAD` con el **HEAD mostrado en el PR #82** en GitHub. Si difieren, detenerse y volver a obtener el PR; no probar una versión distinta de la revisada. `pull/82/head` es la referencia Git del PR y evita fijar en esta guía un commit que quedaría obsoleto al siguiente cambio. No se necesita iniciar sesión ni configurar secretos. El servidor HTTP expone los archivos de esa carpeta a dispositivos de la red local: usar una red confiable y detenerlo con Ctrl+C al terminar.
+2. Conectar el Android propio por USB, aceptar la autorización de depuración en el teléfono y comprobar `adb devices` (estado `device`, no `unauthorized`). Ejecutar `adb reverse tcp:8765 tcp:8765`. En la terminal de la computadora, desde la carpeta `7metros-preview`, iniciar `python -m http.server 8765 --bind 127.0.0.1`. **Este servidor sigue sirviendo archivos del checkout**, pero solamente a la computadora y al dispositivo USB autorizado: no usarlo con dispositivos ajenos, ni exponer el puerto mediante túneles externos.
+3. En **Chrome Android**, abrir `http://127.0.0.1:8765/` y comprobar la portada. Esta dirección es local al Android y **no es una preview remota verificada**. Ejecutar los siete casos de arriba, registrando SHA, dispositivo y capturas. Si hay errores de conexión, comprobar `adb devices`, `adb reverse --list` y el servidor; no abrir puertos del router.
+4. Al terminar, detener Python con Ctrl+C, ejecutar `adb reverse --remove tcp:8765`, desconectar USB y desactivar la depuración USB si ya no se necesita.
 
-2. Identificar la IP privada de la computadora (Windows: `ipconfig`, campo IPv4 de Wi-Fi; Linux/macOS: consultar configuración de red). Desde Chrome Android abrir `http://IP_PRIVADA_DE_LA_PC:8765/` sustituyendo el marcador por la IP real. **No es una URL verificada previamente**: registrar la URL exacta y comprobar que abre la portada. Si no conecta, verificar firewall local, aislamiento entre dispositivos y que ambos estén en la misma Wi-Fi; no configurar port forwarding.
-3. Ejecutar los siete casos manuales de esta guía y anotar resultado, SHA y capturas de fallos. Si se necesita una URL accesible desde cualquier lugar, sigue siendo necesario un despliegue de preview aislado expresamente autorizado.
+**Limitación:** el túnel USB permite probar la navegación real en Chrome Android, pero no valida un despliegue remoto, la configuración del hosting ni la accesibilidad desde Internet. Para una URL pública independiente sigue faltando autorización explícita para crear un proyecto de preview separado, fijado al HEAD de #82 y sin credenciales de escritura.
