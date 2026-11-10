@@ -49,6 +49,23 @@ class PreviewSafetyTests(unittest.TestCase):
                 status, _, _ = self.request(path)
                 self.assertEqual(status, 404)
 
+    def test_symlink_outside_root_is_unavailable(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            root = parent / "web"
+            root.mkdir()
+            outside = parent / "private.js"
+            outside.write_text("SECRET_OUTSIDE_ROOT", encoding="utf-8")
+            (root / "leak.js").symlink_to(outside)
+            with patch("preview_safe.ROOT", root):
+                status, body, _ = self.request("/leak.js")
+            self.assertEqual(status, 404)
+            self.assertNotIn(b"SECRET_OUTSIDE_ROOT", body)
+
 
 if __name__ == "__main__":
     unittest.main()
