@@ -45,3 +45,25 @@ Estado de referencia: 2026-11-08. La cadena de revisión es `main → #75 → #8
 4. Al terminar, detener Python con Ctrl+C, ejecutar `adb reverse --remove tcp:8765`, desconectar USB y desactivar la depuración USB si ya no se necesita.
 
 **Limitación:** el túnel USB permite probar la navegación real en Chrome Android, pero no valida un despliegue remoto, la configuración del hosting ni la accesibilidad desde Internet. Para una URL pública independiente sigue faltando autorización explícita para crear un proyecto de preview separado, fijado al HEAD de #82 y sin credenciales de escritura.
+
+## Registro rápido de aceptación (copiar al comentario del PR #82)
+
+Completar **desde el Android real**, no desde CI ni emulación. No registrar credenciales, tokens, cookies ni datos personales.
+
+```text
+Fecha/hora local:
+Dispositivo / versión Android / Chrome:
+SHA (git rev-parse HEAD):
+Origen: USB ADB local (http://127.0.0.1:8765/) / preview remota verificada
+1. Inicio: OK / FALLA — evidencia:
+2. Menú: OK / FALLA — evidencia:
+3. Búsqueda: OK / FALLA — evidencia:
+4. Fichas: OK / FALLA — evidencia:
+5. Resultados sin 0–0 ficticio: OK / FALLA — evidencia:
+6. Responsive vertical/horizontal: OK / FALLA — evidencia:
+7. Atrás: OK / FALLA — evidencia:
+Errores de consola/red visibles (sin secretos):
+Decisión: APTO PARA REVISIÓN HUMANA / BLOQUEADO
+```
+
+**Comprobación previa al teléfono:** si `git rev-parse HEAD` no coincide con el HEAD actual de #82, detener la prueba y actualizar el checkout; un CI verde de otro SHA no valida el checkout local. En Windows PowerShell puede ser necesario usar `py preview_safe.py` en lugar de `python preview_safe.py`. Si `adb devices` muestra `unauthorized`, aceptar la autorización en el teléfono propio antes de repetir `adb reverse`. No abrir el puerto a la red local.
