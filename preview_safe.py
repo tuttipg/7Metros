@@ -15,7 +15,8 @@ class Handler(SimpleHTTPRequestHandler):
         if name.count('/') != 1 or '\\' in name or name[1:].startswith('.'):
             return str(ROOT / '__denied__')
         target = ROOT / name[1:]
-        if target.suffix.lower() not in ALLOWED or not target.is_file():
+        # Resolve links before checking containment to avoid serving files outside ROOT.
+        if not target.resolve().is_relative_to(ROOT) or target.suffix.lower() not in ALLOWED or not target.is_file():
             return str(ROOT / '__denied__')
         return str(target)
 
