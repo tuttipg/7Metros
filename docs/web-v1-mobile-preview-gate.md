@@ -1,6 +1,6 @@
 # Web V1 — gate de preview móvil para PR #82
 
-Estado de referencia: 2026-11-08. La cadena de revisión es `main → #75 → #81 → #82`. **Esta guía no declara que exista un deploy de preview.**
+Estado de referencia: 2026-11-11 (HEAD #82 `e26ada1aaa2e7665b94f4c98c755d5fd0a4c1dac`; [CI exitoso del HEAD](https://github.com/tuttipg/7Metros/actions/runs/43128711732)). La cadena de revisión es `main → #75 → #81 → #82`. **Esta guía no declara que exista un deploy de preview.**
 
 ## Condiciones previas para publicar una preview
 
@@ -25,6 +25,21 @@ Estado de referencia: 2026-11-08. La cadena de revisión es `main → #75 → #8
 - Revisar primero #75 (marcadores/alcance), luego #81 (almacenamiento/navegación/a11y), luego #82 (deduplicación de cargas y temporadas). Cada PR conserva su base; **no fusionar a main sin aprobación**.
 - Mantener #35 (contratos SQL) separado, en Draft, con staging y revisión de DDL independiente. #34 FEMEBAL SAFE/DRY RUN y #43 IA/GT tampoco se cierran por limpieza del backlog.
 - Registrar fallos reproducibles en #82 y corregirlos en la rama existente con regresión automatizada cuando sea posible.
+
+## Inicio rápido: probar en Chrome Android sin deploy
+
+En la computadora, con Git, Python y ADB instalados, conectá tu Android propio por USB, habilitá depuración USB y ejecutá en una primera terminal:
+
+```bash
+git clone https://github.com/tuttipg/7Metros.git 7metros-preview
+cd 7metros-preview
+git fetch origin pull/82/head
+git checkout --detach FETCH_HEAD
+git rev-parse HEAD
+python preview_safe.py
+```
+
+Comprobá que el SHA impreso coincida con el HEAD más reciente de #82. En otra terminal ejecutá `adb devices` (debe decir `device`) y `adb reverse tcp:8765 tcp:8765`. Abrí **Chrome Android** en `http://127.0.0.1:8765/` y completá los siete casos de aceptación. En Windows, si `python` no funciona, probá `py preview_safe.py`. La URL funciona **solo mientras el USB, el túnel y el servidor estén activos**; no es una preview remota.
 
 ## Alternativa segura sin deploy remoto: Chrome Android por USB (ADB)
 
