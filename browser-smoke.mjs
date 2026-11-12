@@ -5,7 +5,8 @@ import { spawn, spawnSync } from 'node:child_process';
 import { extname, join, normalize } from 'node:path';
 
 const ROOT = process.cwd();
-const PORT = 4173;
+const USE_SAFE_PREVIEW = process.env.BROWSER_SMOKE_SAFE_PREVIEW === '1';
+const PORT = USE_SAFE_PREVIEW ? 8765 : 4173;
 const DEBUG_PORT = 9222;
 const MIMES = {
   '.html': 'text/html; charset=utf-8',
@@ -46,10 +47,31 @@ const server = createServer(async (req, res) => {
   }
 });
 
-await new Promise((resolve, reject) => {
-  server.once('error', reject);
-  server.listen(PORT, '127.0.0.1', resolve);
-});
+let previewProcess = null;
+if (USE_SAFE_PREVIEW) {
+  previewProcess = spawn('python', ['preview_safe.py', '--port', String(PORT)], {
+    stdio: ['ignore', 'ignore', 'pipe']
+  });
+  const deadline = Date.now() + 10000;
+  let ready = false;
+  while (Date.now() < deadline) {
+    if (previewProcess.exitCode !== null) break;
+    try {
+      const response = await fetch(`http://127.0.0.1:${PORT}/index.html`);
+      if (response.ok) { ready = true; break; }
+    } catch {}
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  if (!ready) {
+    previewProcess.kill('SIGTERM');
+    throw new Error('preview_safe.py no inició correctamente');
+  }
+} else {
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(PORT, '127.0.0.1', resolve);
+  });
+}
 
 const chrome = spawn(findChrome(), [
   '--headless=new',
@@ -252,5 +274,6 @@ try {
   cdp.close();
 } finally {
   chrome.kill('SIGTERM');
-  await new Promise(resolve => server.close(resolve));
+  if (previewProcess) previewProcess.kill('SIGTERM');
+  else await new Promise(resolve => server.close(resolve));
 }
