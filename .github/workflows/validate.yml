@@ -176,6 +176,9 @@ jobs:
       - name: Real Chrome mobile smoke test
         run: node browser-smoke.mjs
 
+      - name: Chrome mobile smoke via safe Android preview server
+        run: BROWSER_SMOKE_SAFE_PREVIEW=1 node browser-smoke.mjs
+
       - name: FEMEBAL importer core smoke test
         run: node n8n/importer-core-smoke.mjs
 
