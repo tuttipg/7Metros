@@ -45,7 +45,7 @@ export function clubBadge(club, small = false) {
     return `<span class="${cls}" data-club-tone="${id % 6}">${fallback}</span>`;
   }
 
-  return `<span class="${cls}" data-club-tone="${id % 6}"><span style="grid-area:1/1">${fallback}</span><img src="${esc(logoUrl)}" alt="" loading="lazy" decoding="async" style="grid-area:1/1;width:82%;height:82%;object-fit:contain;background:#fff;border-radius:16%" onerror="this.remove()"></span>`;
+  return `<span class="${cls}" data-club-tone="${id % 6}"><span style="grid-area:1/1">${fallback}</span><img src="${esc(logoUrl)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" style="grid-area:1/1;width:82%;height:82%;object-fit:contain;background:#fff;border-radius:16%" onload="this.classList.add('is-loaded')" onerror="this.remove()"></span>`;
 }
 
 export function showToast(message) {

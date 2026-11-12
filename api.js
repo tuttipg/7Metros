@@ -3,7 +3,7 @@ import { hasVerifiedMatchResult } from './match-result-core.mjs';
 
 const PAGE_SIZE = 1000;
 const REQUEST_TIMEOUT = 15000;
-const SESSION_CACHE_VERSION = 'public-v1';
+const SESSION_CACHE_VERSION = 'public-v2-verified-results';
 const SESSION_CACHE_TTL = 2 * 60 * 1000;
 const SESSION_CACHE_MAX_CHARS = 3_500_000;
 
@@ -304,19 +304,29 @@ async function loadGlobalSummaryView() {
   try {
     const rows = await supabaseGetAll(
       'v_global_summary',
-      '?select=clubes,jugadores,partidos,partidos_con_resultado,goles,promedio_goles'
+      '?select=clubes,jugadores,partidos'
     );
     const row = rows[0];
     // An empty but existing view is not proof that the view is absent.
     // Fail closed rather than scanning every match through the legacy fallback.
     if (!row) throw new DataError('La vista de resumen global no devolvió filas.');
+
+    // La vista histórica considera "con resultado" cualquier marcador no nulo.
+    // Para el producto público, un marcador sólo es deportivo si además cumple
+    // el mismo contrato de resultado verificado usado por el resto de la web.
+    const scoredMatches = await supabaseGetAll(
+      'partidos',
+      '?select=id,estado,goles_local,goles_visitante&goles_local=not.is.null&goles_visitante=not.is.null'
+    );
+    const sport = summaryFromMatches(scoredMatches, 0, 0);
+
     const summary = {
       clubs: readSummaryCount(row.clubes),
       players: readSummaryCount(row.jugadores),
       matches: readSummaryCount(row.partidos),
-      finished: readSummaryCount(row.partidos_con_resultado),
-      goals: readSummaryCount(row.goles),
-      avgGoals: readSummaryAverage(row.promedio_goles)
+      finished: sport.finished,
+      goals: sport.goals,
+      avgGoals: sport.avgGoals
     };
     if (!isValidGlobalSummary(summary)) {
       throw new DataError('La vista de resumen global devolvió estadísticas inválidas.');
@@ -406,13 +416,38 @@ async function loadSeasonMatches(season, teamIds) {
   return filterMatchesToTeamIds(rows, teamIds);
 }
 
+// Multiple views can request the same season before sessionStorage is populated.
+// Share only in-flight loads, keyed by season; do not cache errors in memory.
+const pendingDatasetLoads = Object.create(null);
+
 export async function loadPublicDataset(seasonId) {
-  const season = Number(seasonId);
-  if (!Number.isInteger(season) || season <= 0) throw new DataError('La temporada configurada no es válida.');
+  // Number(true), Number('1e3') and unsafe integers can silently select
+  // a different season. Accept only positive, safe decimal identifiers.
+  const season = typeof seasonId === 'number'
+    ? seasonId
+    : (typeof seasonId === 'string' && /^[1-9][0-9]*$/.test(seasonId)
+      ? Number(seasonId) : NaN);
+  if (!Number.isSafeInteger(season) || season <= 0) {
+    throw new DataError('La temporada configurada no es válida.');
+  }
 
   const cached = readDatasetCache(season);
   if (cached) return cached;
 
+  const existing = pendingDatasetLoads[season];
+  if (existing) return existing;
+
+  const pending = loadPublicDatasetUncached(season);
+  pendingDatasetLoads[season] = pending;
+  try {
+    return await pending;
+  } finally {
+    // A failed load must be retryable, and one season must not clear another.
+    if (pendingDatasetLoads[season] === pending) delete pendingDatasetLoads[season];
+  }
+}
+
+async function loadPublicDatasetUncached(season) {
   // Arranca el resumen global en paralelo para que Inicio pueda mostrar escala
   // de la base mientras todavía se cargan los datos detallados de la temporada.
   // Attach rejection handling immediately; the summary may fail before teams load.
