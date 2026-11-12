@@ -1,6 +1,6 @@
 # Web V1 — gate de preview móvil para PR #82
 
-Estado de referencia: 2026-11-11 (HEAD #82 `e26ada1aaa2e7665b94f4c98c755d5fd0a4c1dac`; [CI exitoso del HEAD](https://github.com/tuttipg/7Metros/actions/runs/43128711732)). La cadena de revisión es `main → #75 → #81 → #82`. **Esta guía no declara que exista un deploy de preview.**
+Estado de referencia: guía operativa para el **HEAD vigente** de #82 (no fijar un SHA histórico). Antes de cada prueba, comparar `git rev-parse HEAD` con el HEAD de [PR #82](https://github.com/tuttipg/7Metros/pull/82) y su CI correspondiente. La cadena de revisión es `main → #75 → #81 → #82`. **Esta guía no declara que exista un deploy de preview.**
 
 ## Condiciones previas para publicar una preview
 
@@ -26,26 +26,11 @@ Estado de referencia: 2026-11-11 (HEAD #82 `e26ada1aaa2e7665b94f4c98c755d5fd0a4c
 - Mantener #35 (contratos SQL) separado, en Draft, con staging y revisión de DDL independiente. #34 FEMEBAL SAFE/DRY RUN y #43 IA/GT tampoco se cierran por limpieza del backlog.
 - Registrar fallos reproducibles en #82 y corregirlos en la rama existente con regresión automatizada cuando sea posible.
 
-## Inicio rápido: probar en Chrome Android sin deploy
-
-En la computadora, con Git, Python y ADB instalados, conectá tu Android propio por USB, habilitá depuración USB y ejecutá en una primera terminal:
-
-```bash
-git clone https://github.com/tuttipg/7Metros.git 7metros-preview
-cd 7metros-preview
-git fetch origin pull/82/head
-git checkout --detach FETCH_HEAD
-git rev-parse HEAD
-python preview_safe.py
-```
-
-Comprobá que el SHA impreso coincida con el HEAD más reciente de #82. En otra terminal ejecutá `adb devices` (debe decir `device`) y `adb reverse tcp:8765 tcp:8765`. Abrí **Chrome Android** en `http://127.0.0.1:8765/` y completá los siete casos de aceptación. En Windows, si `python` no funciona, probá `py preview_safe.py`. La URL funciona **solo mientras el USB, el túnel y el servidor estén activos**; no es una preview remota.
-
 ## Alternativa segura sin deploy remoto: Chrome Android por USB (ADB)
 
 **No servir el checkout del repositorio en la Wi-Fi.** Un servidor HTTP sobre el checkout puede exponer `.git`, documentación y archivos internos. Esta opción usa un puerto enlazado exclusivamente a `127.0.0.1` en la computadora y el túnel USB de Android Debug Bridge (ADB); no abre un puerto LAN ni cambia producción. Requiere Git, Python, Android Platform Tools (`adb`), cable USB y habilitar temporalmente depuración USB en un dispositivo propio. La aplicación puede efectuar GET a fuentes públicas según su configuración: esto no es un entorno de datos aislado.
 
-1. En una terminal de la computadora, descargar el HEAD actual de #82 en una carpeta independiente y comprobar el SHA con el mostrado en GitHub:
+1. En una terminal de la computadora, descargar el HEAD actual de #82 en una carpeta independiente y comprobar el SHA con el mostrado en GitHub. **No continuar si difiere**:
 
    ```bash
    git clone https://github.com/tuttipg/7Metros.git 7metros-preview
