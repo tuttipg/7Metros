@@ -264,6 +264,29 @@ try {
   assert.doesNotMatch(clubProfile, /<small>PTS<\/small><b>0<\/b>|<small>PJ<\/small><b>0<\/b>/,
     'Sin resultados verificados, el marcador del club debe usar guiones y no ceros');
 
+  // Exercise actual browser history, not just direct URL navigation.
+  // The club detail was reached from a generated link; Back must restore the listing.
+  const backResult = await cdp.send('Runtime.evaluate', {
+    expression: `(async () => {
+      history.back();
+      const deadline = Date.now() + 10000;
+      while (Date.now() < deadline) {
+        if (location.pathname === '/clubes.html' && document.querySelector('.club-card')) {
+          return { path: location.pathname, hasCards: true };
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      return { path: location.pathname, hasCards: Boolean(document.querySelector('.club-card')) };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true
+  });
+  assert.equal(backResult.result?.value?.path, '/clubes.html',
+    'Atrás de Chrome debe devolver desde la ficha del club al listado');
+  assert.equal(backResult.result?.value?.hasCards, true,
+    'Atrás de Chrome debe restaurar el listado de clubes');
+  assert.deepEqual(cdp.exceptions, [], 'Atrás de Chrome no debe producir excepciones JS');
+
   const homeResult = await loadPage(cdp, '/index.html',
     `document.querySelector('[data-kpi="clubs"]')?.textContent?.trim() !== '—' && document.querySelector('#dashboard-highlights')?.textContent?.trim().length > 0`);
   const home = homeResult.html;
