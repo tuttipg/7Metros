@@ -2,6 +2,8 @@ import { SEASON_ID } from './config.js';
 import { readRouteParam } from './route-id-core.mjs';
 import { state, getClub, getMatch } from './store.js';
 import { renderCurrentPage } from './pages.js';
+import { enhanceCurrentPage } from './features.js';
+import { enhanceMatchFreshness } from './match-freshness.js';
 import { renderCompetitionBar } from './ui.js';
 import { resolveScopedRouteContext } from './scoped-route-core.mjs';
 
@@ -61,6 +63,8 @@ function applyTeamContext(teamId, entityId) {
 
   renderCompetitionBar();
   renderCurrentPage();
+  enhanceCurrentPage();
+  enhanceMatchFreshness();
   return true;
 }
 

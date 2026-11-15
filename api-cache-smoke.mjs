@@ -9,7 +9,7 @@ globalThis.SEVEN_METROS_CONFIG = {
   defaults: { categoria: 'Mayores', division: 'LHC Hipotecario Seguros', rama: 'M' }
 };
 
-const cacheKey = '7m:dataset:public-v1:3';
+const cacheKey = '7m:dataset:public-v2-verified-results:3';
 const entries = new Map();
 globalThis.sessionStorage = {
   getItem(key) { return entries.get(key) ?? null; },
@@ -92,8 +92,14 @@ let summaryReads = 0;
 let nextSummaryValue = 1;
 Date.now = () => simulatedNow;
 try {
+  let verifiedSportReads = 0;
   globalThis.fetch = async input => {
-    assert.equal(new URL(input).pathname.split('/').at(-1), 'v_global_summary');
+    const table = new URL(input).pathname.split('/').at(-1);
+    if (table === 'partidos') {
+      verifiedSportReads++;
+      return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    assert.equal(table, 'v_global_summary');
     summaryReads++;
     if (nextSummaryValue === 'error') {
       return new Response(JSON.stringify({ code: 'PGRST000', message: 'offline' }), {
@@ -101,8 +107,7 @@ try {
       });
     }
     return new Response(JSON.stringify([{
-      clubes: nextSummaryValue, jugadores: 0, partidos: 0,
-      partidos_con_resultado: 0, goles: 0, promedio_goles: null
+      clubes: nextSummaryValue, jugadores: 0, partidos: 0
     }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
   };
 
@@ -112,6 +117,7 @@ try {
   assert.strictEqual(first, concurrent, 'dos consumidores simultáneos comparten una petición');
   assert.equal((await first).clubs, 1);
   assert.equal(summaryReads, 1);
+  assert.equal(verifiedSportReads, 1, 'el resumen deportivo verificado debe compartirse con la lectura estructural');
 
   nextSummaryValue = 2;
   simulatedNow += 120000;
@@ -123,12 +129,14 @@ try {
   assert.equal((await summaryApi.loadGlobalSummaryFast()).clubs, 2,
     'tras vencer el TTL se consulta un resumen actualizado');
   assert.equal(summaryReads, 2);
+  assert.equal(verifiedSportReads, 2);
 
   nextSummaryValue = 3;
   simulatedNow -= 300000;
   assert.equal((await summaryApi.loadGlobalSummaryFast()).clubs, 3,
     'un reloj que retrocede invalida el resumen');
   assert.equal(summaryReads, 3);
+  assert.equal(verifiedSportReads, 3);
 
   nextSummaryValue = 'error';
   simulatedNow += 120001;
@@ -138,44 +146,58 @@ try {
   assert.equal((await summaryApi.loadGlobalSummaryFast()).clubs, 4,
     'un error transitorio no debe quedar cacheado');
   assert.equal(summaryReads, 5);
+  assert.equal(verifiedSportReads, 4,
+    'si falla la vista estructural no debe ejecutarse una lectura deportiva adicional');
 } finally {
   Date.now = realDateNow;
 }
 
 console.log('API global summary cache: concurrencia, TTL, reloj y retry OK');
 
-// La vista SQL puede devolver un valor corrupto sin que falle el HTTP 200.
-// No convertir null, strings inválidos o totales incoherentes a estadísticas públicas.
-const validSummaryRow = {
-  clubes: 3, jugadores: 4, partidos: 2, partidos_con_resultado: 1,
-  goles: 12, promedio_goles: 12
-};
+// La vista SQL aporta conteos estructurales, mientras que goles/finalizados se
+// vuelven a verificar desde partidos con ambos marcadores. Ninguna de las dos
+// fuentes debe poder convertir datos ambiguos en estadísticas públicas.
+const validSummaryRow = { clubes: 3, jugadores: 4, partidos: 2 };
 let summaryRow = validSummaryRow;
 let summaryIntegrityReads = 0;
+let sportIntegrityReads = 0;
+let sportRows = [{ id: 91, estado: 'finalizado', goles_local: 5, goles_visitante: 7 }];
 globalThis.fetch = async input => {
-  assert.equal(new URL(input).pathname.split('/').at(-1), 'v_global_summary');
+  const table = new URL(input).pathname.split('/').at(-1);
+  if (table === 'partidos') {
+    sportIntegrityReads++;
+    return new Response(JSON.stringify(sportRows), { status: 200 });
+  }
+  assert.equal(table, 'v_global_summary');
   summaryIntegrityReads++;
   return new Response(JSON.stringify([summaryRow]), { status: 200 });
 };
 const validatedSummaryApi = await import('./api.js?summary-integrity-smoke');
 for (const [label, row] of [
   ['conteo ausente', { ...validSummaryRow, clubes: null }],
-  ['conteo no numérico', { ...validSummaryRow, goles: 'invalid' }],
+  ['conteo no numérico', { ...validSummaryRow, jugadores: 'invalid' }],
   ['conteo fuera de rango', { ...validSummaryRow, partidos: '9007199254740992' }],
-  ['finalizados superiores al total', { ...validSummaryRow, partidos_con_resultado: 3 }],
-  ['promedio no finito', { ...validSummaryRow, promedio_goles: 'Infinity' }]
+  ['finalizados superiores al total', { ...validSummaryRow, partidos: 0 }]
 ]) {
   summaryRow = row;
   await assert.rejects(() => validatedSummaryApi.loadGlobalSummaryFast(), error =>
     error instanceof validatedSummaryApi.DataError && /estadísticas inválidas/.test(error.message),
   label + ': debe rechazar datos corruptos sin guardar el error en caché');
 }
-summaryRow = { ...validSummaryRow, clubes: '3', goles: '12', promedio_goles: '12.0' };
+summaryRow = { ...validSummaryRow, clubes: '3', jugadores: '4', partidos: '2' };
 assert.deepEqual(await validatedSummaryApi.loadGlobalSummaryFast(), {
   clubs: 3, players: 4, matches: 2, finished: 1, goals: 12, avgGoals: 12
-}, 'PostgREST puede entregar enteros y promedios como strings decimales');
-assert.equal(summaryIntegrityReads, 6, 'cada resumen inválido debe permitir reintento');
-console.log('API summary integrity: métricas inválidas rechazadas, recuperación OK');
+}, 'los conteos pueden llegar como strings, pero los resultados deportivos se recalculan con evidencia verificada');
+assert.equal(summaryIntegrityReads, 5, 'cada resumen inválido debe permitir reintento');
+assert.equal(sportIntegrityReads, 5, 'cada intento debe verificar de nuevo las filas con marcador');
+
+sportRows = [{ id: 92, estado: 'programado', goles_local: 0, goles_visitante: 0 }];
+summaryRow = { ...validSummaryRow };
+const pendingSummaryApi = await import('./api.js?summary-pending-score-smoke');
+assert.deepEqual(await pendingSummaryApi.loadGlobalSummaryFast(), {
+  clubs: 3, players: 4, matches: 2, finished: 0, goals: 0, avgGoals: null
+}, 'un 0-0 programado no debe entrar a goles, promedio ni partidos finalizados');
+console.log('API summary integrity: estructura y resultados deportivos verificados por separado');
 
 
 // Pagination regression: a pageSize of zero previously never advanced 'from',

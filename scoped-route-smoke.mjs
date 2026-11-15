@@ -134,3 +134,11 @@ for (const { page, rootId, id, expectedName, missingTitle } of [
 }
 
 console.log('scoped-route-smoke: ok — fichas válidas y IDs no canónicos/duplicados sin fallback');
+
+
+import fs from 'node:fs';
+const scopedFixSource = fs.readFileSync(new URL('./scoped-route-fix.js', import.meta.url), 'utf8');
+assert.match(scopedFixSource, /enhanceCurrentPage\(\)/,
+  'scoped route rerenders must reapply feature layers');
+assert.match(scopedFixSource, /enhanceMatchFreshness\(\)/,
+  'scoped route rerenders must reapply result freshness');
