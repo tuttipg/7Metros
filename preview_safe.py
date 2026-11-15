@@ -17,9 +17,9 @@ class Handler(SimpleHTTPRequestHandler):
             if target.is_file() and target.suffix == '.html':
                 page = target.read_text(encoding='utf-8')
                 # Remove speculative connections to production even before JS runs.
-                page = re.sub(r'<link\\b[^>]*\\brel=["\\\']preconnect["\\\'][^>]*>', '', page, flags=re.I)
+                page = re.sub(r'<link\b[^>]*\brel=["\\']preconnect["\\'][^>]*>', '', page, flags=re.I)
                 banner = '<div role="status" style="padding:12px;background:#fff3cd;color:#332800;text-align:center">Vista aislada sin datos en vivo: navegación y diseño solamente.</div>'
-                page = re.sub(r'(<body\\b[^>]*>)', lambda m: m.group(1) + banner, page, count=1, flags=re.I)
+                page = re.sub(r'(<body\b[^>]*>)', lambda m: m.group(1) + banner, page, count=1, flags=re.I)
                 payload = page.encode('utf-8')
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/html; charset=utf-8')
@@ -33,7 +33,7 @@ class Handler(SimpleHTTPRequestHandler):
         name = unquote(urlsplit(path).path)
         if name == '/':
             name = '/index.html'
-        if name.count('/') != 1 or '\\' in name or name[1:].startswith('.'):
+        if name.count('/') != 1 or '\' in name or name[1:].startswith('.'):
             return str(ROOT / '__denied__')
         target = ROOT / name[1:]
         # Resolve links before checking containment to avoid serving files outside ROOT.
