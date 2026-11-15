@@ -9,6 +9,17 @@ Estado de referencia: guía operativa para el **HEAD vigente** de #82 (no fijar 
 3. Revisar la configuración antes de exponer el deploy: solo credenciales públicas/publishable, consultas GET de solo lectura, RLS activo y sin datos sensibles; no introducir tokens de servicio ni usar escrituras/DDL. La preview puede leer datos públicos existentes si se aprueba expresamente esa dependencia; para aislamiento total, usar fixtures sin datos reales.
 4. Registrar URL final, proveedor, SHA desplegado, fecha y resultado HTTP en el PR #82. Si no existe proveedor de preview autorizado, solicitar **aprobación de un entorno de preview aislado**, sin desplegar por cuenta propia en producción.
 
+## Bloqueo de aislamiento remoto — decisión verificable (15/11/2026)
+
+En el HEAD de referencia, `script.js` asigna `window.SEVEN_METROS_CONFIG = Object.freeze({...})` con un `supabaseUrl` fijo. `config.js` consume esa variable. **Cambiar de dominio/hosting no cambia el backend consultado**; inyectar otra configuración antes de `script.js` tampoco basta porque ese archivo vuelve a asignarla. Una clave *publishable* no autoriza asumir que todas las rutas sean solo lectura.
+
+**Antes de solicitar un deploy:** elegir explícitamente una de estas dos modalidades y registrar la decisión en #82:
+
+- **Preview con datos públicos compartidos (no aislada de datos):** autorización humana expresa para leer el backend público existente; auditar en DevTools las solicitudes reales, métodos, rutas, credenciales y RLS aplicable; rechazar cualquier escritura, cookie privada o endpoint administrativo. Aislar hosting no equivale a aislar datos.
+- **Preview aislada de datos:** modificar en la misma rama #82 el bootstrap para admitir configuración de preview validada o fixtures locales; agregar regresión que demuestre que ninguna solicitud sale hacia el Supabase de producción, también durante búsqueda/fichas y errores. No introducir secretos, no crear ramas nuevas y no publicar hasta que CI y navegación real lo confirmen.
+
+**Evidencia mínima del deploy remoto:** proveedor y proyecto independiente autorizado; URL abierta por HTTPS desde un navegador sin sesión; SHA servido comprobado contra el HEAD de #82; inventario de destinos de red y métodos HTTP durante los siete recorridos; resultado de CI para ese SHA. Si no hay autorización del proveedor o de la modalidad de datos, usar la alternativa USB local (que **sí puede consultar datos públicos**) sin presentar esa prueba como aislamiento remoto.
+
 ## Pruebas manuales — Chrome Android (anotar OK / falla, URL, dispositivo y fecha)
 
 1. **Inicio:** abrir la URL en una pestaña de incógnito, comprobar que se ve la portada y que no queda en pantalla de carga/error.
