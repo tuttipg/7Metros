@@ -20,6 +20,10 @@ En el HEAD de referencia, `script.js` asigna `window.SEVEN_METROS_CONFIG = Objec
 
 **Evidencia mínima del deploy remoto:** proveedor y proyecto independiente autorizado; URL abierta por HTTPS desde un navegador sin sesión; SHA servido comprobado contra el HEAD de #82; inventario de destinos de red y métodos HTTP durante los siete recorridos; resultado de CI para ese SHA. Si no hay autorización del proveedor o de la modalidad de datos, usar la alternativa USB local (que **sí puede consultar datos públicos**) sin presentar esa prueba como aislamiento remoto.
 
+## Nueva alternativa local sin conexiones a datos (modo offline)
+
+En el HEAD que incorpora este cambio, ejecutar `python preview_safe.py --offline` en la computadora, conectar Android por USB, ejecutar `adb reverse tcp:8765 tcp:8765` y abrir `http://127.0.0.1:8765/` en Chrome Android. La respuesta HTML elimina enlaces `preconnect` y muestra una banda visible de **vista aislada sin datos en vivo**. La cabecera CSP usa `connect-src 'none'` para bloquear peticiones de datos desde la página. No se modifican archivos de producción ni el backend. Usar este modo para revisar inicio, menú, rutas y responsive; las búsquedas/fichas con datos y la verificación de marcadores requieren fixtures o una modalidad de datos expresamente aprobada. No interpretar errores de carga de datos en modo offline como regresiones de producción. No es un deploy remoto ni sustituye una prueba Android física o una auditoría de red en el navegador.
+
 ## Pruebas manuales — Chrome Android (anotar OK / falla, URL, dispositivo y fecha)
 
 1. **Inicio:** abrir la URL en una pestaña de incógnito, comprobar que se ve la portada y que no queda en pantalla de carga/error.
