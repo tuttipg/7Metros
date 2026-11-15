@@ -38,6 +38,18 @@ class PreviewSafetyTests(unittest.TestCase):
                 self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
                 self.assertEqual(headers["Cache-Control"], "no-store")
 
+    def test_offline_mode_blocks_external_connections_and_removes_preconnect(self):
+        from unittest.mock import patch
+        with patch('preview_safe.OFFLINE', True):
+            status, body, headers = self.request('/')
+            self.assertEqual(status, 200)
+            self.assertIn(b'Vista aislada sin datos en vivo', body)
+            self.assertNotIn(b'rel="preconnect"', body)
+            self.assertIn("connect-src 'none'", headers['Content-Security-Policy'])
+            status, _, asset_headers = self.request('/script.js')
+            self.assertEqual(status, 200)
+            self.assertIn("connect-src 'none'", asset_headers['Content-Security-Policy'])
+
     def test_internal_files_and_directories_are_unavailable(self):
         for path in (
             "/.git/config", "/.github/workflows/validate.yml",
