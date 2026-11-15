@@ -19,7 +19,7 @@ class Handler(SimpleHTTPRequestHandler):
                 # Remove speculative connections to production even before JS runs.
                 page = re.sub(r'<link\\b[^>]*\\brel=["\\\']preconnect["\\\'][^>]*>', '', page, flags=re.I)
                 banner = '<div role="status" style="padding:12px;background:#fff3cd;color:#332800;text-align:center">Vista aislada sin datos en vivo: navegación y diseño solamente.</div>'
-                page = page.replace('<body', '<body', 1).replace('>', '>' + banner, 1) if False else re.sub(r'(<body\\b[^>]*>)', lambda m: m.group(1) + banner, page, count=1, flags=re.I)
+                page = re.sub(r'(<body\\b[^>]*>)', lambda m: m.group(1) + banner, page, count=1, flags=re.I)
                 payload = page.encode('utf-8')
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/html; charset=utf-8')
